@@ -23,8 +23,8 @@ Keyboard: Cmd-1/2/3 switch between Timeline, Projects and Tracked Apps; in the p
 ## Getting started
 
 ```sh
-git clone https://github.com/NickKoepr/TimeTracker.git
-cd TimeTracker
+git clone https://github.com/NickKoepr/Timelane.git
+cd Timelane
 open Timelane.xcodeproj
 ```
 
