@@ -1,9 +1,12 @@
 import Foundation
 import GRDB
+import os
 
 /// Owns the SQLite connection. Repositories receive this and never open files themselves.
 final class AppDatabase: Sendable {
     let writer: any DatabaseWriter
+
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "TimeTracker", category: "database")
 
     init(writer: any DatabaseWriter) throws {
         self.writer = writer
@@ -18,6 +21,11 @@ final class AppDatabase: Sendable {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let queue = try DatabaseQueue(path: directory.appendingPathComponent("db.sqlite").path)
         return try AppDatabase(writer: queue)
+    }
+
+    /// A database in a regular file, e.g. for tests that reopen it.
+    static func file(at url: URL) throws -> AppDatabase {
+        try AppDatabase(writer: try DatabaseQueue(path: url.path))
     }
 
     /// For tests and previews.
@@ -37,6 +45,9 @@ final class AppDatabase: Sendable {
                     }
                 } catch {
                     // The stream ends; the owner of the stream restarts observation if needed.
+                    if !(error is CancellationError) {
+                        Self.logger.error("Database observation failed: \(String(describing: error), privacy: .public)")
+                    }
                 }
                 continuation.finish()
             }

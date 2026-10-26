@@ -58,3 +58,27 @@ struct TimeEntryEditorTests {
         #expect(try await all().isEmpty)
     }
 }
+
+struct PersistenceTests {
+    @Test func entryWithTitleSurvivesReopeningTheDatabaseFile() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("TimeTrackerTests-\(UUID())")
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let url = directory.appendingPathComponent("db.sqlite")
+        let day = DateRange.day(of: TestCalendar.date(2026, 11, 3, 12), calendar: TestCalendar.make())
+
+        do {
+            let db = try AppDatabase.file(at: url)
+            let projectId = try await GRDBProjectRepository(database: db).save(Project(name: "A", colorHex: "#000000")).id!
+            let editor = TimeEntryEditor(repository: GRDBTimeEntryRepository(database: db))
+            try await editor.create(projectId: projectId,
+                                    range: DateRange(start: TestCalendar.date(2026, 11, 3, 9), end: TestCalendar.date(2026, 11, 3, 10)),
+                                    title: " Write report ", note: nil)
+        }
+
+        let reopened = try AppDatabase.file(at: url)
+        let entries = try await GRDBTimeEntryRepository(database: reopened).entries(in: day)
+        #expect(entries.count == 1)
+        #expect(entries[0].title == "Write report")
+    }
+}

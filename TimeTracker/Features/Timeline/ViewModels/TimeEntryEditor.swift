@@ -8,10 +8,9 @@ struct TimeEntryEditor: Sendable {
     let repository: any TimeEntryRepository
     var now: @Sendable () -> Date = { .now }
 
-    func create(projectId: Int64, range: DateRange, note: String?) async throws {
-        let trimmed = note?.trimmingCharacters(in: .whitespacesAndNewlines)
+    func create(projectId: Int64, range: DateRange, title: String? = nil, note: String?) async throws {
         let entry = TimeEntry(projectId: projectId, start: range.start, end: range.end,
-                              note: trimmed?.isEmpty == true ? nil : trimmed,
+                              title: Self.normalized(title), note: Self.normalized(note),
                               createdAt: now(), updatedAt: now())
         try await apply(entry)
     }
@@ -26,6 +25,12 @@ struct TimeEntryEditor: Sendable {
     func delete(_ entry: TimeEntry) async throws {
         guard let id = entry.id else { return }
         try await repository.save([], deleting: [id])
+    }
+
+    /// Trimmed text, or nil when empty.
+    static func normalized(_ text: String?) -> String? {
+        let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed?.isEmpty == false ? trimmed : nil
     }
 
     private func apply(_ entry: TimeEntry) async throws {
