@@ -1,37 +1,41 @@
 import SwiftUI
 
-/// Hour labels plus hour and quarter-hour lines behind the lanes.
+/// Time labels plus hour, label and minor lines behind the lanes; density follows the zoom level.
 struct HourGridView: View {
     let geometry: TimelineGeometry
-
-    private var hourCount: Int { Int((geometry.day.duration / 3600).rounded(.up)) }
+    var zoom: TimelineZoom = .hour
 
     var body: some View {
+        let layout = HourGridLayout(geometry: geometry, zoom: zoom)
         ZStack(alignment: .topLeading) {
             Canvas { context, size in
-                for quarter in 0...(hourCount * 4) {
-                    let date = geometry.day.start.addingTimeInterval(Double(quarter) * 900)
-                    let y = geometry.y(for: date)
-                    let isHour = quarter % 4 == 0
+                for line in layout.lines {
                     var path = Path()
-                    path.move(to: CGPoint(x: TimelineMetrics.labelWidth, y: y))
-                    path.addLine(to: CGPoint(x: size.width, y: y))
-                    context.stroke(path, with: .color(.secondary.opacity(isHour ? 0.35 : 0.12)),
-                                   lineWidth: isHour ? 1 : 0.5)
+                    path.move(to: CGPoint(x: TimelineMetrics.labelWidth, y: line.y))
+                    path.addLine(to: CGPoint(x: size.width, y: line.y))
+                    context.stroke(path, with: .color(.secondary.opacity(opacity(line.kind))),
+                                   lineWidth: line.kind == .hour ? 1 : 0.5)
                 }
             }
-            ForEach(0..<hourCount, id: \.self) { hour in
-                let date = geometry.day.start.addingTimeInterval(Double(hour) * 3600)
-                Text(date.formatted(date: .omitted, time: .shortened))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+            ForEach(layout.labels, id: \.date) { label in
+                Text(label.date.formatted(date: .omitted, time: .shortened))
+                    .font((label.isHour ? Font.caption : Font.caption2).monospacedDigit())
+                    .foregroundStyle(label.isHour ? .secondary : .tertiary)
                     .frame(width: TimelineMetrics.labelWidth - 8, alignment: .trailing)
-                    .offset(y: geometry.y(for: date) - 7)
+                    .offset(y: label.y - 7)
             }
         }
         .frame(height: geometry.totalHeight)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    private func opacity(_ kind: HourGridLayout.LineKind) -> Double {
+        switch kind {
+        case .hour: 0.35
+        case .label: 0.2
+        case .minor: 0.1
+        }
     }
 }
 

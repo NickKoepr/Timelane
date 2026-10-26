@@ -10,7 +10,7 @@ struct TimelineColumn: View {
             let available = proxy.size.width - TimelineMetrics.labelWidth - TimelineMetrics.laneSpacing - TimelineMetrics.laneInset * 2
             let appWidth = available * TimelineMetrics.appLaneFraction
             ZStack(alignment: .topLeading) {
-                HourGridView(geometry: geometry)
+                HourGridView(geometry: geometry, zoom: viewModel.zoomState.zoom)
                 lanes(geometry: geometry, appWidth: appWidth)
                 if viewModel.isToday { NowIndicatorView(geometry: geometry) }
             }
