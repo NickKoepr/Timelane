@@ -15,6 +15,7 @@ struct TimelineViewModelTests {
                                    trackedApps: GRDBTrackedAppRepository(database: db),
                                    editor: TimeEntryEditor(repository: GRDBTimeEntryRepository(database: db)),
                                    lastProject: LastProjectStore(defaults: UserDefaults(suiteName: "TimelineVMTests-\(UUID())")!),
+                                   zoomState: TimelineZoomState(defaults: UserDefaults(suiteName: "Zoom-\(UUID())")!),
                                    calendar: cal, clock: { now })
         return (vm, db)
     }
@@ -73,6 +74,7 @@ struct TimelineTrackedAppsTests {
                                    projects: GRDBProjectRepository(database: db), trackedApps: GRDBTrackedAppRepository(database: db),
                                    editor: TimeEntryEditor(repository: repo),
                                    lastProject: LastProjectStore(defaults: UserDefaults(suiteName: "TLTA-\(UUID())")!),
+                                   zoomState: TimelineZoomState(defaults: UserDefaults(suiteName: "Zoom-\(UUID())")!),
                                    calendar: TestCalendar.make(), clock: { now })
         let sessions = GRDBAppSessionRepository(database: db)
         for (id, hour) in [("x", 9), ("y", 11)] {
@@ -106,6 +108,7 @@ struct TimelineRegistrationTests {
         let vm = TimelineViewModel(timeEntries: entries, appSessions: GRDBAppSessionRepository(database: db),
                                    projects: projects, trackedApps: GRDBTrackedAppRepository(database: db), editor: TimeEntryEditor(repository: entries),
                                    lastProject: LastProjectStore(defaults: UserDefaults(suiteName: "TimelineRegTests-\(UUID())")!),
+                                   zoomState: TimelineZoomState(defaults: UserDefaults(suiteName: "Zoom-\(UUID())")!),
                                    calendar: cal, clock: { now })
         let task = Task { await vm.task() }
         for _ in 0..<200 where vm.projects.isEmpty { try? await Task.sleep(for: .milliseconds(10)) }

@@ -20,18 +20,17 @@ final class TimelineViewModel {
         let ids = Set((trackedApps ?? []).map(\.bundleIdentifier))
         return allSessions.filter { ids.contains($0.bundleIdentifier) }
     }
-    private let timeEntries: any TimeEntryRepository
-    private let appSessions: any AppSessionRepository
-    private let projectRepository: any ProjectRepository
-    private let trackedAppRepository: any TrackedAppRepository
+    private let timeEntries: any TimeEntryRepository, appSessions: any AppSessionRepository
+    private let projectRepository: any ProjectRepository, trackedAppRepository: any TrackedAppRepository
     let entryEditing: EntryEditingViewModel
+    let zoomState: TimelineZoomState
     private let editor: TimeEntryEditor
     private let lastProject: LastProjectStore
-    private let calendar: Calendar
-    private let clock: () -> Date
+    private let calendar: Calendar, clock: () -> Date
 
     init(timeEntries: any TimeEntryRepository, appSessions: any AppSessionRepository,
-         projects: any ProjectRepository, trackedApps: any TrackedAppRepository, editor: TimeEntryEditor, lastProject: LastProjectStore = LastProjectStore(),
+         projects: any ProjectRepository, trackedApps: any TrackedAppRepository, editor: TimeEntryEditor,
+         lastProject: LastProjectStore = LastProjectStore(), zoomState: TimelineZoomState = TimelineZoomState(),
          calendar: Calendar = .current, clock: @escaping () -> Date = { .now }) {
         self.timeEntries = timeEntries
         self.appSessions = appSessions
@@ -40,6 +39,7 @@ final class TimelineViewModel {
         self.editor = editor
         self.entryEditing = EntryEditingViewModel(editor: editor)
         self.lastProject = lastProject
+        self.zoomState = zoomState
         self.calendar = calendar
         self.clock = clock
         self.now = clock()
@@ -48,7 +48,7 @@ final class TimelineViewModel {
 
     // MARK: Presentation
 
-    var geometry: TimelineGeometry { TimelineGeometry(day: day) }
+    var geometry: TimelineGeometry { TimelineGeometry(day: day, pointsPerHour: zoomState.zoom.pointsPerHour) }
     var isToday: Bool { day.contains(clock()) }
     var title: String { day.start.formatted(.dateTime.weekday(.wide).day().month(.wide).year()) }
     var registeredTotal: TimeInterval { DayTotals.registered(entries: entries, in: day) }
