@@ -19,7 +19,7 @@ final class MenuBarViewModel {
             timeEntries: environment.timeEntries, appSessions: environment.appSessions,
             projects: environment.projects, trackedApps: environment.trackedApps, editor: environment.timeEntryEditor,
             zoomState: TimelineZoomState(defaults: defaults, key: zoomKey, defaultLevel: .halfHour),
-            allowsCreatingProjects: false))
+            allowsCreatingProjects: false, recordingTimer: environment.recordingTimer))
     }
 
     /// The panel became visible: jump to today around "now". An unfinished form is left alone, so closing

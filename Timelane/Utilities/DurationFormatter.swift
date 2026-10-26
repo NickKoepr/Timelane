@@ -15,4 +15,10 @@ enum DurationFormatter {
         if hours == 0 { return "\(minutes)m" }
         return minutes == 0 ? "\(hours)h" : "\(hours)h \(minutes)m"
     }
+
+    /// "0:12:34" — hours:minutes:seconds, for the running timer.
+    static func clock(_ seconds: TimeInterval) -> String {
+        let total = Int(max(seconds, 0))
+        return String(format: "%d:%02d:%02d", total / 3600, total / 60 % 60, total % 60)
+    }
 }

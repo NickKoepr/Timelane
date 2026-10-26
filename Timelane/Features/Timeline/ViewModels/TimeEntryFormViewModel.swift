@@ -7,6 +7,8 @@ final class TimeEntryFormViewModel: Identifiable {
     var form: TimeEntryForm
     var search: ProjectSearch
     private(set) var errorMessage: String?
+    /// Informational line above the buttons (e.g. a recording that crossed midnight).
+    var notice: String?
     private(set) var isBusy = false
 
     private let projectRepository: any ProjectRepository

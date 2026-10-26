@@ -14,7 +14,8 @@ struct TimelineScreen: View {
             appSessions: environment.appSessions,
             projects: environment.projects,
             trackedApps: environment.trackedApps,
-            editor: environment.timeEntryEditor))
+            editor: environment.timeEntryEditor,
+            recordingTimer: environment.recordingTimer))
     }
 
     var body: some View {

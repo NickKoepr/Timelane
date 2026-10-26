@@ -24,11 +24,13 @@ final class TimelineViewModel {
     private let editor: TimeEntryEditor
     private let lastProject: LastProjectStore
     private let allowsCreatingProjects: Bool
-    private let calendar: Calendar, clock: () -> Date
+    let recordingTimer: RecordingTimer, calendar: Calendar
+    private let clock: () -> Date
 
     init(timeEntries: any TimeEntryRepository, appSessions: any AppSessionRepository,
          projects: any ProjectRepository, trackedApps: any TrackedAppRepository, editor: TimeEntryEditor,
          lastProject: LastProjectStore = LastProjectStore(), zoomState: TimelineZoomState = TimelineZoomState(), allowsCreatingProjects: Bool = true,
+         recordingTimer: RecordingTimer = RecordingTimer(),
          calendar: Calendar = .current, clock: @escaping () -> Date = { .now }) {
         self.timeEntries = timeEntries
         self.appSessions = appSessions
@@ -39,6 +41,7 @@ final class TimelineViewModel {
         self.lastProject = lastProject
         self.zoomState = zoomState
         self.allowsCreatingProjects = allowsCreatingProjects
+        self.recordingTimer = recordingTimer
         self.calendar = calendar
         self.clock = clock
         self.now = clock()
@@ -83,9 +86,12 @@ final class TimelineViewModel {
     }
 
     /// Click on an app session: open the window with the whole session's range.
-    func assign(_ block: AppSessionBlockModel) {
-        selection = TimelineSelection(range: block.range)
-        openForm(.new(range: block.range, projectId: defaultProjectId))
+    func assign(_ block: AppSessionBlockModel) { openNewForm(for: block.range) }
+
+    /// Marks the range on the timeline and opens the new-entry window for it.
+    func openNewForm(for range: DateRange) {
+        selection = TimelineSelection(range: range)
+        openForm(.new(range: range, projectId: defaultProjectId))
     }
 
     /// Closes the window and clears the selection overlay.
@@ -100,7 +106,7 @@ final class TimelineViewModel {
         return open.first { $0.id == lastProject.projectId }?.id ?? open.first?.id
     }
 
-    private func openForm(_ values: TimeEntryForm) {
+    func openForm(_ values: TimeEntryForm) {
         form = TimeEntryFormViewModel(
             form: values, projects: projects, projectRepository: projectRepository, editor: editor,
             allowsCreatingProjects: allowsCreatingProjects,
@@ -119,7 +125,7 @@ final class TimelineViewModel {
     func goToToday() { show(.day(of: clock(), calendar: calendar)) }
     func go(to date: Date) { show(.day(of: date, calendar: calendar)) }
 
-    private func show(_ range: DateRange) {
+    func show(_ range: DateRange) {
         cancelRegistration()
         entryEditing.reset()
         day = range

@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// ⌘← / ⌘→ / ⌘T and the zoom shortcuts, registered once for the whole bar whichever variant is showing.
+/// ⌘← / ⌘→ / ⌘T / ⌘R (record/stop) and the zoom shortcuts, registered once for the whole bar whichever variant is showing.
 struct DayNavigationShortcuts: View {
     let viewModel: TimelineViewModel
     let changeZoom: (ZoomChange) -> Void
@@ -11,6 +11,7 @@ struct DayNavigationShortcuts: View {
             Button("Next day") { viewModel.goToNextDay() }.keyboardShortcut(.rightArrow, modifiers: .command)
             Button("Today") { viewModel.goToToday() }.keyboardShortcut("t", modifiers: .command)
                 .disabled(viewModel.isToday)
+            Button("Record or stop") { viewModel.toggleRecording() }.keyboardShortcut("r", modifiers: .command)
             Button("Zoom out") { changeZoom { $0.zoomOut() } }.keyboardShortcut("-", modifiers: .command)
                 .disabled(!viewModel.zoomState.canZoomOut)
             Button("Zoom in") { changeZoom { $0.zoomIn() } }.keyboardShortcut("+", modifiers: .command)

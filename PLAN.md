@@ -543,6 +543,7 @@ The structure above is chosen so these can be added without restructuring:
 
 - Responsive bars (v1.9): `DayNavigationBar` and `MonthNavigationBar` use `ViewThatFits` with wide/medium/narrow variants, single-line fixed-size texts, and shortcuts registered once in hidden `*Shortcuts` views. Minimum window size lives in `App/WindowMetrics.swift` (700 × 520, detail column ≥ 480).
 - Lane labels (v1.10, PLAN-v1.10.md): `TimelineLaneHeader` (sticky, above the `ScrollView` in `TimelineScrollArea`, fed the measured scroll content width) and the column both take their x positions from the pure `TimelineLaneLayout`. `LaneBackdrop` draws the entry-lane tint (accent 4%) and the 1 pt `LaneDivider`; the header shows only the lane titles (no captions), and the "No activity tracked yet" overlay stays the empty state. All are non-hit-testable.
+- Recording timer (v1.11, PLAN-v1.11.md): `RecordingTimer` (`Services/Timer`, owned by `AppEnvironment`, start time persisted in UserDefaults via `RecordingTimerStore`) is shared by both timelines. `RecordedPeriod` rounds start down / end up to minutes and clamps to the start day. `TimelineViewModel.toggleRecording()` starts, or stops and `register(_:)`s into the new-entry form; `RecordButton` sits in `DayNavigationBar` (⌘R in `DayNavigationShortcuts` only) and above the menu bar timeline; `RecordingBlock` is a non-hit-testable block in the Logged hours lane.
 
 ## 12. Definition of done (v1)
 

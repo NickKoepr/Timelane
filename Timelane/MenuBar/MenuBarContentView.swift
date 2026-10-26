@@ -19,9 +19,12 @@ struct MenuBarContentView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            MenuBarStatusLine(tracker: environment.tracker)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+            HStack(spacing: 8) {
+                MenuBarStatusLine(tracker: environment.tracker)
+                RecordButton(timer: environment.recordingTimer) { timeline.toggleRecording() }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
             Divider()
             timelineLayer
             Divider()

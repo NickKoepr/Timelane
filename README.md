@@ -7,6 +7,7 @@ A native macOS app (SwiftUI) for developers to register working hours per projec
 ## Features
 
 - **Day timeline** with two lanes, "Tracked apps" (recorded automatically) and "Logged hours" (registered by you), each with a sticky header and separated by a divider. Drag over either lane to select a period, or click an app session to assign the whole session. Entries can be edited, moved and resized; right-click an entry for Edit or Delete. Zoom from the hour overview down to 10-minute detail (pinch or zoom controls); hover cards show details.
+- **Record / Stop timer** (Cmd-R in the main window, also in the menu bar panel): Record starts one shared timer that survives closing the window and relaunching the app; Stop opens the new-entry form with the period rounded to whole minutes. A recording past midnight is cut at the end of its start day. A red block in "Logged hours" shows the running recording.
 - **Projects** with a colour, monthly totals and month navigation (Cmd-Left / Cmd-Right, Cmd-T for the current month).
 - **Tracked apps**: only the apps you add are recorded. Tracking pauses on idle (after 5 minutes without input), sleep and screen lock.
 - **Menu bar panel** with live tracking status (red dot while recording, grey "not tracking" icon for apps not on the list, grey pause icon when paused), the same timeline and a popup form to register time without opening the main window. Tracking and the menu bar item keep running when the window is closed.

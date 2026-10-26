@@ -10,11 +10,14 @@ final class AppEnvironment {
     let trackedApps: any TrackedAppRepository
     let timeEntryEditor: TimeEntryEditor
     let tracker: AppActivityTracker
+    /// The one Record/Stop timer, shared by the main window and the menu bar panel.
+    let recordingTimer: RecordingTimer
     /// Set by the menu bar to open the main window on a specific screen; `RootView` consumes it.
     var requestedSidebarItem: SidebarItem?
 
-    init(database: AppDatabase) {
+    init(database: AppDatabase, recordingTimerStore: any RecordingTimerStore = InMemoryRecordingTimerStore()) {
         self.database = database
+        self.recordingTimer = RecordingTimer(store: recordingTimerStore)
         self.projects = GRDBProjectRepository(database: database)
         self.timeEntries = GRDBTimeEntryRepository(database: database)
         self.appSessions = GRDBAppSessionRepository(database: database)
@@ -33,7 +36,7 @@ final class AppEnvironment {
 
     static func live() -> AppEnvironment {
         do {
-            return AppEnvironment(database: try AppDatabase.live())
+            return AppEnvironment(database: try AppDatabase.live(), recordingTimerStore: UserDefaultsRecordingTimerStore())
         } catch {
             fatalError("Could not open the Timelane database: \(error)")
         }

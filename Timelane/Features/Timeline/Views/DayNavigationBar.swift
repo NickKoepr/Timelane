@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Top bar of the timeline. `ViewThatFits` picks the richest variant that fits (≈ 840 / 640 / 440 pt of detail width);
+/// Top bar of the timeline. `ViewThatFits` picks the richest variant that fits (≈ 960 / 760 / 440 pt of detail width);
 /// shortcuts are registered once in `DayNavigationShortcuts`, not on the visible buttons.
 struct DayNavigationBar: View {
     let viewModel: TimelineViewModel
@@ -23,6 +23,7 @@ struct DayNavigationBar: View {
             DayNavigationButtons(viewModel: viewModel)
             date(viewModel.title, font: .title3)
             Spacer(minLength: 8)
+            record
             zoom
             DayTotalsView(registered: viewModel.registeredTotal, tracked: viewModel.trackedTotal).fixedSize()
         }
@@ -33,6 +34,7 @@ struct DayNavigationBar: View {
             DayNavigationButtons(viewModel: viewModel)
             date(viewModel.shortTitle, font: .title3)
             Spacer(minLength: 8)
+            record
             zoom
             totals
         }
@@ -47,10 +49,15 @@ struct DayNavigationBar: View {
                 zoom
             }
             HStack(spacing: 8) {
+                record
                 Spacer(minLength: 8)
                 totals
             }
         }
+    }
+
+    private var record: some View {
+        RecordButton(timer: viewModel.recordingTimer) { viewModel.toggleRecording() }
     }
 
     private var zoom: some View {

@@ -22,6 +22,9 @@ struct TimeEntryFormContent: View {
                     .textFieldStyle(.roundedBorder)
                     .lineLimit(2...5)
             }
+            if let notice = viewModel.notice {
+                Label(notice, systemImage: "info.circle").font(.callout).foregroundStyle(.secondary)
+            }
             if let message = viewModel.errorMessage {
                 Text(message).font(.callout).foregroundStyle(.red)
             }

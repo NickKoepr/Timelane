@@ -9,6 +9,7 @@ struct TimeEntryLane: View {
         let geometry = viewModel.geometry
         ZStack(alignment: .topLeading) {
             Color.clear
+            RecordingBlock(viewModel: viewModel)
             ForEach(viewModel.entries) { entry in
                 block(for: entry, geometry: geometry)
             }
