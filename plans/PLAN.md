@@ -461,7 +461,7 @@ Time entries on the timeline **must not overlap**. The newest action wins:
     func task() async                       // observe totals for current month
 }
 ```
-Sort rows: by total descending, then by name. Archived projects only shown when `showArchived` is on (they're shown when they have hours in that month regardless).
+Sort rows: by total descending, then by name. Archived projects are only shown when `showArchived` is on, also when they have hours that month (changed in v1.0.1); the month total always includes their hours.
 
 ### 7.3 Add / edit
 - `+ New` toolbar button (shortcut ⌘N) opens `ProjectFormSheet` backed by `ProjectFormViewModel` (name, color from `ProjectColor.palette`, validation: non-empty, unique name case-insensitively).

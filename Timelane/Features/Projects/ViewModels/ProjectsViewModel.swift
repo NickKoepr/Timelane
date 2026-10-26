@@ -20,10 +20,10 @@ final class ProjectsViewModel {
         self.month = .month(of: now(), calendar: calendar)
     }
 
-    /// Rows to show: archived projects only when asked for, or when they have hours this month.
+    /// Rows to show: archived projects only when "Show archived" is on.
     var rows: [ProjectMonthTotal] {
         allTotals
-            .filter { !$0.project.isArchived || showArchived || $0.totalSeconds > 0 }
+            .filter { !$0.project.isArchived || showArchived }
             .sorted {
                 if $0.totalSeconds != $1.totalSeconds { return $0.totalSeconds > $1.totalSeconds }
                 return $0.project.name.localizedCaseInsensitiveCompare($1.project.name) == .orderedAscending
@@ -32,7 +32,8 @@ final class ProjectsViewModel {
 
     /// False when no project exists at all (as opposed to nothing to show this month).
     var hasAnyProjects: Bool { !allTotals.isEmpty }
-    var monthTotal: TimeInterval { rows.reduce(0) { $0 + $1.totalSeconds } }
+    /// All hours registered this month, including archived projects (even while they are hidden).
+    var monthTotal: TimeInterval { allTotals.reduce(0) { $0 + $1.totalSeconds } }
     var isCurrentMonth: Bool { month == .month(of: now(), calendar: calendar) }
     var monthTitle: String { month.start.formatted(.dateTime.month(.wide).year()) }
     var shortMonthTitle: String { month.start.formatted(.dateTime.month(.abbreviated).year()) }

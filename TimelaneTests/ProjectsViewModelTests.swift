@@ -40,6 +40,26 @@ struct ProjectsViewModelTests {
         #expect(viewModel.rows.map(\.project.name) == ["Big", "Small", "Old"])
     }
 
+    @Test func archivedProjectWithHoursIsHiddenButStillCounted() async throws {
+        let (viewModel, projects, entries) = try await makeViewModel()
+        let active = try await projects.save(Project(name: "Active", colorHex: "#000000"))
+        let archived = try await projects.save(Project(name: "Archived", colorHex: "#000000"))
+        try await entries.save([
+            TimeEntry(projectId: active.id!, start: TestCalendar.date(2026, 10, 5, 9), end: TestCalendar.date(2026, 10, 5, 10)),
+            TimeEntry(projectId: archived.id!, start: TestCalendar.date(2026, 10, 6, 9), end: TestCalendar.date(2026, 10, 6, 11)),
+        ], deleting: [])
+        try await projects.archive(id: archived.id!, archived: true)
+
+        let task = Task { await viewModel.task() }
+        await waitUntil { viewModel.allTotals.count == 2 && viewModel.allTotals.contains { $0.project.isArchived } }
+        task.cancel()
+
+        #expect(viewModel.rows.map(\.project.name) == ["Active"])
+        #expect(viewModel.monthTotal == 3 * 3600)
+        viewModel.showArchived = true
+        #expect(viewModel.rows.map(\.project.name) == ["Archived", "Active"])
+    }
+
     @Test func monthNavigation() async throws {
         let (viewModel, _, _) = try await makeViewModel()
         #expect(viewModel.isCurrentMonth)
