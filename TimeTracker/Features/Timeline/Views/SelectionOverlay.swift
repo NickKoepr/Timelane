@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The translucent range shown while dragging; anchors the project picker popover afterwards.
+/// The translucent range shown while dragging.
 struct SelectionOverlay: View {
     let viewModel: TimelineViewModel
 
@@ -18,15 +18,7 @@ struct SelectionOverlay: View {
                 }
                 .frame(height: max(frame.height, 2))
                 .offset(y: frame.y)
-                .popover(isPresented: pickerBinding, arrowEdge: .leading) {
-                    if let picker = viewModel.picker { ProjectPickerPopover(viewModel: picker) }
-                }
                 .allowsHitTesting(false)
         }
-    }
-
-    private var pickerBinding: Binding<Bool> {
-        Binding(get: { viewModel.picker != nil },
-                set: { if !$0 { viewModel.cancelRegistration() } })
     }
 }

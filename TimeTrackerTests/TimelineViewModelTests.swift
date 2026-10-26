@@ -81,7 +81,11 @@ struct TimelineRegistrationTests {
         return (vm, entries, project)
     }
 
-    @Test func dragSelectsSnappedRangeAndOpensPicker() async throws {
+    func waitForEntries(_ vm: TimelineViewModel, count: Int) async {
+        for _ in 0..<300 where vm.entries.count != count { try? await Task.sleep(for: .milliseconds(10)) }
+    }
+
+    @Test func dragSelectsSnappedRangeAndOpensForm() async throws {
         let (vm, entries, project) = try await makeViewModel()
         let g = vm.geometry
         vm.updateSelection(startY: g.y(for: TestCalendar.date(2026, 11, 3, 13, 2)),
@@ -89,14 +93,41 @@ struct TimelineRegistrationTests {
         #expect(vm.selection?.start == TestCalendar.date(2026, 11, 3, 10))
         #expect(vm.selection?.end == TestCalendar.date(2026, 11, 3, 13))
         vm.finishSelection()
-        let picker = try #require(vm.picker)
-        #expect(picker.highlightedId == project.id)
+        let form = try #require(vm.form)
+        #expect(form.form.projectId == project.id)
+        #expect(form.heading == "New time entry")
 
-        await picker.confirm()
-        #expect(vm.picker == nil && vm.selection == nil)
+        form.form.title = "Deep work"
+        await form.save()
+        #expect(vm.form == nil && vm.selection == nil)
         let saved = try await entries.entries(in: vm.day)
         #expect(saved.count == 1)
         #expect(saved[0].duration == 3 * 3600)
+        #expect(saved[0].title == "Deep work")
+    }
+
+    @Test func selectionBeforeNowIsAccepted() async throws {
+        let (vm, _, _) = try await makeViewModel()
+        let g = vm.geometry
+        // "now" is 14:30; select 08:00-09:00, well before it.
+        vm.updateSelection(startY: g.y(for: TestCalendar.date(2026, 11, 3, 8)), currentY: g.y(for: TestCalendar.date(2026, 11, 3, 9)))
+        vm.finishSelection()
+        #expect(vm.form?.form.range == DateRange(start: TestCalendar.date(2026, 11, 3, 8), end: TestCalendar.date(2026, 11, 3, 9)))
+    }
+
+    @Test func savedEntryAppearsOnTheTimeline() async throws {
+        let (vm, _, _) = try await makeViewModel()
+        let observing = Task { await vm.task() }
+        defer { observing.cancel() }
+        let g = vm.geometry
+        vm.updateSelection(startY: g.y(for: TestCalendar.date(2026, 11, 3, 9)), currentY: g.y(for: TestCalendar.date(2026, 11, 3, 10)))
+        vm.finishSelection()
+        let form = try #require(vm.form)
+        form.form.title = "Standup"
+        await form.save()
+        await waitForEntries(vm, count: 1)
+        #expect(vm.entries.count == 1)
+        #expect(vm.entries.first?.title == "Standup")
     }
 
     @Test func tinySelectionIsDiscarded() async throws {
@@ -104,40 +135,67 @@ struct TimelineRegistrationTests {
         let g = vm.geometry
         vm.updateSelection(startY: g.y(for: TestCalendar.date(2026, 11, 3, 10)), currentY: g.y(for: TestCalendar.date(2026, 11, 3, 10, 1)))
         vm.finishSelection()
-        #expect(vm.picker == nil && vm.selection == nil)
+        #expect(vm.form == nil && vm.selection == nil)
     }
 
     @Test func assigningSessionUsesItsRange() async throws {
-        let (vm, entries, project) = try await makeViewModel()
+        let (vm, entries, _) = try await makeViewModel()
         let block = AppSessionBlockModel(bundleIdentifier: "x", appName: "X",
                                          start: TestCalendar.date(2026, 11, 3, 9), end: TestCalendar.date(2026, 11, 3, 9, 45))
         vm.assign(block)
-        let picker = try #require(vm.picker)
-        await picker.select(project)
+        let form = try #require(vm.form)
+        await form.save()
         let saved = try await entries.entries(in: vm.day)
         #expect(saved.first?.start == block.start && saved.first?.end == block.end)
     }
 
-    @Test func pickerCreatesProjectInline() async throws {
+    @Test func selectingAnEntryOpensEditFormAndSaveUpdatesIt() async throws {
+        let (vm, entries, project) = try await makeViewModel()
+        try await entries.save([TimeEntry(projectId: project.id!, start: TestCalendar.date(2026, 11, 3, 9),
+                                          end: TestCalendar.date(2026, 11, 3, 10))], deleting: [])
+        let entry = try #require(try await entries.entries(in: vm.day).first)
+        vm.select(entry)
+        let form = try #require(vm.form)
+        #expect(form.heading == "Edit time entry")
+        form.form.title = "Renamed"
+        form.form.end = TestCalendar.date(2026, 11, 3, 10, 30)
+        await form.save()
+        let saved = try await entries.entries(in: vm.day)
+        #expect(saved.count == 1 && saved[0].id == entry.id)
+        #expect(saved[0].title == "Renamed" && saved[0].end == TestCalendar.date(2026, 11, 3, 10, 30))
+        #expect(vm.form == nil)
+
+        vm.select(saved[0])
+        await vm.form?.delete()
+        #expect(try await entries.entries(in: vm.day).isEmpty)
+    }
+
+    @Test func inlineProjectCreationSelectsTheNewProject() async throws {
         let (vm, entries, _) = try await makeViewModel()
         vm.assign(AppSessionBlockModel(bundleIdentifier: "x", appName: "X",
                                        start: TestCalendar.date(2026, 11, 3, 9), end: TestCalendar.date(2026, 11, 3, 10)))
-        let picker = try #require(vm.picker)
-        picker.searchText = "Brand New"
-        #expect(picker.newProjectName == "Brand New")
-        #expect(picker.filtered.isEmpty)
-        await picker.confirm()
-        #expect(try await entries.entries(in: vm.day).count == 1)
+        let form = try #require(vm.form)
+        form.search.query = "Brand New"
+        #expect(form.search.newProjectName == "Brand New")
+        await form.confirmSearch()
+        #expect(form.search.projects.map(\.name).contains("Brand New"))
+        await form.save()
+        let saved = try await entries.entries(in: vm.day)
+        #expect(saved.count == 1)
+        #expect(saved[0].projectId == form.form.projectId)
     }
 
-    @Test func pickerFiltersAndMovesHighlight() async throws {
-        let (vm, _, _) = try await makeViewModel()
+    @Test func formCannotSaveWithoutProjectOrWithBadTimes() async throws {
+        let (vm, entries, _) = try await makeViewModel()
         vm.assign(AppSessionBlockModel(bundleIdentifier: "x", appName: "X",
                                        start: TestCalendar.date(2026, 11, 3, 9), end: TestCalendar.date(2026, 11, 3, 10)))
-        let picker = try #require(vm.picker)
-        picker.searchText = "a"
-        #expect(picker.filtered.map(\.name) == ["A"])
-        picker.moveHighlight(by: 1)
-        #expect(picker.highlightedId == picker.filtered[0].id)
+        let form = try #require(vm.form)
+        form.form.end = form.form.start
+        #expect(!form.canSave)
+        await form.save()
+        #expect(try await entries.entries(in: vm.day).isEmpty)
+        form.form.end = form.form.start.addingTimeInterval(3600)
+        form.form.projectId = nil
+        #expect(!form.canSave)
     }
 }

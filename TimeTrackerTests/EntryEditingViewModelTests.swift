@@ -57,35 +57,10 @@ struct EntryEditingViewModelTests {
         #expect(f.vm.preview == nil)
     }
 
-    @Test func detailSavesChangesAndCloses() async throws {
-        let f = try await makeFixture()
-        let item = try await entry(f, d(9), d(10))
-        f.vm.select(item, projects: [f.project])
-        let detail = try #require(f.vm.detail)
-        detail.note = "  fixed bug "
-        detail.end = d(10, 30)
-        await detail.save()
-        #expect(f.vm.detail == nil)
-        let saved = try await f.repo.entries(in: f.geometry.day)
-        #expect(saved[0].note == "fixed bug")
-        #expect(saved[0].end == d(10, 30))
-    }
-
-    @Test func detailRejectsEmptyRange() async throws {
-        let f = try await makeFixture()
-        let item = try await entry(f, d(9), d(10))
-        f.vm.select(item, projects: [f.project])
-        let detail = try #require(f.vm.detail)
-        detail.end = d(9)
-        #expect(!detail.canSave)
-        await detail.save()
-        #expect(detail.errorMessage != nil)
-    }
-
     @Test func deleteRemovesAndDeselects() async throws {
         let f = try await makeFixture()
         let item = try await entry(f, d(9), d(10))
-        f.vm.select(item, projects: [f.project])
+        f.vm.select(item)
         await f.vm.delete(item)
         #expect(try await f.repo.entries(in: f.geometry.day).isEmpty)
         #expect(f.vm.selectedEntryId == nil)

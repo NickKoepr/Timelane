@@ -17,16 +17,30 @@ struct TimeEntryBlock: View {
         "\(range.start.formatted(date: .omitted, time: .shortened)) – \(range.end.formatted(date: .omitted, time: .shortened))"
     }
 
+    private var primaryText: String {
+        entry.title ?? project?.name ?? "Unknown project"
+    }
+
+    /// Lines under the first one, in priority order; only as many as fit are shown.
+    private var detailLines: [String] {
+        var lines: [String] = []
+        if entry.title != nil { lines.append(project?.name ?? "Unknown project") }
+        lines.append("\(timeText) · \(DurationFormatter.short(duration))")
+        if let note = entry.note, !note.isEmpty { lines.append(note) }
+        return lines
+    }
+
+    private var tooltip: String {
+        ([entry.title, project?.name ?? "Unknown project", timeText, entry.note].compactMap { $0 }).joined(separator: "\n")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             if height > 18 {
-                Text(project?.name ?? "Unknown project").font(.caption.weight(.semibold)).lineLimit(1)
+                Text(primaryText).font(.caption.weight(.semibold)).lineLimit(1)
             }
-            if height > 34 {
-                Text("\(timeText) · \(DurationFormatter.short(duration))").font(.caption2).lineLimit(1)
-            }
-            if height > 50, let note = entry.note, !note.isEmpty {
-                Text(note).font(.caption2).lineLimit(2).opacity(0.85)
+            ForEach(Array(detailLines.prefix(max(0, Int((height - 18) / 15))).enumerated()), id: \.offset) { _, line in
+                Text(line).font(.caption2).lineLimit(1).opacity(0.9)
             }
         }
         .foregroundStyle(.white)
@@ -41,9 +55,9 @@ struct TimeEntryBlock: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
         .gesture(dragGesture(.move))
-        .help("\(project?.name ?? "Unknown project")\n\(timeText)")
+        .help(tooltip)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(project?.name ?? "Unknown project"), \(timeText)")
+        .accessibilityLabel("\(primaryText), \(timeText)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 

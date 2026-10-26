@@ -32,14 +32,6 @@ struct TimeEntryLane: View {
             onDrag: { mode, dy in editing.dragChanged(entry, mode: mode, translationY: dy, geometry: geometry) },
             onDragEnd: { Task { await editing.dragEnded(entry) } })
         .offset(y: frame.y)
-        .popover(isPresented: detailBinding(for: entry), arrowEdge: .leading) {
-            if let detail = editing.detail { TimeEntryDetailPopover(viewModel: detail) }
-        }
-    }
-
-    private func detailBinding(for entry: TimeEntry) -> Binding<Bool> {
-        Binding(get: { viewModel.entryEditing.isShowingDetail(for: entry) },
-                set: { if !$0 { viewModel.entryEditing.closeDetail() } })
     }
 
     private var selectionDrag: some Gesture {

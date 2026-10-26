@@ -9,7 +9,8 @@ final class TimelineViewModel {
     private(set) var projects: [Project] = []
     private(set) var now: Date
     private(set) var selection: TimelineSelection?
-    private(set) var picker: ProjectPickerViewModel?
+    /// The open time entry window (new or edit); presented as a sheet.
+    private(set) var form: TimeEntryFormViewModel?
 
     private var sessions: [AppSession] = []
     private let timeEntries: any TimeEntryRepository
@@ -63,33 +64,41 @@ final class TimelineViewModel {
                                       current: geometry.snapped(geometry.date(forY: currentY)))
     }
 
-    /// Drag released: open the project picker, or discard a too-small selection.
+    /// Drag released: open the time entry window, or discard a too-small selection.
     func finishSelection() {
         guard let selection, selection.duration >= Self.minimumSelection else {
             cancelRegistration()
             return
         }
-        openPicker(for: selection.range)
+        openForm(.new(range: selection.range, projectId: defaultProjectId))
     }
 
-    /// Click on an app session: assign the whole session to a project.
+    /// Click on an app session: open the window with the whole session's range.
     func assign(_ block: AppSessionBlockModel) {
         selection = TimelineSelection(range: block.range)
-        openPicker(for: block.range)
+        openForm(.new(range: block.range, projectId: defaultProjectId))
     }
 
+    /// Closes the window and clears the selection overlay.
     func cancelRegistration() {
-        picker = nil
+        form = nil
         selection = nil
     }
 
-    private func openPicker(for range: DateRange) {
-        picker = ProjectPickerViewModel(
-            range: range, projects: projects, lastProjectId: lastProject.projectId,
-            projectRepository: projectRepository, editor: editor,
+    /// Last used project if it can still be chosen, else the first one.
+    private var defaultProjectId: Int64? {
+        let open = projects.filter { !$0.isArchived }
+        return open.first { $0.id == lastProject.projectId }?.id ?? open.first?.id
+    }
+
+    private func openForm(_ values: TimeEntryForm) {
+        form = TimeEntryFormViewModel(
+            form: values, projects: projects, projectRepository: projectRepository, editor: editor,
             onFinish: { [weak self] projectId in
-                if let projectId { self?.lastProject.projectId = projectId }
-                self?.cancelRegistration()
+                guard let self else { return }
+                if let projectId { lastProject.projectId = projectId }
+                entryEditing.deselect()
+                cancelRegistration()
             })
     }
 
@@ -108,7 +117,12 @@ final class TimelineViewModel {
 
     // MARK: Entries
 
-    func select(_ entry: TimeEntry) { entryEditing.select(entry, projects: projects) }
+    /// Click on an entry: select it and open the window in edit mode.
+    func select(_ entry: TimeEntry) {
+        selection = nil
+        entryEditing.select(entry)
+        openForm(.editing(entry))
+    }
 
     func deleteSelectedEntry() {
         guard let id = entryEditing.selectedEntryId, let entry = entries.first(where: { $0.id == id }) else { return }

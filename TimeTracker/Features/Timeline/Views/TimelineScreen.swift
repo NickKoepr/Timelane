@@ -34,13 +34,16 @@ struct TimelineScreen: View {
             scrollPosition.scrollTo(y: viewModel.geometry.y(for: viewModel.initialScrollDate))
             await viewModel.task()
         }
+        .sheet(item: Binding(get: { viewModel.form }, set: { if $0 == nil { viewModel.cancelRegistration() } })) {
+            TimeEntryFormSheet(viewModel: $0)
+        }
         .errorAlert(Binding(get: { viewModel.entryEditing.errorMessage },
                            set: { viewModel.entryEditing.errorMessage = $0 }))
         .navigationTitle("Timeline")
     }
 
     private func deleteSelection() -> KeyPress.Result {
-        guard viewModel.entryEditing.selectedEntryId != nil, viewModel.entryEditing.detail == nil else { return .ignored }
+        guard viewModel.entryEditing.selectedEntryId != nil, viewModel.form == nil else { return .ignored }
         viewModel.deleteSelectedEntry()
         return .handled
     }
