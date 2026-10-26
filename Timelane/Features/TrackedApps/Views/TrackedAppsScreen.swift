@@ -49,6 +49,7 @@ struct TrackedAppsScreen: View {
             .safeAreaInset(edge: .bottom) {
                 Text("Only these apps are recorded. Removing an app stops recording it; time already recorded stays on the timeline.")
                     .font(.caption).foregroundStyle(.secondary)
+                    .lineLimit(3).fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(12)
             }
         }

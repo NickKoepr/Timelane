@@ -11,6 +11,7 @@ struct TimelaneApp: App {
                 .environment(environment)
         }
         .defaultSize(width: 900, height: 750)
+        .windowResizability(.contentMinSize)
 
         // Same clock as the app icon (template image from Tools/generate-app-icon.swift).
         MenuBarExtra("Timelane", image: "MenuBarIcon") {

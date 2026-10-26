@@ -10,19 +10,24 @@ struct RootView: View {
                 Label(item.title, systemImage: item.systemImage)
                     .tag(item)
             }
-            .navigationSplitViewColumnWidth(min: 160, ideal: 180)
+            .navigationSplitViewColumnWidth(min: WindowMetrics.sidebarMinimumWidth, ideal: 180)
         } detail: {
-            switch selection ?? .timeline {
-            case .timeline: TimelineScreen(environment: environment, onShowTrackedApps: { selection = .trackedApps })
-            case .projects: ProjectsScreen(environment: environment)
-            case .trackedApps: TrackedAppsScreen(environment: environment)
-            }
+            detail.navigationSplitViewColumnWidth(min: WindowMetrics.detailMinimumWidth, ideal: 720)
         }
+        .frame(minWidth: WindowMetrics.minimumSize.width, minHeight: WindowMetrics.minimumSize.height)
         .background { sidebarShortcuts }
         .onChange(of: environment.requestedSidebarItem, initial: true) {
             guard let item = environment.requestedSidebarItem else { return }
             selection = item
             environment.requestedSidebarItem = nil
+        }
+    }
+
+    @ViewBuilder private var detail: some View {
+        switch selection ?? .timeline {
+        case .timeline: TimelineScreen(environment: environment, onShowTrackedApps: { selection = .trackedApps })
+        case .projects: ProjectsScreen(environment: environment)
+        case .trackedApps: TrackedAppsScreen(environment: environment)
         }
     }
 

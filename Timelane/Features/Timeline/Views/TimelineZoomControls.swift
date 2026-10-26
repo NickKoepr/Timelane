@@ -6,11 +6,13 @@ typealias ZoomChange = (TimelineZoomState) -> Void
 struct TimelineZoomControls: View {
     let zoomState: TimelineZoomState
     let apply: (ZoomChange) -> Void
+    /// False when the owner registers the shortcuts once via `TimelineZoomShortcuts` (e.g. inside `ViewThatFits`).
+    var registersShortcuts = true
 
     var body: some View {
         HStack(spacing: 4) {
             Button { apply { $0.zoomOut() } } label: { Image(systemName: "minus.magnifyingglass") }
-                .keyboardShortcut("-", modifiers: .command)
+                .keyboardShortcutIf(registersShortcuts, "-")
                 .disabled(!zoomState.canZoomOut)
                 .help("Zoom out (⌘−)")
             Menu(zoomState.zoom.displayName) {
@@ -22,22 +24,10 @@ struct TimelineZoomControls: View {
             .fixedSize()
             .help("Timeline scale: time per 80 pt")
             Button { apply { $0.zoomIn() } } label: { Image(systemName: "plus.magnifyingglass") }
-                .keyboardShortcut("+", modifiers: .command)
+                .keyboardShortcutIf(registersShortcuts, "+")
                 .disabled(!zoomState.canZoomIn)
                 .help("Zoom in (⌘+)")
-            hiddenShortcuts
+            if registersShortcuts { TimelineZoomShortcuts(apply: apply) }
         }
-    }
-
-    /// ⌘= (same key as ⌘+ on most layouts) and ⌘0 (back to the overview).
-    private var hiddenShortcuts: some View {
-        Group {
-            Button("Zoom in") { apply { $0.zoomIn() } }.keyboardShortcut("=", modifiers: .command)
-            Button("Reset zoom") { apply { $0.set(.hour) } }.keyboardShortcut("0", modifiers: .command)
-        }
-        .frame(width: 0, height: 0)
-        .opacity(0)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 }

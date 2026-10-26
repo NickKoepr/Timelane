@@ -8,15 +8,18 @@ struct ProjectRow: View {
             Circle()
                 .fill(total.project.color)
                 .frame(width: 12, height: 12)
-            Text(total.project.name)
+                .fixedSize()
+            Text(total.project.name).lineLimit(1).truncationMode(.tail)
             if total.project.isArchived {
                 Text("Archived")
                     .font(.caption)
                     .foregroundStyle(.secondary)
+                    .lineLimit(1).fixedSize()
             }
-            Spacer()
+            Spacer(minLength: 8)
             Text(DurationFormatter.hoursMinutes(total.totalSeconds))
                 .font(.body.monospacedDigit())
+                .lineLimit(1).fixedSize()
                 .foregroundStyle(total.totalSeconds > 0 ? .primary : .secondary)
         }
         .opacity(total.project.isArchived ? 0.6 : 1)

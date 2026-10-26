@@ -12,12 +12,14 @@ struct MenuBarDayBar: View {
                     .help("Previous day")
                 Button("Today") { viewModel.goToToday() }
                     .disabled(viewModel.isToday)
+                    .fixedSize()
                 Button { viewModel.goToNextDay() } label: { Image(systemName: "chevron.right") }
                     .help("Next day")
                 Text(viewModel.day.start.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))
                     .font(.headline)
+                    .lineLimit(1).fixedSize()
                     .padding(.leading, 4)
-                Spacer()
+                Spacer(minLength: 4)
                 TimelineZoomControls(zoomState: viewModel.zoomState, apply: changeZoom)
             }
             HStack {
@@ -36,5 +38,6 @@ struct MenuBarDayBar: View {
             Text(DurationFormatter.hoursMinutes(seconds)).fontWeight(.semibold)
         }
         .font(.callout.monospacedDigit())
+        .lineLimit(1).fixedSize()
     }
 }

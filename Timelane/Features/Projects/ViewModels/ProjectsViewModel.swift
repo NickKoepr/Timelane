@@ -33,6 +33,7 @@ final class ProjectsViewModel {
     var monthTotal: TimeInterval { rows.reduce(0) { $0 + $1.totalSeconds } }
     var isCurrentMonth: Bool { month == .month(of: now(), calendar: calendar) }
     var monthTitle: String { month.start.formatted(.dateTime.month(.wide).year()) }
+    var shortMonthTitle: String { month.start.formatted(.dateTime.month(.abbreviated).year()) }
 
     func goToPreviousMonth() { month = month.shiftedMonths(-1, calendar: calendar) }
     func goToNextMonth() { month = month.shiftedMonths(1, calendar: calendar) }

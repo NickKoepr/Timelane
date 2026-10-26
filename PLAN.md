@@ -541,6 +541,8 @@ The structure above is chosen so these can be added without restructuring:
 
 ---
 
+- Responsive bars (v1.9): `DayNavigationBar` and `MonthNavigationBar` use `ViewThatFits` with wide/medium/narrow variants, single-line fixed-size texts, and shortcuts registered once in hidden `*Shortcuts` views. Minimum window size lives in `App/WindowMetrics.swift` (700 × 520, detail column ≥ 480).
+
 ## 12. Definition of done (v1)
 
 - [ ] App runs on macOS, stays active in the menu bar when the window is closed, and records app sessions (paused on idle/sleep/lock).

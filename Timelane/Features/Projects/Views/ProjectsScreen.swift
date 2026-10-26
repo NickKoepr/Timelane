@@ -14,6 +14,7 @@ struct ProjectsScreen: View {
         VStack(spacing: 0) {
             MonthNavigationBar(
                 title: viewModel.monthTitle,
+                shortTitle: viewModel.shortMonthTitle,
                 isCurrentMonth: viewModel.isCurrentMonth,
                 previous: viewModel.goToPreviousMonth,
                 next: viewModel.goToNextMonth,

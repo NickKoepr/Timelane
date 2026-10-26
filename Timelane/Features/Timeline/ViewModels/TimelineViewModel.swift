@@ -49,7 +49,8 @@ final class TimelineViewModel {
 
     var geometry: TimelineGeometry { TimelineGeometry(day: day, pointsPerHour: zoomState.pointsPerHour) }
     var isToday: Bool { day.contains(clock()) }
-    var title: String { day.start.formatted(.dateTime.weekday(.wide).day().month(.wide).year()) }
+    var title: String { DayTitleFormatter(calendar: calendar).full(day.start) }
+    var shortTitle: String { DayTitleFormatter(calendar: calendar).short(day.start) }
     var registeredTotal: TimeInterval { DayTotals.registered(entries: entries, in: day) }
     var trackedTotal: TimeInterval { DayTotals.tracked(sessions: sessions, in: day, now: now) }
     var hasActivity: Bool { !sessionBlocks.isEmpty || !entries.isEmpty }
