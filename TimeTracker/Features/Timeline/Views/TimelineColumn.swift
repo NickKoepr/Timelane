@@ -27,7 +27,7 @@ struct TimelineColumn: View {
                 .onTapGesture { viewModel.entryEditing.deselect() }
                 .gesture(SelectionDragGesture(viewModel: viewModel))
             HStack(spacing: TimelineMetrics.laneSpacing) {
-                AppSessionLane(blocks: viewModel.sessionBlocks, geometry: geometry,
+                AppSessionLane(width: appWidth, blocks: viewModel.sessionBlocks, geometry: geometry,
                                selectionDrag: SelectionDragGesture(viewModel: viewModel),
                                onSelect: viewModel.assign)
                     .frame(width: appWidth)

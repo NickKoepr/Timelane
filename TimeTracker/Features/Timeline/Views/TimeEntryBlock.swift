@@ -36,8 +36,8 @@ struct TimeEntryBlock: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            if height > 18 {
-                Text(primaryText).font(.caption.weight(.semibold)).lineLimit(1)
+            if height >= 15 {
+                Text(primaryText).font(height >= 20 ? .caption.weight(.semibold) : .caption2.weight(.semibold)).lineLimit(1)
             }
             ForEach(Array(detailLines.prefix(max(0, Int((height - 18) / 15))).enumerated()), id: \.offset) { _, line in
                 Text(line).font(.caption2).lineLimit(1).opacity(0.9)

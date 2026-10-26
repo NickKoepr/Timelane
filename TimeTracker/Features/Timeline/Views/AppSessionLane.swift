@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AppSessionLane: View {
+    let width: CGFloat
     let blocks: [AppSessionBlockModel]
     let geometry: TimelineGeometry
     let selectionDrag: SelectionDragGesture
@@ -11,7 +12,7 @@ struct AppSessionLane: View {
             Color.clear
             ForEach(blocks) { block in
                 let frame = geometry.frame(for: block.start, end: block.end)
-                AppSessionBlock(block: block, height: max(frame.height - 1, 2),
+                AppSessionBlock(block: block, height: max(frame.height - 1, 2), width: width,
                                 selectionDrag: selectionDrag, onSelect: onSelect)
                     .offset(y: frame.y)
             }
