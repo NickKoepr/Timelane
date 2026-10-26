@@ -8,7 +8,8 @@ struct TimelineScreen: View {
         _viewModel = State(initialValue: TimelineViewModel(
             timeEntries: environment.timeEntries,
             appSessions: environment.appSessions,
-            projects: environment.projects))
+            projects: environment.projects,
+            editor: environment.timeEntryEditor))
     }
 
     var body: some View {

@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 
 @MainActor @Observable
@@ -7,19 +8,26 @@ final class TimelineViewModel {
     private(set) var entries: [TimeEntry] = []
     private(set) var projects: [Project] = []
     private(set) var now: Date
+    private(set) var selection: TimelineSelection?
+    private(set) var picker: ProjectPickerViewModel?
 
     private var sessions: [AppSession] = []
     private let timeEntries: any TimeEntryRepository
     private let appSessions: any AppSessionRepository
     private let projectRepository: any ProjectRepository
+    private let editor: TimeEntryEditor
+    private let lastProject: LastProjectStore
     private let calendar: Calendar
     private let clock: () -> Date
 
     init(timeEntries: any TimeEntryRepository, appSessions: any AppSessionRepository,
-         projects: any ProjectRepository, calendar: Calendar = .current, clock: @escaping () -> Date = { .now }) {
+         projects: any ProjectRepository, editor: TimeEntryEditor, lastProject: LastProjectStore = LastProjectStore(),
+         calendar: Calendar = .current, clock: @escaping () -> Date = { .now }) {
         self.timeEntries = timeEntries
         self.appSessions = appSessions
         self.projectRepository = projects
+        self.editor = editor
+        self.lastProject = lastProject
         self.calendar = calendar
         self.clock = clock
         self.now = clock()
@@ -42,12 +50,53 @@ final class TimelineViewModel {
         isToday ? max(clock().addingTimeInterval(-3600), day.start) : day.start.addingTimeInterval(8 * 3600)
     }
 
+    // MARK: Registering time
+
+    static let minimumSelection: TimeInterval = 5 * 60
+
+    /// Called continuously while dragging over the entry lane.
+    func updateSelection(startY: CGFloat, currentY: CGFloat) {
+        let geometry = geometry
+        selection = TimelineSelection(anchor: geometry.snapped(geometry.date(forY: startY)),
+                                      current: geometry.snapped(geometry.date(forY: currentY)))
+    }
+
+    /// Drag released: open the project picker, or discard a too-small selection.
+    func finishSelection() {
+        guard let selection, selection.duration >= Self.minimumSelection else {
+            cancelRegistration()
+            return
+        }
+        openPicker(for: selection.range)
+    }
+
+    /// Click on an app session: assign the whole session to a project.
+    func assign(_ block: AppSessionBlockModel) {
+        selection = TimelineSelection(range: block.range)
+        openPicker(for: block.range)
+    }
+
+    func cancelRegistration() {
+        picker = nil
+        selection = nil
+    }
+
+    private func openPicker(for range: DateRange) {
+        picker = ProjectPickerViewModel(
+            range: range, projects: projects, lastProjectId: lastProject.projectId,
+            projectRepository: projectRepository, editor: editor,
+            onFinish: { [weak self] projectId in
+                if let projectId { self?.lastProject.projectId = projectId }
+                self?.cancelRegistration()
+            })
+    }
+
     // MARK: Navigation
 
-    func goToPreviousDay() { day = day.shiftedDays(-1, calendar: calendar) }
-    func goToNextDay() { day = day.shiftedDays(1, calendar: calendar) }
-    func goToToday() { day = .day(of: clock(), calendar: calendar) }
-    func go(to date: Date) { day = .day(of: date, calendar: calendar) }
+    func goToPreviousDay() { cancelRegistration(); day = day.shiftedDays(-1, calendar: calendar) }
+    func goToNextDay() { cancelRegistration(); day = day.shiftedDays(1, calendar: calendar) }
+    func goToToday() { cancelRegistration(); day = .day(of: clock(), calendar: calendar) }
+    func go(to date: Date) { cancelRegistration(); day = .day(of: date, calendar: calendar) }
 
     // MARK: Observation
 

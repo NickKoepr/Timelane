@@ -12,10 +12,9 @@ struct TimelineColumn: View {
             ZStack(alignment: .topLeading) {
                 HourGridView(geometry: geometry)
                 HStack(spacing: TimelineMetrics.laneSpacing) {
-                    AppSessionLane(blocks: viewModel.sessionBlocks, geometry: geometry)
+                    AppSessionLane(blocks: viewModel.sessionBlocks, geometry: geometry, onSelect: viewModel.assign)
                         .frame(width: appWidth)
-                    TimeEntryLane(entries: viewModel.entries, geometry: geometry,
-                                  project: { viewModel.project(id: $0) })
+                    TimeEntryLane(viewModel: viewModel)
                 }
                 .padding(.leading, TimelineMetrics.labelWidth + TimelineMetrics.laneInset)
                 .padding(.trailing, TimelineMetrics.laneInset)
