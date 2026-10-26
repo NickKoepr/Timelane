@@ -15,6 +15,7 @@ final class TimelineViewModel {
     private let timeEntries: any TimeEntryRepository
     private let appSessions: any AppSessionRepository
     private let projectRepository: any ProjectRepository
+    let entryEditing: EntryEditingViewModel
     private let editor: TimeEntryEditor
     private let lastProject: LastProjectStore
     private let calendar: Calendar
@@ -27,6 +28,7 @@ final class TimelineViewModel {
         self.appSessions = appSessions
         self.projectRepository = projects
         self.editor = editor
+        self.entryEditing = EntryEditingViewModel(editor: editor)
         self.lastProject = lastProject
         self.calendar = calendar
         self.clock = clock
@@ -93,10 +95,25 @@ final class TimelineViewModel {
 
     // MARK: Navigation
 
-    func goToPreviousDay() { cancelRegistration(); day = day.shiftedDays(-1, calendar: calendar) }
-    func goToNextDay() { cancelRegistration(); day = day.shiftedDays(1, calendar: calendar) }
-    func goToToday() { cancelRegistration(); day = .day(of: clock(), calendar: calendar) }
-    func go(to date: Date) { cancelRegistration(); day = .day(of: date, calendar: calendar) }
+    func goToPreviousDay() { show(day.shiftedDays(-1, calendar: calendar)) }
+    func goToNextDay() { show(day.shiftedDays(1, calendar: calendar)) }
+    func goToToday() { show(.day(of: clock(), calendar: calendar)) }
+    func go(to date: Date) { show(.day(of: date, calendar: calendar)) }
+
+    private func show(_ range: DateRange) {
+        cancelRegistration()
+        entryEditing.reset()
+        day = range
+    }
+
+    // MARK: Entries
+
+    func select(_ entry: TimeEntry) { entryEditing.select(entry, projects: projects) }
+
+    func deleteSelectedEntry() {
+        guard let id = entryEditing.selectedEntryId, let entry = entries.first(where: { $0.id == id }) else { return }
+        Task { await entryEditing.delete(entry) }
+    }
 
     // MARK: Observation
 

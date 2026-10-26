@@ -3,6 +3,7 @@ import SwiftUI
 struct TimelineScreen: View {
     @State private var viewModel: TimelineViewModel
     @State private var scrollPosition = ScrollPosition(edge: .top)
+    @FocusState private var timelineFocused: Bool
 
     init(environment: AppEnvironment) {
         _viewModel = State(initialValue: TimelineViewModel(
@@ -22,12 +23,26 @@ struct TimelineScreen: View {
                     .overlay(alignment: .top) { emptyState }
             }
             .scrollPosition($scrollPosition)
+            .focusable()
+            .focusEffectDisabled()
+            .focused($timelineFocused)
+            .onKeyPress(.delete) { deleteSelection() }
+            .onKeyPress(.deleteForward) { deleteSelection() }
+            .onChange(of: viewModel.entryEditing.selectedEntryId) { _, id in if id != nil { timelineFocused = true } }
         }
         .task(id: viewModel.day) {
             scrollPosition.scrollTo(y: viewModel.geometry.y(for: viewModel.initialScrollDate))
             await viewModel.task()
         }
+        .errorAlert(Binding(get: { viewModel.entryEditing.errorMessage },
+                           set: { viewModel.entryEditing.errorMessage = $0 }))
         .navigationTitle("Timeline")
+    }
+
+    private func deleteSelection() -> KeyPress.Result {
+        guard viewModel.entryEditing.selectedEntryId != nil, viewModel.entryEditing.detail == nil else { return .ignored }
+        viewModel.deleteSelectedEntry()
+        return .handled
     }
 
     @ViewBuilder private var emptyState: some View {

@@ -9,16 +9,37 @@ struct TimeEntryLane: View {
         ZStack(alignment: .topLeading) {
             Color.clear
                 .contentShape(Rectangle())
+                .onTapGesture { viewModel.entryEditing.deselect() }
                 .gesture(selectionDrag)
             ForEach(viewModel.entries) { entry in
-                let frame = geometry.frame(for: entry.start, end: entry.end)
-                TimeEntryBlock(entry: entry, project: viewModel.project(id: entry.projectId),
-                               height: max(frame.height - 1, 2))
-                    .offset(y: frame.y)
+                block(for: entry, geometry: geometry)
             }
             SelectionOverlay(viewModel: viewModel)
         }
         .frame(height: geometry.totalHeight)
+    }
+
+    private func block(for entry: TimeEntry, geometry: TimelineGeometry) -> some View {
+        let editing = viewModel.entryEditing
+        let range = editing.displayRange(for: entry)
+        let frame = geometry.frame(for: range.start, end: range.end)
+        return TimeEntryBlock(
+            entry: entry, range: range, project: viewModel.project(id: entry.projectId),
+            height: max(frame.height - 1, 2),
+            isSelected: editing.selectedEntryId == entry.id,
+            canDrag: editing.canDrag(entry, in: geometry),
+            onTap: { viewModel.select(entry) },
+            onDrag: { mode, dy in editing.dragChanged(entry, mode: mode, translationY: dy, geometry: geometry) },
+            onDragEnd: { Task { await editing.dragEnded(entry) } })
+        .offset(y: frame.y)
+        .popover(isPresented: detailBinding(for: entry), arrowEdge: .leading) {
+            if let detail = editing.detail { TimeEntryDetailPopover(viewModel: detail) }
+        }
+    }
+
+    private func detailBinding(for entry: TimeEntry) -> Binding<Bool> {
+        Binding(get: { viewModel.entryEditing.isShowingDetail(for: entry) },
+                set: { if !$0 { viewModel.entryEditing.closeDetail() } })
     }
 
     private var selectionDrag: some Gesture {
