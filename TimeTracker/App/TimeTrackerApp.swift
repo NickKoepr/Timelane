@@ -12,7 +12,8 @@ struct TimeTrackerApp: App {
         }
         .defaultSize(width: 900, height: 750)
 
-        MenuBarExtra("TimeTracker", systemImage: "clock") {
+        // Same clock as the app icon (template image from Tools/generate-app-icon.swift).
+        MenuBarExtra("TimeTracker", image: "MenuBarIcon") {
             MenuBarContentView(environment: environment)
                 .environment(environment)
         }

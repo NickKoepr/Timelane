@@ -1,6 +1,7 @@
 #!/usr/bin/env swift
-// Generates the TimeTracker app icon at every macOS size.
-// Usage: swift Tools/generate-app-icon.swift <output-dir>
+// Generates the TimeTracker app icon at every macOS size, and optionally the menu bar icon
+// (the same clock as a template image, so the menu bar and the app icon match).
+// Usage: swift Tools/generate-app-icon.swift <appiconset-dir> [<menubar-imageset-dir>]
 import AppKit
 
 let canvas: CGFloat = 1024
@@ -28,11 +29,15 @@ func draw(in ctx: CGContext) {
     ctx.fillPath()
     ctx.restoreGState()
 
-    // Clock ring.
+    drawClock(in: ctx, color: color(clockHex))
+}
+
+/// The clock alone, centred on (512, 512) with an outer radius of 280.
+func drawClock(in ctx: CGContext, color clock: CGColor) {
     let center = CGPoint(x: 512, y: 512)
     let ringWidth: CGFloat = 60
     let outerRadius: CGFloat = 280
-    ctx.setStrokeColor(color(clockHex))
+    ctx.setStrokeColor(clock)
     ctx.setLineWidth(ringWidth)
     ctx.strokeEllipse(in: CGRect(x: center.x - outerRadius + ringWidth / 2, y: center.y - outerRadius + ringWidth / 2,
                                  width: (outerRadius - ringWidth / 2) * 2, height: (outerRadius - ringWidth / 2) * 2))
@@ -47,29 +52,55 @@ func draw(in ctx: CGContext) {
     }
     hand(angle: .pi / 2 + .pi / 3, length: 125, width: 50)  // hour hand towards 10
     hand(angle: .pi / 2 - .pi / 3, length: 170, width: 44)  // minute hand towards 2
-    ctx.setFillColor(color(clockHex))
+    ctx.setFillColor(clock)
     // Large enough to cover the joint of both hands, so the centre reads as one smooth dot.
     ctx.fillEllipse(in: CGRect(x: center.x - 42, y: center.y - 42, width: 84, height: 84))
 }
 
-func render(pixels: Int) -> Data {
+func render(pixels: Int, drawing: (CGContext) -> Void) -> Data {
     let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels, bitsPerSample: 8,
                                samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
                                bytesPerRow: 0, bitsPerPixel: 0)!
     let context = NSGraphicsContext(bitmapImageRep: rep)!
     context.cgContext.interpolationQuality = .high
-    context.cgContext.scaleBy(x: CGFloat(pixels) / canvas, y: CGFloat(pixels) / canvas)
-    draw(in: context.cgContext)
+    drawing(context.cgContext)
     return rep.representation(using: .png, properties: [:])!
 }
 
-guard CommandLine.arguments.count == 2 else {
-    FileHandle.standardError.write(Data("usage: generate-app-icon.swift <output-dir>\n".utf8))
+/// App icon at `pixels` x `pixels`.
+func appIcon(pixels: Int) -> Data {
+    render(pixels: pixels) { ctx in
+        ctx.scaleBy(x: CGFloat(pixels) / canvas, y: CGFloat(pixels) / canvas)
+        draw(in: ctx)
+    }
+}
+
+/// Menu bar template image: the clock in black on transparent, 16 of 18 points tall.
+func menuBarIcon(pixels: Int) -> Data {
+    render(pixels: pixels) { ctx in
+        let scale = CGFloat(pixels) * 16 / 18 / 560
+        ctx.translateBy(x: CGFloat(pixels) / 2, y: CGFloat(pixels) / 2)
+        ctx.scaleBy(x: scale, y: scale)
+        ctx.translateBy(x: -512, y: -512)
+        drawClock(in: ctx, color: color(0x000000))
+    }
+}
+
+guard (2...3).contains(CommandLine.arguments.count) else {
+    FileHandle.standardError.write(Data("usage: generate-app-icon.swift <appiconset-dir> [<menubar-imageset-dir>]\n".utf8))
     exit(1)
 }
 let output = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
 try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
 for size in sizes {
-    try render(pixels: size).write(to: output.appendingPathComponent("icon_\(size).png"))
+    try appIcon(pixels: size).write(to: output.appendingPathComponent("icon_\(size).png"))
 }
 print("Wrote \(sizes.count) icons to \(output.path)")
+
+if CommandLine.arguments.count == 3 {
+    let menuBar = URL(fileURLWithPath: CommandLine.arguments[2], isDirectory: true)
+    try FileManager.default.createDirectory(at: menuBar, withIntermediateDirectories: true)
+    try menuBarIcon(pixels: 18).write(to: menuBar.appendingPathComponent("menubar_18.png"))
+    try menuBarIcon(pixels: 36).write(to: menuBar.appendingPathComponent("menubar_36.png"))
+    print("Wrote menu bar icon to \(menuBar.path)")
+}
