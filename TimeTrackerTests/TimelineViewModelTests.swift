@@ -213,6 +213,21 @@ struct TimelineRegistrationTests {
         #expect(try await entries.entries(in: vm.day).isEmpty)
     }
 
+    @Test func contextMenuDeleteRemovesTheEntryAndClearsSelection() async throws {
+        let (vm, entries, project) = try await makeViewModel()
+        try await entries.save([TimeEntry(projectId: project.id!, start: TestCalendar.date(2026, 11, 3, 9),
+                                          end: TestCalendar.date(2026, 11, 3, 10))], deleting: [])
+        let entry = try #require(try await entries.entries(in: vm.day).first)
+        vm.entryEditing.select(entry)
+        vm.delete(entry)
+        for _ in 0..<100 {
+            if try await entries.entries(in: vm.day).isEmpty { break }
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(try await entries.entries(in: vm.day).isEmpty)
+        #expect(vm.entryEditing.selectedEntryId == nil)
+    }
+
     @Test func inlineProjectCreationSelectsTheNewProject() async throws {
         let (vm, entries, _) = try await makeViewModel()
         vm.assign(AppSessionBlockModel(bundleIdentifier: "x", appName: "X",
