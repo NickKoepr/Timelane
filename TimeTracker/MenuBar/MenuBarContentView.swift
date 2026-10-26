@@ -30,7 +30,7 @@ struct MenuBarContentView: View {
         .overlay {
             if let form = timeline.form {
                 MenuBarFormPopup(viewModel: form, onManageProjects: { openMainWindow(.projects) })
-                    .transition(.opacity.combined(with: .move(edge: .top)))
+                    .transition(.opacity)
             }
         }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: timeline.form?.id)
