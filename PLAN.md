@@ -156,7 +156,10 @@ TimeTracker/
 │           └── ColorPickerRow.swift
 │
 ├── MenuBar/
-│   └── MenuBarContentView.swift      // current app, today's total, "Open TimeTracker", Quit
+│   ├── MenuBarContentView.swift      // status line + compact day bar + timeline (or inline form) + footer
+│   ├── MenuBarViewModel.swift        // own TimelineViewModel (own zoom key), "today on open"
+│   ├── MenuBarStatusLine / MenuBarDayBar / MenuBarFooter / MenuBarFormView / MenuBarErrorBanner
+│   └── PanelOpenObserver.swift       // NSView helper: fires on every window key / visible
 │
 └── Assets.xcassets
 
@@ -306,8 +309,14 @@ Translate all sources into one `ActivityEvent` enum and handle them in a single 
 
 ### 5.2 Keeping the app alive
 - `AppDelegate.applicationShouldTerminateAfterLastWindowClosed` → `false`.
-- Add a `MenuBarExtra` (`MenuBarContentView`) that shows: current app being tracked, today's registered vs tracked total, "Open TimeTracker" (`openWindow`), "Quit".
+- Add a `MenuBarExtra` (`.window` style, 380 × 600 pt, `MenuBarContentView`). Since v1.5 it shows the live status line plus the same timeline as the main window (see §5.3).
 - Leave "launch at login" for later (see §10) but structure settings so it can be added via `SMAppService.mainApp`.
+
+### 5.3 Menu bar timeline (v1.5)
+- The panel reuses `TimelineScrollArea` (scroll view, `TimelineColumn`, zoom, delete key) with its own `TimelineViewModel` (same database, so both stay in sync) created by `MenuBarViewModel.make`. Zoom is remembered under `"menuBarTimelineZoomLevel"` (default 30 min) via `TimelineZoomState(key:defaultLevel:)`.
+- Registering uses an inline form: while `timeline.form != nil`, `MenuBarFormView` (wrapping `TimeEntryFormContent`, the content of the main window's `TimeEntryFormSheet`) covers the timeline, which stays alive underneath so its scroll position survives. Errors from move/resize/delete show in `MenuBarErrorBanner` instead of an alert.
+- No project/tracked-app management: the timeline view model is created with `allowsCreatingProjects: false` (no "New project" row, Return without a match does nothing). "Open TimeTracker to add projects" and the no-tracked-apps banner open the main window on Projects / Tracked Apps through `AppEnvironment.requestedSidebarItem`, consumed by `RootView`.
+- "Today on open": `onAppear`/`task` of MenuBarExtra content run once, so `PanelOpenObserver` (an `NSViewRepresentable`) observes `didBecomeKey` and `didChangeOcclusionState` of its window and calls `MenuBarViewModel.panelDidOpen()`: go to today and bump `scrollTrigger`, which makes `TimelineScrollArea` scroll to now − 1 h. An open form is left alone.
 
 ---
 
