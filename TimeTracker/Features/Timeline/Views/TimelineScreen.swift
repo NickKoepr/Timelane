@@ -2,10 +2,7 @@ import SwiftUI
 
 struct TimelineScreen: View {
     @State private var viewModel: TimelineViewModel
-    @State private var scrollPosition = ScrollPosition(edge: .top)
     @State private var anchor = ZoomScrollAnchor()
-    @State private var hover = TimelineHoverState()
-    @FocusState private var timelineFocused: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let onShowTrackedApps: () -> Void
@@ -25,23 +22,7 @@ struct TimelineScreen: View {
             DayNavigationBar(viewModel: viewModel, changeZoom: changeZoom)
             Divider()
             if viewModel.hasNoTrackedApps { NoTrackedAppsBanner(action: onShowTrackedApps) }
-            ScrollView {
-                TimelineColumn(viewModel: viewModel, hover: hover, anchor: anchor)
-                    .padding(.bottom, 20)
-                    .overlay(alignment: .top) { emptyState }
-            }
-            .scrollPosition($scrollPosition)
-            .timelineZoom(viewModel: viewModel, scrollPosition: $scrollPosition, anchor: anchor, apply: changeZoom)
-            .focusable()
-            .focusEffectDisabled()
-            .focused($timelineFocused)
-            .onKeyPress(.delete) { deleteSelection() }
-            .onKeyPress(.deleteForward) { deleteSelection() }
-            .onChange(of: viewModel.entryEditing.selectedEntryId) { _, id in if id != nil { timelineFocused = true } }
-        }
-        .task(id: viewModel.day) {
-            scrollPosition.scrollTo(y: viewModel.geometry.y(for: viewModel.initialScrollDate))
-            await viewModel.task()
+            TimelineScrollArea(viewModel: viewModel, anchor: anchor, changeZoom: changeZoom)
         }
         .sheet(item: Binding(get: { viewModel.form }, set: { if $0 == nil { viewModel.cancelRegistration() } })) {
             TimeEntryFormSheet(viewModel: $0)
@@ -51,26 +32,8 @@ struct TimelineScreen: View {
         .navigationTitle("Timeline")
     }
 
-    /// Applies a zoom change (animated unless Reduce Motion is on) and keeps the time in the middle of the view in place.
     private func changeZoom(_ change: ZoomChange) {
-        anchor.capture(with: viewModel.geometry)
-        viewModel.zoomState.animationDuration = reduceMotion ? 0 : ZoomTransition.defaultDuration
-        change(viewModel.zoomState)
-    }
-
-    private func deleteSelection() -> KeyPress.Result {
-        guard viewModel.entryEditing.selectedEntryId != nil, viewModel.form == nil else { return .ignored }
-        viewModel.deleteSelectedEntry()
-        return .handled
-    }
-
-    @ViewBuilder private var emptyState: some View {
-        if !viewModel.hasActivity {
-            Text("No activity tracked yet")
-                .foregroundStyle(.secondary)
-                .padding(.top, viewModel.geometry.y(for: viewModel.initialScrollDate) + 120)
-                .allowsHitTesting(false)
-        }
+        anchor.change(change, in: viewModel, animated: !reduceMotion)
     }
 }
 
