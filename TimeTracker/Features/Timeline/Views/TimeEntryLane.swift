@@ -27,6 +27,8 @@ struct TimeEntryLane: View {
             isSelected: editing.selectedEntryId == entry.id,
             canDrag: editing.canDrag(entry, in: geometry),
             onTap: { viewModel.select(entry) },
+            onEdit: { viewModel.select(entry) },
+            onDelete: { viewModel.delete(entry) },
             onDrag: { mode, dy in editing.dragChanged(entry, mode: mode, translationY: dy, geometry: geometry) },
             onDragEnd: { Task { await editing.dragEnded(entry) } })
         .reportsHover(.entry(entry, project: viewModel.project(id: entry.projectId), range: range), to: hover,

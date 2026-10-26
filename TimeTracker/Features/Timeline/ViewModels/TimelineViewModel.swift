@@ -135,6 +135,11 @@ final class TimelineViewModel {
 
     func deleteSelectedEntry() {
         guard let id = entryEditing.selectedEntryId, let entry = entries.first(where: { $0.id == id }) else { return }
+        delete(entry)
+    }
+
+    /// Context menu / Delete key: removes the entry (and clears the selection).
+    func delete(_ entry: TimeEntry) {
         Task { await entryEditing.delete(entry) }
     }
 

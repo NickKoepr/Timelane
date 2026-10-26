@@ -8,6 +8,8 @@ struct TimeEntryBlock: View {
     let isSelected: Bool
     let canDrag: Bool
     let onTap: () -> Void
+    let onEdit: () -> Void
+    let onDelete: () -> Void
     let onDrag: (EntryDragMode, CGFloat) -> Void
     let onDragEnd: () -> Void
 
@@ -51,6 +53,11 @@ struct TimeEntryBlock: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
         .gesture(dragGesture(.move))
+        .contextMenu {
+            Button("Edit…", action: onEdit)
+            Divider()
+            Button("Delete", role: .destructive, action: onDelete)
+        }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(primaryText), \(timeText)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])

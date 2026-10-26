@@ -18,6 +18,7 @@ struct MenuBarFormView: View {
                     .padding(12)
             }
         }
-        .background(.background)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .panelBackground()
     }
 }
