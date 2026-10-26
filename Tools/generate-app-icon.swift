@@ -48,7 +48,8 @@ func draw(in ctx: CGContext) {
     hand(angle: .pi / 2 + .pi / 3, length: 125, width: 50)  // hour hand towards 10
     hand(angle: .pi / 2 - .pi / 3, length: 170, width: 44)  // minute hand towards 2
     ctx.setFillColor(color(clockHex))
-    ctx.fillEllipse(in: CGRect(x: center.x - 30, y: center.y - 30, width: 60, height: 60))
+    // Large enough to cover the joint of both hands, so the centre reads as one smooth dot.
+    ctx.fillEllipse(in: CGRect(x: center.x - 42, y: center.y - 42, width: 84, height: 84))
 }
 
 func render(pixels: Int) -> Data {
