@@ -38,6 +38,16 @@ enum Migrations {
             try db.create(index: "appSession_start", on: "appSession", columns: ["start"])
         }
 
+        migrator.registerMigration("v2") { db in
+            try db.alter(table: "timeEntry") { t in t.add(column: "title", .text) }
+            try db.create(table: "trackedApp") { t in
+                t.autoIncrementedPrimaryKey("id")
+                t.column("bundleIdentifier", .text).notNull().unique()
+                t.column("name", .text).notNull()
+                t.column("addedAt", .double).notNull()
+            }
+        }
+
         return migrator
     }
 }
