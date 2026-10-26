@@ -125,3 +125,31 @@ struct TrackedAppsTrackerTests {
         await f.tracker.stop()
     }
 }
+
+@MainActor
+struct AddTrackedAppViewModelTests {
+    @Test func loadsCandidatesSelectsAndAdds() async throws {
+        let db = try AppDatabase.inMemory()
+        let tracked = GRDBTrackedAppRepository(database: db)
+        let sessions = GRDBAppSessionRepository(database: db)
+        try await tracked.add([TrackedApp(bundleIdentifier: "done", name: "Done")])
+        _ = try await sessions.start(AppSession(bundleIdentifier: "seen", appName: "Seen",
+                                                start: TestCalendar.date(2026, 11, 3, 9), end: TestCalendar.date(2026, 11, 3, 10)))
+        var finished = false
+        let vm = AddTrackedAppViewModel(
+            trackedApps: tracked, appSessions: sessions,
+            runningApps: { [ForegroundApp(bundleIdentifier: "run", name: "Running"), ForegroundApp(bundleIdentifier: "done", name: "Done"),
+                            ForegroundApp(bundleIdentifier: "me", name: "TimeTracker")] },
+            ownBundleId: "me", onFinish: { finished = true })
+        await vm.load()
+        #expect(vm.candidates.map(\.bundleIdentifier) == ["run", "seen"])
+        vm.searchText = "seen"
+        #expect(vm.filtered.map(\.bundleIdentifier) == ["seen"])
+        vm.include([ForegroundApp(bundleIdentifier: "disk", name: "From Disk")])
+        #expect(vm.candidates.count == 3 && vm.canAdd)
+        vm.toggle(ForegroundApp(bundleIdentifier: "seen", name: "Seen"))
+        await vm.add()
+        #expect(finished)
+        #expect(try await tracked.trackedApps().map(\.bundleIdentifier).sorted() == ["disk", "done", "seen"])
+    }
+}

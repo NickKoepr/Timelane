@@ -13,18 +13,20 @@ struct RootView: View {
             .navigationSplitViewColumnWidth(min: 160, ideal: 180)
         } detail: {
             switch selection ?? .timeline {
-            case .timeline: TimelineScreen(environment: environment)
+            case .timeline: TimelineScreen(environment: environment, onShowTrackedApps: { selection = .trackedApps })
             case .projects: ProjectsScreen(environment: environment)
+            case .trackedApps: TrackedAppsScreen(environment: environment)
             }
         }
         .background { sidebarShortcuts }
     }
 
-    /// ⌘1 / ⌘2 switch screens.
+    /// ⌘1 / ⌘2 / ⌘3 switch screens.
     private var sidebarShortcuts: some View {
         HStack {
             Button("Timeline") { selection = .timeline }.keyboardShortcut("1", modifiers: .command)
             Button("Projects") { selection = .projects }.keyboardShortcut("2", modifiers: .command)
+            Button("Tracked Apps") { selection = .trackedApps }.keyboardShortcut("3", modifiers: .command)
         }
         .opacity(0)
         .allowsHitTesting(false)

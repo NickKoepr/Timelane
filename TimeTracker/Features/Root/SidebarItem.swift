@@ -3,6 +3,7 @@ import Foundation
 enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
     case timeline
     case projects
+    case trackedApps
 
     var id: String { rawValue }
 
@@ -10,6 +11,7 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .timeline: "Timeline"
         case .projects: "Projects"
+        case .trackedApps: "Tracked Apps"
         }
     }
 
@@ -17,6 +19,7 @@ enum SidebarItem: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .timeline: "calendar.day.timeline.left"
         case .projects: "folder"
+        case .trackedApps: "app.badge.checkmark"
         }
     }
 }

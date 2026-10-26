@@ -5,7 +5,10 @@ struct TimelineScreen: View {
     @State private var scrollPosition = ScrollPosition(edge: .top)
     @FocusState private var timelineFocused: Bool
 
-    init(environment: AppEnvironment) {
+    private let onShowTrackedApps: () -> Void
+
+    init(environment: AppEnvironment, onShowTrackedApps: @escaping () -> Void = {}) {
+        self.onShowTrackedApps = onShowTrackedApps
         _viewModel = State(initialValue: TimelineViewModel(
             timeEntries: environment.timeEntries,
             appSessions: environment.appSessions,
@@ -18,6 +21,7 @@ struct TimelineScreen: View {
         VStack(spacing: 0) {
             DayNavigationBar(viewModel: viewModel)
             Divider()
+            if viewModel.hasNoTrackedApps { NoTrackedAppsBanner(action: onShowTrackedApps) }
             ScrollView {
                 TimelineColumn(viewModel: viewModel)
                     .padding(.bottom, 20)
