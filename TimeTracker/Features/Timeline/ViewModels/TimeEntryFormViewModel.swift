@@ -31,7 +31,10 @@ final class TimeEntryFormViewModel: Identifiable {
     var heading: String { form.isEditing ? "Edit time entry" : "New time entry" }
     var canSave: Bool { form.canSave && !isBusy }
 
-    func choose(_ project: Project) { form.projectId = project.id }
+    func choose(_ project: Project) {
+        form.projectId = project.id
+        search.highlight(project.id)
+    }
 
     /// Enter in the search field: choose the highlighted project, or create the typed one.
     func confirmSearch() async {

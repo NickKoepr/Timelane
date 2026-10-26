@@ -38,6 +38,8 @@ struct ProjectSearch: Equatable {
         highlightedId = list[min(max(current + offset, 0), list.count - 1)].id
     }
 
+    mutating func highlight(_ id: Int64?) { highlightedId = id }
+
     mutating func add(_ project: Project) {
         projects.append(project)
         query = ""

@@ -39,6 +39,19 @@ struct MenuBarTimelineTests {
         #expect(await iterator.next()?.isEmpty == true)
     }
 
+    @Test func choosingAProjectMovesTheKeyboardHighlight() throws {
+        let db = try AppDatabase.inMemory()
+        let projects = [Project(id: 1, name: "Website", colorHex: "#000000"), Project(id: 2, name: "Admin", colorHex: "#000000")]
+        let viewModel = TimeEntryFormViewModel(
+            form: .new(range: DateRange(start: .now.addingTimeInterval(-3600), end: .now), projectId: 1),
+            projects: projects, projectRepository: GRDBProjectRepository(database: db),
+            editor: TimeEntryEditor(repository: GRDBTimeEntryRepository(database: db)),
+            allowsCreatingProjects: true, onFinish: { _ in })
+        #expect(viewModel.search.highlightedId == 1)
+        viewModel.choose(projects[1])
+        #expect(viewModel.form.projectId == 2 && viewModel.search.highlightedId == 2)
+    }
+
     @Test func hoverCardStaysInsideANarrowColumn() {
         let card = CGSize(width: 220, height: 100)
         func origin(_ block: CGRect, left: Bool) -> CGPoint {

@@ -62,4 +62,10 @@ struct ProjectSearchTests {
         search.moveHighlight(by: -5)
         #expect(search.highlightedId == 1)
     }
+
+    @Test func highlightSetsTheCursor() {
+        var search = ProjectSearch(projects: projects, highlightedId: 1)
+        search.highlight(2)
+        #expect(search.highlightedId == 2 && search.highlightedProject?.id == 2)
+    }
 }
