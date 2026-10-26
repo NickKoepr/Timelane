@@ -156,9 +156,9 @@ TimeTracker/
 │           └── ColorPickerRow.swift
 │
 ├── MenuBar/
-│   ├── MenuBarContentView.swift      // status line + compact day bar + timeline (or inline form) + footer
+│   ├── MenuBarContentView.swift      // status line + compact day bar + timeline + footer; form popup overlay
 │   ├── MenuBarViewModel.swift        // own TimelineViewModel (own zoom key), "today on open"
-│   ├── MenuBarStatusLine / MenuBarDayBar / MenuBarFooter / MenuBarFormView / MenuBarErrorBanner
+│   ├── MenuBarStatusLine / MenuBarDayBar / MenuBarFooter / MenuBarFormPopup / MenuBarErrorBanner
 │   └── PanelOpenObserver.swift       // NSView helper: fires on every window key / visible
 │
 └── Assets.xcassets
@@ -314,7 +314,7 @@ Translate all sources into one `ActivityEvent` enum and handle them in a single 
 
 ### 5.3 Menu bar timeline (v1.5)
 - The panel reuses `TimelineScrollArea` (scroll view, `TimelineColumn`, zoom, delete key) with its own `TimelineViewModel` (same database, so both stay in sync) created by `MenuBarViewModel.make`. Zoom is remembered under `"menuBarTimelineZoomLevel"` (default 30 min) via `TimelineZoomState(key:defaultLevel:)`.
-- Registering uses an inline form: while `timeline.form != nil`, `MenuBarFormView` (wrapping `TimeEntryFormContent`, the content of the main window's `TimeEntryFormSheet`) covers the timeline, which stays alive underneath so its scroll position survives. Errors from move/resize/delete show in `MenuBarErrorBanner` instead of an alert.
+- Registering uses a popup drawn inside the panel: while `timeline.form != nil`, `MenuBarFormPopup` (a card wrapping `TimeEntryFormContent`, the content of the main window's `TimeEntryFormSheet`) fades in over the dimmed panel; the timeline stays alive underneath so its scroll position survives. Not a real `.sheet`: that is a separate window, so the MenuBarExtra panel loses key and closes on any click in it, and the inactive app bounces in the Dock. Errors from move/resize/delete show in `MenuBarErrorBanner` instead of an alert.
 - No project/tracked-app management: the timeline view model is created with `allowsCreatingProjects: false` (no "New project" row, Return without a match does nothing). "Open TimeTracker to add projects" and the no-tracked-apps banner open the main window on Projects / Tracked Apps through `AppEnvironment.requestedSidebarItem`, consumed by `RootView`.
 - "Today on open": `onAppear`/`task` of MenuBarExtra content run once, so `PanelOpenObserver` (an `NSViewRepresentable`) observes `didBecomeKey` and `didChangeOcclusionState` of its window and calls `MenuBarViewModel.panelDidOpen()`: go to today and bump `scrollTrigger`, which makes `TimelineScrollArea` scroll to now − 1 h. An open form is left alone.
 - (v1.6) Right-click on an entry block (`TimeEntryBlock.contextMenu`, shared by window and panel): **Edit…** (`TimelineViewModel.select`) and **Delete** (`TimelineViewModel.delete`, no confirmation). The panel form uses `View.panelBackground()` (opaque `windowBackgroundColor`, also used by `MenuBarContentView`) and fills the whole timeline area; `.background` would resolve to the translucent panel material.
