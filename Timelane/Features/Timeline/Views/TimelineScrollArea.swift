@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The scrollable day: timeline column, empty state, zoom behaviour, delete key and initial scroll.
+/// The day: sticky lane header above the scrollable timeline column, zoom behaviour, delete key and initial scroll.
 /// Shared by the main window and the menu bar panel. Owns the observation of the view model (`task`).
 struct TimelineScrollArea: View {
     let viewModel: TimelineViewModel
@@ -11,14 +11,23 @@ struct TimelineScrollArea: View {
 
     @State private var scrollPosition = ScrollPosition(edge: .top)
     @State private var hover = TimelineHoverState()
+    @State private var contentWidth: CGFloat = 0
     @FocusState private var timelineFocused: Bool
 
     var body: some View {
+        VStack(spacing: 0) {
+            TimelineLaneHeader(contentWidth: contentWidth)
+            Divider()
+            scrollView
+        }
+    }
+
+    private var scrollView: some View {
         ScrollView {
             TimelineColumn(viewModel: viewModel, hover: hover, anchor: anchor)
                 .padding(.bottom, 20)
-                .overlay(alignment: .top) { emptyState }
         }
+        .onScrollGeometryChange(for: CGFloat.self, of: { $0.contentSize.width }, action: { _, new in contentWidth = new })
         .scrollPosition($scrollPosition)
         .timelineZoom(viewModel: viewModel, scrollPosition: $scrollPosition, anchor: anchor, apply: changeZoom)
         .focusable()
@@ -42,14 +51,5 @@ struct TimelineScrollArea: View {
         guard viewModel.entryEditing.selectedEntryId != nil, viewModel.form == nil else { return .ignored }
         viewModel.deleteSelectedEntry()
         return .handled
-    }
-
-    @ViewBuilder private var emptyState: some View {
-        if !viewModel.hasActivity {
-            Text("No activity tracked yet")
-                .foregroundStyle(.secondary)
-                .padding(.top, viewModel.geometry.y(for: viewModel.initialScrollDate) + 120)
-                .allowsHitTesting(false)
-        }
     }
 }

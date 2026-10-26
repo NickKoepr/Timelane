@@ -542,6 +542,7 @@ The structure above is chosen so these can be added without restructuring:
 ---
 
 - Responsive bars (v1.9): `DayNavigationBar` and `MonthNavigationBar` use `ViewThatFits` with wide/medium/narrow variants, single-line fixed-size texts, and shortcuts registered once in hidden `*Shortcuts` views. Minimum window size lives in `App/WindowMetrics.swift` (700 × 520, detail column ≥ 480).
+- Lane labels (v1.10, PLAN-v1.10.md): `TimelineLaneHeader` (sticky, above the `ScrollView` in `TimelineScrollArea`, fed the measured scroll content width) and the column both take their x positions from the pure `TimelineLaneLayout`. `LaneBackdrop` draws the entry-lane tint (accent 4%) and the 1 pt `LaneDivider`; `LaneEmptyHints` replaces the old "No activity tracked yet" overlay. All are non-hit-testable.
 
 ## 12. Definition of done (v1)
 

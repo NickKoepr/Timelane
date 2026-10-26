@@ -9,11 +9,13 @@ struct TimelineColumn: View {
     var body: some View {
         let geometry = viewModel.geometry
         GeometryReader { proxy in
-            let available = proxy.size.width - TimelineMetrics.labelWidth - TimelineMetrics.laneSpacing - TimelineMetrics.laneInset * 2
-            let appWidth = available * TimelineMetrics.appLaneFraction
+            let layout = TimelineLaneLayout(totalWidth: proxy.size.width)
             ZStack(alignment: .topLeading) {
+                LaneBackdrop(layout: layout, height: geometry.totalHeight)
                 HourGridView(geometry: geometry, zoom: viewModel.zoomState.zoom)
-                lanes(geometry: geometry, appWidth: appWidth)
+                lanes(geometry: geometry, appWidth: layout.appWidth)
+                LaneEmptyHints(layout: layout, y: geometry.y(for: viewModel.initialScrollDate) + 60,
+                               showsAppHint: viewModel.sessionBlocks.isEmpty, showsEntryHint: viewModel.entries.isEmpty)
                 if viewModel.isToday { NowIndicatorView(geometry: geometry) }
                 hoverCard(columnSize: CGSize(width: proxy.size.width, height: geometry.totalHeight))
             }
@@ -35,7 +37,11 @@ struct TimelineColumn: View {
                                selectionDrag: SelectionDragGesture(viewModel: viewModel),
                                onSelect: viewModel.assign)
                     .frame(width: appWidth)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Tracked apps")
                 TimeEntryLane(viewModel: viewModel, hover: hover)
+                    .accessibilityElement(children: .contain)
+                    .accessibilityLabel("Your time")
             }
         }
         .padding(.leading, TimelineMetrics.labelWidth + TimelineMetrics.laneInset)
