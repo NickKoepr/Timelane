@@ -16,7 +16,7 @@ struct TimelineLaneHeader: View {
                 LaneHeaderCell(icon: "record.circle", title: "Tracked apps")
                     .frame(width: layout.appWidth, height: Self.height)
                     .offset(x: layout.appX)
-                LaneHeaderCell(icon: "hand.draw", title: "Your time")
+                LaneHeaderCell(icon: "hand.draw", title: "Logged hours")
                     .frame(width: layout.entryWidth, height: Self.height)
                     .offset(x: layout.entryX)
             }

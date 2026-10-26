@@ -39,7 +39,7 @@ struct TimelineColumn: View {
                     .accessibilityLabel("Tracked apps")
                 TimeEntryLane(viewModel: viewModel, hover: hover)
                     .accessibilityElement(children: .contain)
-                    .accessibilityLabel("Your time")
+                    .accessibilityLabel("Logged hours")
             }
         }
         .padding(.leading, TimelineMetrics.labelWidth + TimelineMetrics.laneInset)
