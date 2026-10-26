@@ -1,58 +1,65 @@
 import SwiftUI
 
+/// The menu bar panel: live status on top, then the same timeline as the main window.
+/// The inline form covers the timeline (which stays alive underneath, keeping its scroll position).
 struct MenuBarContentView: View {
+    static let size = CGSize(width: 380, height: 600)
+
     @Environment(AppEnvironment.self) private var environment
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var viewModel: MenuBarViewModel
+    @State private var anchor = ZoomScrollAnchor()
 
     init(environment: AppEnvironment) {
-        _viewModel = State(initialValue: MenuBarViewModel(
-            timeEntries: environment.timeEntries, appSessions: environment.appSessions))
+        _viewModel = State(initialValue: MenuBarViewModel.make(environment: environment))
     }
 
+    private var timeline: TimelineViewModel { viewModel.timeline }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            statusLine
-            TimelineView(.periodic(from: .now, by: 30)) { context in
-                VStack(alignment: .leading, spacing: 4) {
-                    totalRow("Registered today", viewModel.registeredTotal(now: context.date))
-                    totalRow("Tracked today", viewModel.trackedTotal(now: context.date))
+        VStack(spacing: 0) {
+            MenuBarStatusLine(tracker: environment.tracker)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+            Divider()
+            ZStack {
+                timelineLayer
+                    .allowsHitTesting(timeline.form == nil)
+                    .accessibilityHidden(timeline.form != nil)
+                if let form = timeline.form {
+                    MenuBarFormView(viewModel: form, onManageProjects: { openMainWindow(.projects) })
                 }
             }
             Divider()
-            Button("Open TimeTracker") {
-                openWindow(id: "main")
-                NSApp.activate()
+            MenuBarFooter(openMainWindow: { openMainWindow(nil) })
+        }
+        .frame(width: Self.size.width, height: Self.size.height)
+        .background { PanelOpenObserver { viewModel.panelDidOpen() } }
+    }
+
+    private var timelineLayer: some View {
+        VStack(spacing: 0) {
+            MenuBarDayBar(viewModel: timeline, changeZoom: changeZoom)
+            Divider()
+            if timeline.hasNoTrackedApps { NoTrackedAppsBanner(action: { openMainWindow(.trackedApps) }) }
+            if let message = timeline.entryEditing.errorMessage {
+                MenuBarErrorBanner(message: message) { timeline.entryEditing.errorMessage = nil }
             }
-            Button("Quit TimeTracker") { NSApp.terminate(nil) }
-        }
-        .padding(14)
-        .frame(width: 260)
-        .task { await viewModel.task() }
-    }
-
-    private var statusLine: some View {
-        let tracker = environment.tracker
-        return HStack(spacing: 6) {
-            Image(systemName: tracker.isPaused ? "pause.circle" : "record.circle")
-                .foregroundStyle(tracker.isPaused ? Color.secondary : Color.red)
-            Text(statusText(for: tracker))
-                .lineLimit(1)
+            TimelineScrollArea(viewModel: timeline, anchor: anchor, changeZoom: changeZoom,
+                               scrollTrigger: viewModel.scrollTrigger)
         }
     }
 
-    private func statusText(for tracker: AppActivityTracker) -> String {
-        if tracker.isPaused { return "Paused" }
-        guard let app = tracker.currentApp else { return "Not tracking" }
-        return tracker.isCurrentAppTracked ? app.name : "Not tracking: \(app.name)"
+    private func changeZoom(_ change: ZoomChange) {
+        anchor.change(change, in: timeline, animated: !reduceMotion)
     }
 
-    private func totalRow(_ title: String, _ seconds: TimeInterval) -> some View {
-        HStack {
-            Text(title).foregroundStyle(.secondary)
-            Spacer()
-            Text(DurationFormatter.hoursMinutes(seconds)).monospacedDigit()
-        }
+    /// Opens the main window, on a specific screen when given.
+    private func openMainWindow(_ item: SidebarItem?) {
+        environment.requestedSidebarItem = item
+        openWindow(id: "main")
+        NSApp.activate()
     }
 }
 

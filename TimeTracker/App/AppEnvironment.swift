@@ -10,6 +10,8 @@ final class AppEnvironment {
     let trackedApps: any TrackedAppRepository
     let timeEntryEditor: TimeEntryEditor
     let tracker: AppActivityTracker
+    /// Set by the menu bar to open the main window on a specific screen; `RootView` consumes it.
+    var requestedSidebarItem: SidebarItem?
 
     init(database: AppDatabase) {
         self.database = database

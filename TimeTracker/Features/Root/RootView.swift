@@ -19,6 +19,11 @@ struct RootView: View {
             }
         }
         .background { sidebarShortcuts }
+        .onChange(of: environment.requestedSidebarItem, initial: true) {
+            guard let item = environment.requestedSidebarItem else { return }
+            selection = item
+            environment.requestedSidebarItem = nil
+        }
     }
 
     /// ⌘1 / ⌘2 / ⌘3 switch screens.

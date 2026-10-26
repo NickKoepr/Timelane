@@ -1,42 +1,32 @@
 import Foundation
 
+/// What the menu bar panel adds on top of the timeline: its own `TimelineViewModel` (own zoom level)
+/// and "show today again" every time the panel opens.
 @MainActor @Observable
 final class MenuBarViewModel {
-    private(set) var entries: [TimeEntry] = []
-    private var sessions: [AppSession] = []
+    static let zoomKey = "menuBarTimelineZoomLevel"
 
-    private let timeEntries: any TimeEntryRepository
-    private let appSessions: any AppSessionRepository
-    private let calendar: Calendar
+    let timeline: TimelineViewModel
+    /// Increases whenever the panel opened and the timeline should scroll back to "now".
+    private(set) var scrollTrigger = 0
 
-    init(timeEntries: any TimeEntryRepository, appSessions: any AppSessionRepository,
-         calendar: Calendar = .current) {
-        self.timeEntries = timeEntries
-        self.appSessions = appSessions
-        self.calendar = calendar
+    init(timeline: TimelineViewModel) {
+        self.timeline = timeline
     }
 
-    func registeredTotal(now: Date) -> TimeInterval {
-        DayTotals.registered(entries: entries, in: .day(of: now, calendar: calendar))
+    static func make(environment: AppEnvironment, defaults: UserDefaults = .standard) -> MenuBarViewModel {
+        MenuBarViewModel(timeline: TimelineViewModel(
+            timeEntries: environment.timeEntries, appSessions: environment.appSessions,
+            projects: environment.projects, trackedApps: environment.trackedApps, editor: environment.timeEntryEditor,
+            zoomState: TimelineZoomState(defaults: defaults, key: zoomKey, defaultLevel: .halfHour),
+            allowsCreatingProjects: false))
     }
 
-    func trackedTotal(now: Date) -> TimeInterval {
-        DayTotals.tracked(sessions: sessions, in: .day(of: now, calendar: calendar), now: now)
-    }
-
-    /// Observes today's data. Re-run when the popover appears so "today" stays current.
-    func task() async {
-        let today = DateRange.day(of: .now, calendar: calendar)
-        async let observedEntries: Void = observeEntries(in: today)
-        async let observedSessions: Void = observeSessions(in: today)
-        _ = await (observedEntries, observedSessions)
-    }
-
-    private func observeEntries(in range: DateRange) async {
-        for await value in timeEntries.observeEntries(in: range) { entries = value }
-    }
-
-    private func observeSessions(in range: DateRange) async {
-        for await value in appSessions.observeSessions(in: range) { sessions = value }
+    /// The panel became visible: jump to today around "now". An unfinished form is left alone, so closing
+    /// the panel by accident does not lose what was typed.
+    func panelDidOpen() {
+        guard timeline.form == nil else { return }
+        timeline.goToToday()
+        scrollTrigger += 1
     }
 }

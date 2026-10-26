@@ -104,25 +104,6 @@ struct TimelineTrackedAppsTests {
 }
 
 @MainActor
-struct MenuBarViewModelTests {
-    @Test func trackedTodayIncludesSessionsOfRemovedApps() async throws {
-        let db = try AppDatabase.inMemory()
-        let cal = Calendar.current
-        let now = Date.now
-        let start = cal.startOfDay(for: now)
-        let sessions = GRDBAppSessionRepository(database: db)
-        _ = try await sessions.start(AppSession(bundleIdentifier: "gone", appName: "Gone", start: start.addingTimeInterval(60),
-                                                end: start.addingTimeInterval(3660)))
-        let vm = MenuBarViewModel(timeEntries: GRDBTimeEntryRepository(database: db), appSessions: sessions,
-                                  calendar: cal)
-        let task = Task { await vm.task() }
-        defer { task.cancel() }
-        for _ in 0..<300 where vm.trackedTotal(now: now) == 0 { try? await Task.sleep(for: .milliseconds(10)) }
-        #expect(vm.trackedTotal(now: now) == 3600)
-    }
-}
-
-@MainActor
 struct TimelineRegistrationTests {
     let cal = TestCalendar.make()
     let now = TestCalendar.date(2026, 11, 3, 14, 30)
