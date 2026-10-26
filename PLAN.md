@@ -12,12 +12,12 @@ Guiding principles: **simple, not over-engineered, small files, MVVM, easy to ex
 
 **Day timeline (main screen)**
 - R1. A vertical, column-shaped timeline for one day (00:00–24:00, scrollable; on open it scrolls to the current time, or to 08:00 for past days).
-- R2. The app tracks which application is in the foreground and stores these as *app sessions* (app, start, end).
+- R2. The app tracks which application is in the foreground and stores these as *app sessions* (app, start, end). **v1.1:** only apps on the user's *tracked apps list* are recorded and shown; the list starts empty and is managed in the Tracked Apps screen (see PLAN-v1.1.md §4).
 - R3. App sessions are drawn on the timeline in their own lane, so the user can see how long they spent in which app.
-- R4. The user registers hours by **dragging** vertically over the timeline to select a time range (e.g. 10:00–13:00). After releasing, they pick a project. The result is a *time entry* (project, start, end, optional note).
-- R5. The user can assign a whole app session to a project in one action (click the session → pick project).
+- R4. The user registers hours by **dragging** vertically over the timeline to select a time range (e.g. 10:00–13:00). After releasing, a *time entry window* (sheet) opens where they pick the project, adjust the times and give the block a title. The result is a *time entry* (project, start, end, optional title, optional note).
+- R5. The user can assign a whole app session to a project in one action (click the session → time entry window prefilled with the session's range).
 - R6. Splitting a session over several projects is done by simply dragging several smaller ranges. There is no special "split" feature.
-- R7. Existing time entries can be selected, moved, resized (drag top/bottom edge), have their project or note changed, and be deleted.
+- R7. Existing time entries can be selected, moved, resized (drag top/bottom edge), have their title, project, note or times changed (same window), and be deleted.
 - R8. Day navigation: previous day, next day, "Today", and a date picker. Today is the default view.
 - R9. A day total shows the registered hours (sum of time entries) and the tracked hours (sum of app sessions).
 
@@ -136,9 +136,13 @@ TimeTracker/
 │   │       ├── TimeEntryLane.swift
 │   │       ├── TimeEntryBlock.swift          // incl. resize handles
 │   │       ├── SelectionOverlay.swift        // the range being dragged
-│   │       ├── ProjectPickerPopover.swift    // choose project + optional note
-│   │       └── TimeEntryDetailPopover.swift  // edit/delete existing entry
+│   │       ├── SelectionDragGesture.swift    // drag over both lanes
+│   │       ├── NoTrackedAppsBanner.swift
+│   │       ├── TimeEntryFormSheet.swift      // v1.1: new/edit window (replaces both popovers)
+│   │       ├── TimeEntryFormTimeFields.swift
+│   │       └── ProjectSearchList.swift
 │   │
+│   ├── TrackedApps/                      // v1.1: list, add sheet, open panel
 │   └── Projects/
 │       ├── ViewModels/
 │       │   ├── ProjectsViewModel.swift       // month, totals, observation
@@ -211,7 +215,7 @@ struct ProjectMonthTotal {       // read model, not stored
 
 Keep the models free of GRDB and SwiftUI imports (except `Foundation`). `ProjectColor` translates `colorHex` into a SwiftUI `Color` in a separate extension.
 
-### 4.2 SQLite schema (migration `v1`)
+### 4.2 SQLite schema (migration `v1`; `v2` adds `timeEntry.title` and the `trackedApp` table, see PLAN-v1.1.md §1)
 
 ```sql
 CREATE TABLE project (
@@ -296,7 +300,7 @@ Hide GRDB-specific types behind `AsyncStream` so ViewModels never import GRDB.
 - `DistributedNotificationCenter`: `com.apple.screenIsLocked` / `com.apple.screenIsUnlocked` → pause / resume.
 - `IdleMonitor`: every 30s check `CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .null)` (use `kCGAnyInputEventType`). When idle > 5 min (configurable constant in `TrackingSettings`): close the current session at `now - idleSeconds` and pause. On the first check after activity returns: resume.
 - On `applicationWillTerminate`: close the current session.
-- Ignore the app's own bundle id? **No** — keep it; it's honest data and shows time spent registering. (Simple to change later via a filter.)
+- **v1.1:** only apps on the tracked apps list (`TrackedAppRepository`) open sessions; list changes arrive as `ActivityEvent.trackedAppsChanged`. Untracked frontmost apps behave like a pause. The app's own bundle id is only recorded if the user adds it.
 
 Translate all sources into one `ActivityEvent` enum and handle them in a single `handle(_ event:)` method; this keeps the tracker small and testable (inject a clock `() -> Date` and feed events in tests).
 
@@ -355,22 +359,20 @@ Output: `[AppSessionBlockModel]` (id, appName, bundleId, start, end, duration).
 
 `AppSessionBlock` shows: app icon (via `NSWorkspace.shared.urlForApplication(withBundleIdentifier:)` → `icon(forFile:)`, cached in a small `AppIconProvider`), app name and duration if the block is tall enough (> 30pt), otherwise only the icon/color. Color: a stable hash-based color per bundle id. Tooltip (`.help`) with name + start–end.
 
-Clicking an `AppSessionBlock` opens `ProjectPickerPopover` pre-filled with the block's range → "assign whole session to project" (R5).
+Clicking an `AppSessionBlock` opens the `TimeEntryFormSheet` (§6.5) pre-filled with the block's range → "assign whole session to project" (R5).
 
 ### 6.4 Drag to select (R4, R6)
-- The drag gesture lives on the **TimeEntryLane** background only (not on the app lane, so clicks there remain clicks). Optional nice-to-have: allow dragging in the app lane too; skip in v1.
+- **v1.1:** the drag gesture lives on a full-size layer behind both lanes in `TimelineColumn` (and as a `simultaneousGesture` on the app-session blocks, so a click still assigns the session and a drag selects a range). It works in the past, present and future of the shown day. All pure overlays have `allowsHitTesting(false)`.
 - `DragGesture(minimumDistance: 4, coordinateSpace: .named("timeline"))`:
   - `onChanged`: `selection = TimelineSelection(anchor: snapped(date(forY: startLocation.y)), current: snapped(date(forY: location.y)))`. `TimelineSelection` exposes a normalized `start`/`end` (handles dragging upward).
-  - `onEnded`: if duration ≥ 5 min → show `ProjectPickerPopover` anchored to the selection; else clear.
+  - `onEnded`: if duration ≥ 5 min → open the `TimeEntryFormSheet`; else clear.
 - `SelectionOverlay` draws a translucent accent-colored rectangle with a label "10:00 – 13:00 (3:00)" while dragging.
 - Auto-scroll when dragging near the top/bottom edge is a nice-to-have; not required in v1.
 
-### 6.5 `ProjectPickerPopover`
-- Search field + list of non-archived projects (color dot + name), keyboard navigable (↑↓, Enter, Esc).
-- Optional note text field.
-- "New project…" row at the bottom → creates a project inline (name only, auto-assigned color) and selects it. This keeps registering fast.
-- Remember the last used project and preselect it.
-- On confirm: `TimeEntryEditor.create(projectId:start:end:note:)`.
+### 6.5 `TimeEntryFormSheet` (v1.1; replaced the v1 popovers)
+- A modal sheet (`.sheet(item:)` from `TimelineScreen`), independent of view positions (v1's popovers were anchored to `.offset` views and never appeared). Opens after a drag selection, a click on an app session (new entry) or a click on an entry (edit).
+- Fields: title (optional), project (searchable list of non-archived projects, last used preselected, inline "New project" row), From/To (`DatePicker(.hourAndMinute)`, validation end > start and ≥ 1 min), note. Buttons: Cancel (Esc), Save (↩ / ⌘↩), Delete (edit mode).
+- Logic: `TimeEntryForm` (values + validation), `ProjectSearch` (filter/highlight/inline-create, pure), `TimeEntryFormViewModel` (save/delete through `TimeEntryEditor`).
 
 ### 6.6 Overlap rule — `TimeEntryOverlapResolver` (pure, tested)
 Time entries on the timeline **must not overlap**. The newest action wins:
@@ -382,8 +384,8 @@ Time entries on the timeline **must not overlap**. The newest action wins:
 - If an existing entry and the new one have the same project and are adjacent/overlapping, merging them is a nice-to-have; not in v1.
 
 ### 6.7 Editing existing entries (R7)
-- `TimeEntryBlock`: filled with the project color, shows project name, duration, and note (if room).
-- Click → `TimeEntryDetailPopover`: change project, edit note, edit start/end via `DatePicker(.hourAndMinute)`, Delete button. Also support the `Delete` key when an entry is selected.
+- `TimeEntryBlock`: filled with the project color, shows the title (or the project name when there is none), the project name, time/duration and note (as far as there is room).
+- Click → `TimeEntryFormSheet` in edit mode (title, project, note, start/end, Delete). Also support the `Delete` key when an entry is selected.
 - Resize: small (6pt) drag handles at the top and bottom edge; cursor `NSCursor.resizeUpDown` on hover (`.onContinuousHover` / `.pointerStyle`). Dragging updates a local preview; on end → `TimeEntryEditor.update(...)` (which goes through the overlap resolver).
 - Move: dragging the body of a block moves it (keeping the duration), snapped. Same commit path.
 - Minimum entry duration: 5 minutes.
@@ -467,7 +469,7 @@ Sort rows: by total descending, then by name. Archived projects only shown when 
   Use `Window` (single window) rather than `WindowGroup`; the app doesn't need multiple windows.
 - `AppEnvironment` holds: `AppDatabase`, the three repositories, `AppActivityTracker`, `TimeEntryEditor`. Provides `static func live()` and `static func preview()` (in-memory DB with sample data) for SwiftUI previews.
 - `AppDelegate` gets the environment injected (or the tracker is started from `TimeTrackerApp`'s `init`), and starts tracking on launch.
-- `RootView`: `NavigationSplitView` with a sidebar (`SidebarItem.timeline` "Timeline" ⌘1, `SidebarItem.projects` "Projects" ⌘2) and the detail area showing the screen. Each screen creates its own ViewModel (`@State private var viewModel: TimelineViewModel`) from the environment.
+- `RootView`: `NavigationSplitView` with a sidebar (`SidebarItem.timeline` "Timeline" ⌘1, `SidebarItem.projects` "Projects" ⌘2, `SidebarItem.trackedApps` "Tracked Apps" ⌘3) and the detail area showing the screen. Each screen creates its own ViewModel (`@State private var viewModel: TimelineViewModel`) from the environment.
 - Commands: ⌘T → today (timeline) / this month (projects); ⌘← / ⌘→ previous/next day or month.
 
 ---
