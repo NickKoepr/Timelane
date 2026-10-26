@@ -20,7 +20,7 @@ Guiding principles: **simple, not over-engineered, small files, MVVM, easy to ex
 - R5. The user can assign a whole app session to a project in one action (click the session → time entry window prefilled with the session's range).
 - R6. Splitting a session over several projects is done by simply dragging several smaller ranges. There is no special "split" feature.
 - R7. Existing time entries can be selected, moved, resized (drag top/bottom edge), have their title, project, note or times changed (same window), and be deleted.
-- R8. Day navigation: previous day, next day, "Today", and a date picker. Today is the default view.
+- R8. Day navigation: previous day, next day, "Today", and a calendar button next to the day title (popover with a month calendar). Today is the default view.
 - R9. A day total shows the registered hours (sum of time entries) and the tracked hours (sum of app sessions).
 
 **Projects screen**

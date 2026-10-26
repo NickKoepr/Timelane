@@ -21,8 +21,7 @@ struct DayNavigationBar: View {
     private var wide: some View {
         HStack(spacing: 8) {
             DayNavigationButtons(viewModel: viewModel)
-            title(viewModel.title, font: .title3).padding(.leading, 6)
-            DayDatePicker(viewModel: viewModel)
+            date(viewModel.title, font: .title3)
             Spacer(minLength: 8)
             zoom
             DayTotalsView(registered: viewModel.registeredTotal, tracked: viewModel.trackedTotal).fixedSize()
@@ -32,8 +31,7 @@ struct DayNavigationBar: View {
     private var medium: some View {
         HStack(spacing: 8) {
             DayNavigationButtons(viewModel: viewModel)
-            title(viewModel.shortTitle, font: .title3).padding(.leading, 6)
-            DayDatePicker(viewModel: viewModel)
+            date(viewModel.shortTitle, font: .title3)
             Spacer(minLength: 8)
             zoom
             totals
@@ -44,12 +42,11 @@ struct DayNavigationBar: View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
                 DayNavigationButtons(viewModel: viewModel)
-                title(viewModel.shortTitle, font: .headline).padding(.leading, 6)
+                date(viewModel.shortTitle, font: .headline)
                 Spacer(minLength: 8)
                 zoom
             }
             HStack(spacing: 8) {
-                DayDatePicker(viewModel: viewModel)
                 Spacer(minLength: 8)
                 totals
             }
@@ -64,8 +61,13 @@ struct DayNavigationBar: View {
         CompactDayTotals(registered: viewModel.registeredTotal, tracked: viewModel.trackedTotal)
     }
 
-    private func title(_ text: String, font: Font) -> some View {
-        Text(text).font(font.weight(.semibold)).lineLimit(1).fixedSize()
+    /// The day title with its calendar button right next to it.
+    private func date(_ text: String, font: Font) -> some View {
+        HStack(spacing: 4) {
+            Text(text).font(font.weight(.semibold)).lineLimit(1).fixedSize()
+            DayDatePicker(viewModel: viewModel)
+        }
+        .padding(.leading, 6)
     }
 }
 
