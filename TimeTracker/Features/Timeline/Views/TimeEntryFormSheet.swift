@@ -1,13 +1,16 @@
 import SwiftUI
 
-/// Modal window to register or edit a time entry (main window); the fields live in `TimeEntryFormContent`.
+/// Modal window to register or edit a time entry (main window and menu bar panel);
+/// the fields live in `TimeEntryFormContent`.
 struct TimeEntryFormSheet: View {
     let viewModel: TimeEntryFormViewModel
+    var width: CGFloat = 420
+    var onManageProjects: (() -> Void)?
 
     var body: some View {
-        TimeEntryFormContent(viewModel: viewModel)
+        TimeEntryFormContent(viewModel: viewModel, onManageProjects: onManageProjects)
             .padding(20)
-            .frame(width: 420)
+            .frame(width: width)
             .interactiveDismissDisabled(viewModel.isBusy)
     }
 }
