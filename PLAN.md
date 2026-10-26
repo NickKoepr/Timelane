@@ -328,7 +328,7 @@ Translate all sources into one `ActivityEvent` enum and handle them in a single 
 └───────┴────────────────────────┴──────────────────────────────┘
 ```
 - One `ScrollView(.vertical)` containing `TimelineColumn` with a fixed height of `24 * pointsPerHour`.
-- `pointsPerHour = 80` (constant in `TimelineGeometry`; design so it can become a zoom setting later).
+- `pointsPerHour` follows the zoom level (v1.2, §6.9); 80 at the overview level.
 - Three columns: hour labels (fixed width ~50pt), app session lane (~40%), time entry lane (~60%).
 - `HourGridView` draws horizontal lines for every hour (and faint lines every 15 min) across both lanes.
 - `NowIndicatorView` only on today, updates every minute via `TimelineView(.periodic(from:by: 60))`.
@@ -410,6 +410,12 @@ Time entries on the timeline **must not overlap**. The newest action wins:
 - While viewing today, refresh the open session's end every 60s (the merger uses `now`).
 
 ---
+
+### 6.9 Zoom, adaptive labels, hover card (v1.2, see PLAN-v1.2.md)
+- **Zoom:** `TimelineZoom` has four levels (1 h = 80 pt, 30 min = 160, 15 min = 320, 10 min = 480 pt per hour; at the last one 10 minutes = 80 pt). `TimelineZoomState` (owned by `TimelineViewModel`) holds the level and remembers it in `UserDefaults`; `TimelineViewModel.geometry` is built from it. Controls: `TimelineZoomControls` in `DayNavigationBar` (− / level menu / +), ⌘− / ⌘+ (⌘=) / ⌘0, and trackpad pinch (`MagnifyGesture` as a simultaneous gesture on the scroll view, one level per 25% via `PinchZoomStepper`). Every change goes through `TimelineScreen.changeZoom`, which captures the time at the centre of the visible area (`ZoomScrollAnchor`, `TimelineZoomAnchor`) and scrolls so it stays centred. Snapping stays 5 minutes at all levels.
+- **Grid:** `HourGridLayout` (pure) decides lines and labels per zoom level (labels every 60/30/15/10 min, minor lines every 15/15/5/5); `HourGridView` only draws it.
+- **Adaptive labels:** `SessionLabelStyle.style(forHeight:width:)` picks `full` (>= 32 pt), `singleLine` (>= 15), `iconOnly` (>= 10) or `colorOnly`; narrow lanes drop the name. `AppSessionBlockLabel` renders it.
+- **Hover card:** blocks report hover via `reportsHover(...)` to `TimelineHoverState` (`HoverTarget`, frame in the "timeline" space). `TimelineColumn` draws a single `TimelineHoverCard` overlay (`allowsHitTesting(false)`, no popover) placed by `HoverCardPlacement`; hidden during selection and entry drags. The old `.help` tooltips are gone.
 
 ## 7. Projects feature (detailed)
 
