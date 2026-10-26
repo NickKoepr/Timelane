@@ -4,8 +4,9 @@ import Foundation
 /// `pointsPerHour` is the scale that is drawn: it follows `zoom`, animated when `animationDuration` > 0.
 @MainActor @Observable
 final class TimelineZoomState {
-    private static let key = "timelineZoomLevel"
+    static let defaultKey = "timelineZoomLevel"
     private let defaults: UserDefaults
+    private let key: String
     private(set) var zoom: TimelineZoom
     private(set) var pointsPerHour: CGFloat
     private(set) var isAnimating = false
@@ -14,9 +15,12 @@ final class TimelineZoomState {
 
     @ObservationIgnored private var animation: Task<Void, Never>?
 
-    init(defaults: UserDefaults = .standard) {
+    /// `key` is where the level is remembered; use another key for a second timeline (menu bar) so they stay independent.
+    /// `defaultLevel` applies until a level has been saved.
+    init(defaults: UserDefaults = .standard, key: String = TimelineZoomState.defaultKey, defaultLevel: TimelineZoom = .hour) {
         self.defaults = defaults
-        let saved = TimelineZoom(rawValue: defaults.integer(forKey: Self.key)) ?? .hour
+        self.key = key
+        let saved = defaults.object(forKey: key) == nil ? defaultLevel : TimelineZoom(rawValue: defaults.integer(forKey: key)) ?? defaultLevel
         zoom = saved
         pointsPerHour = saved.pointsPerHour
     }
@@ -29,7 +33,7 @@ final class TimelineZoomState {
 
     func set(_ newZoom: TimelineZoom) {
         zoom = newZoom
-        defaults.set(newZoom.rawValue, forKey: Self.key)
+        defaults.set(newZoom.rawValue, forKey: key)
         animateScale(to: newZoom.pointsPerHour)
     }
 

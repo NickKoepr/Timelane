@@ -5,8 +5,11 @@ struct ProjectSearch: Equatable {
     private(set) var projects: [Project]
     var query = "" { didSet { if query != oldValue { highlightedId = filtered.first?.id } } }
     private(set) var highlightedId: Int64?
+    /// False in the menu bar: projects are managed in the main window only.
+    let allowsCreating: Bool
 
-    init(projects: [Project], highlightedId: Int64?) {
+    init(projects: [Project], highlightedId: Int64?, allowsCreating: Bool = true) {
+        self.allowsCreating = allowsCreating
         self.projects = projects
         self.highlightedId = highlightedId
     }
@@ -20,7 +23,7 @@ struct ProjectSearch: Equatable {
     /// Offer inline creation when the typed name matches no existing project.
     var newProjectName: String? {
         let text = trimmedQuery
-        guard !text.isEmpty,
+        guard allowsCreating, !text.isEmpty,
               !projects.contains(where: { $0.name.caseInsensitiveCompare(text) == .orderedSame }) else { return nil }
         return text
     }

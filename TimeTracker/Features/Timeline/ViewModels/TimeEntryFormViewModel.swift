@@ -16,11 +16,13 @@ final class TimeEntryFormViewModel: Identifiable {
 
     /// Archived projects are not offered, except the one the entry already uses.
     init(form: TimeEntryForm, projects: [Project], projectRepository: any ProjectRepository,
-         editor: TimeEntryEditor, onFinish: @escaping (Int64?) -> Void) {
+         editor: TimeEntryEditor, allowsCreatingProjects: Bool = true,
+         onFinish: @escaping (Int64?) -> Void) {
         let usedId = form.projectId
         let offered = projects.filter { !$0.isArchived || $0.id == usedId }
         self.form = form
-        self.search = ProjectSearch(projects: offered, highlightedId: form.projectId ?? offered.first?.id)
+        self.search = ProjectSearch(projects: offered, highlightedId: form.projectId ?? offered.first?.id,
+                                    allowsCreating: allowsCreatingProjects)
         self.projectRepository = projectRepository
         self.editor = editor
         self.onFinish = onFinish

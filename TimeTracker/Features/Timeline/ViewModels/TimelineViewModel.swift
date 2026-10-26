@@ -23,11 +23,12 @@ final class TimelineViewModel {
     let zoomState: TimelineZoomState
     private let editor: TimeEntryEditor
     private let lastProject: LastProjectStore
+    private let allowsCreatingProjects: Bool
     private let calendar: Calendar, clock: () -> Date
 
     init(timeEntries: any TimeEntryRepository, appSessions: any AppSessionRepository,
          projects: any ProjectRepository, trackedApps: any TrackedAppRepository, editor: TimeEntryEditor,
-         lastProject: LastProjectStore = LastProjectStore(), zoomState: TimelineZoomState = TimelineZoomState(),
+         lastProject: LastProjectStore = LastProjectStore(), zoomState: TimelineZoomState = TimelineZoomState(), allowsCreatingProjects: Bool = true,
          calendar: Calendar = .current, clock: @escaping () -> Date = { .now }) {
         self.timeEntries = timeEntries
         self.appSessions = appSessions
@@ -37,6 +38,7 @@ final class TimelineViewModel {
         self.entryEditing = EntryEditingViewModel(editor: editor)
         self.lastProject = lastProject
         self.zoomState = zoomState
+        self.allowsCreatingProjects = allowsCreatingProjects
         self.calendar = calendar
         self.clock = clock
         self.now = clock()
@@ -100,6 +102,7 @@ final class TimelineViewModel {
     private func openForm(_ values: TimeEntryForm) {
         form = TimeEntryFormViewModel(
             form: values, projects: projects, projectRepository: projectRepository, editor: editor,
+            allowsCreatingProjects: allowsCreatingProjects,
             onFinish: { [weak self] projectId in
                 guard let self else { return }
                 if let projectId { lastProject.projectId = projectId }

@@ -4,6 +4,8 @@ import SwiftUI
 /// Layout (padding, width) is left to the host: a sheet in the main window, inline in the menu bar panel.
 struct TimeEntryFormContent: View {
     @Bindable var viewModel: TimeEntryFormViewModel
+    /// Shown when there are no projects and creating is not allowed (menu bar); nil hides the button.
+    var onManageProjects: (() -> Void)?
     @FocusState private var titleFocused: Bool
 
     var body: some View {
@@ -12,7 +14,7 @@ struct TimeEntryFormContent: View {
             TextField("Title", text: $viewModel.form.title, prompt: Text("What did you work on?"))
                 .textFieldStyle(.roundedBorder)
                 .focused($titleFocused)
-            labeled("Project") { ProjectSearchList(viewModel: viewModel) }
+            labeled("Project") { ProjectSearchList(viewModel: viewModel, onManageProjects: onManageProjects) }
             TimeEntryFormTimeFields(form: $viewModel.form)
             labeled("Note") {
                 TextField("Note", text: $viewModel.form.note, prompt: Text("Optional"), axis: .vertical)

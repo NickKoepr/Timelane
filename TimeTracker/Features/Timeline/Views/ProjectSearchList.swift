@@ -3,10 +3,11 @@ import SwiftUI
 /// Search field plus list of projects; the chosen project gets a checkmark.
 struct ProjectSearchList: View {
     @Bindable var viewModel: TimeEntryFormViewModel
+    var onManageProjects: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            TextField("Search or create project", text: $viewModel.search.query)
+            TextField(viewModel.search.allowsCreating ? "Search or create project" : "Search project", text: $viewModel.search.query)
                 .textFieldStyle(.roundedBorder)
                 .onSubmit { Task { await viewModel.confirmSearch() } }
                 .onKeyPress(.upArrow) { viewModel.search.moveHighlight(by: -1); return .handled }
@@ -24,15 +25,33 @@ struct ProjectSearchList: View {
                             highlighted: viewModel.search.filtered.isEmpty, chosen: false)
                             .onTapGesture { Task { await viewModel.createProject() } }
                     }
-                    if viewModel.search.filtered.isEmpty && viewModel.search.newProjectName == nil {
-                        Text("No projects yet. Type a name to create one.")
-                            .font(.callout).foregroundStyle(.secondary).padding(6)
-                    }
+                    emptyHint
                 }
             }
             .frame(height: 120)
             .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 6))
         }
+    }
+
+    @ViewBuilder private var emptyHint: some View {
+        if viewModel.search.filtered.isEmpty && viewModel.search.newProjectName == nil {
+            if viewModel.search.allowsCreating {
+                hint("No projects yet. Type a name to create one.")
+            } else if viewModel.search.projects.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    hint("No projects yet.")
+                    if let onManageProjects {
+                        Button("Open TimeTracker to add projects", action: onManageProjects).padding(.leading, 6)
+                    }
+                }
+            } else {
+                hint("No matching projects.")
+            }
+        }
+    }
+
+    private func hint(_ text: String) -> some View {
+        Text(text).font(.callout).foregroundStyle(.secondary).padding(6)
     }
 
     private func row(color: Color? = nil, symbol: String? = nil, title: String,
