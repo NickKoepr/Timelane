@@ -15,6 +15,7 @@ struct DayDatePicker: View {
                 DatePicker("Day", selection: selection, displayedComponents: .date)
                     .labelsHidden()
                     .datePickerStyle(.graphical)
+                    .focusEffectDisabled()   // no blue focus ring around the calendar
                     .padding(12)
             }
     }
