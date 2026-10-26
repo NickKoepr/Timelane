@@ -342,7 +342,7 @@ Translate all sources into one `ActivityEvent` enum and handle them in a single 
 ```
 - One `ScrollView(.vertical)` containing `TimelineColumn` with a fixed height of `24 * pointsPerHour`.
 - `pointsPerHour` follows the zoom level (v1.2, §6.9); 80 at the overview level.
-- Three columns: hour labels (fixed width ~50pt), app session lane (~40%), time entry lane (~60%).
+- Three columns: hour labels (fixed width ~50pt), app session lane (1/3), time entry lane (2/3; was 40/60 until v1.10).
 - `HourGridView` draws horizontal lines for every hour (and faint lines every 15 min) across both lanes.
 - `NowIndicatorView` only on today, updates every minute via `TimelineView(.periodic(from:by: 60))`.
 - On appear: `ScrollViewReader` scrolls to `max(now - 1h, 0)` for today, else to 08:00 or the first entry/session.
