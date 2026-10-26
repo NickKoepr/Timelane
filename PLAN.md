@@ -1,4 +1,6 @@
-# TimeTracker — Implementation Plan
+# Timelane — Implementation Plan
+
+> The app was called TimeTracker until v1.9; the PLAN-v1.x files keep the old name as design history.
 
 A native macOS app (SwiftUI) that helps a software developer register working hours per project. The app automatically records which applications were in the foreground and shows them on a vertical day timeline. The user then drags across the timeline to assign time ranges to projects. A separate screen manages projects and shows the hours spent per project per month.
 
@@ -51,16 +53,16 @@ Guiding principles: **simple, not over-engineered, small files, MVVM, easy to ex
 | Database | **GRDB.swift** (SPM, `https://github.com/groue/GRDB.swift`, latest 7.x) on top of SQLite | Real SQLite with explicit migrations, `Codable` records, efficient aggregate queries (monthly totals), and `ValueObservation` for live UI updates. Thin and predictable compared to SwiftData. |
 | Data access | Repository protocols (`ProjectRepository`, …) with a GRDB implementation | ViewModels depend on protocols → testable with in-memory DB or fakes, and the storage can be swapped/extended (e.g. sync) later. |
 | App tracking | `NSWorkspace.shared.notificationCenter` (`didActivateApplicationNotification`) + sleep/wake + screen lock + idle detection | Works in the sandbox, no extra permissions needed. |
-| Dependency injection | One `AppEnvironment` (composition root) created in `TimeTrackerApp`, passed down via SwiftUI `.environment(...)` | No DI framework needed; one place where everything is wired. |
+| Dependency injection | One `AppEnvironment` (composition root) created in `TimelaneApp`, passed down via SwiftUI `.environment(...)` | No DI framework needed; one place where everything is wired. |
 | Tests | Swift Testing (`import Testing`) in a new unit test target | Pure logic (geometry, overlap resolution, aggregation) and repositories (in-memory GRDB). |
 | Time | Store `Date` as UTC timestamp in SQLite. Day/month boundaries are calculated using `Calendar.current` in a single helper (`DateRange`). | Avoids timezone/DST bugs scattered over the code. |
 
 ### 2.1 Project setup tasks
 1. Set the target to **macOS only** (`SDKROOT = macosx`, `SUPPORTED_PLATFORMS = macosx`) and remove the iOS-specific `INFOPLIST_KEY_UI*` settings.
 2. Add GRDB via Swift Package Manager.
-3. Add a unit test target `TimeTrackerTests`.
-4. Rename `MyApp.swift` → `App/TimeTrackerApp.swift` (struct `TimeTrackerApp`). Delete `ContentView.swift` (including the `Playgrounds` import).
-5. The project uses `PBXFileSystemSynchronizedRootGroup`: files created in the `TimeTracker/` folder are picked up by Xcode automatically. Create the folder structure from §3 on disk.
+3. Add a unit test target `TimelaneTests`.
+4. Rename `MyApp.swift` → `App/TimelaneApp.swift` (struct `TimelaneApp`). Delete `ContentView.swift` (including the `Playgrounds` import).
+5. The project uses `PBXFileSystemSynchronizedRootGroup`: files created in the `Timelane/` folder are picked up by Xcode automatically. Create the folder structure from §3 on disk.
 6. Set the Swift language version to 6 (strict concurrency) if the project builds cleanly; otherwise keep 5 with complete concurrency checking.
 
 ---
@@ -68,9 +70,9 @@ Guiding principles: **simple, not over-engineered, small files, MVVM, easy to ex
 ## 3. Folder structure
 
 ```
-TimeTracker/
+Timelane/
 ├── App/
-│   ├── TimeTrackerApp.swift          // @main, scenes (WindowGroup + MenuBarExtra)
+│   ├── TimelaneApp.swift          // @main, scenes (WindowGroup + MenuBarExtra)
 │   ├── AppEnvironment.swift          // composition root: DB, repositories, tracker
 │   └── AppDelegate.swift             // keep running when window closes; start tracker
 │
@@ -163,7 +165,7 @@ TimeTracker/
 │
 └── Assets.xcassets
 
-TimeTrackerTests/
+TimelaneTests/
 ├── TimelineGeometryTests.swift
 ├── AppSessionMergerTests.swift
 ├── TimeEntryOverlapResolverTests.swift
@@ -254,7 +256,7 @@ CREATE INDEX appSession_start ON appSession(start);
 
 Use GRDB's `DatabaseMigrator` with `t.autoIncrementedPrimaryKey`, `t.belongsTo` etc. rather than raw SQL; the above is the intended result. Every future schema change becomes a **new** migration (`v2`, `v3`, …) — never edit an existing migration.
 
-Database location: `Application Support/TimeTracker/db.sqlite` (inside the sandbox container). `AppDatabase` also offers `static func inMemory()` for tests and previews.
+Database location: `Application Support/Timelane/db.sqlite` (inside the sandbox container). `AppDatabase` also offers `static func inMemory()` for tests and previews.
 
 ### 4.3 Queries the repositories must provide
 
@@ -315,7 +317,7 @@ Translate all sources into one `ActivityEvent` enum and handle them in a single 
 ### 5.3 Menu bar timeline (v1.5)
 - The panel reuses `TimelineScrollArea` (scroll view, `TimelineColumn`, zoom, delete key) with its own `TimelineViewModel` (same database, so both stay in sync) created by `MenuBarViewModel.make`. Zoom is remembered under `"menuBarTimelineZoomLevel"` (default 30 min) via `TimelineZoomState(key:defaultLevel:)`.
 - Registering uses a popup drawn inside the panel: while `timeline.form != nil`, `MenuBarFormPopup` (a card wrapping `TimeEntryFormContent`, the content of the main window's `TimeEntryFormSheet`) fades in over the dimmed panel; the timeline stays alive underneath so its scroll position survives. Not a real `.sheet`: that is a separate window, so the MenuBarExtra panel loses key and closes on any click in it, and the inactive app bounces in the Dock. Errors from move/resize/delete show in `MenuBarErrorBanner` instead of an alert.
-- No project/tracked-app management: the timeline view model is created with `allowsCreatingProjects: false` (no "New project" row, Return without a match does nothing). "Open TimeTracker to add projects" and the no-tracked-apps banner open the main window on Projects / Tracked Apps through `AppEnvironment.requestedSidebarItem`, consumed by `RootView`.
+- No project/tracked-app management: the timeline view model is created with `allowsCreatingProjects: false` (no "New project" row, Return without a match does nothing). "Open Timelane to add projects" and the no-tracked-apps banner open the main window on Projects / Tracked Apps through `AppEnvironment.requestedSidebarItem`, consumed by `RootView`.
 - "Today on open": `onAppear`/`task` of MenuBarExtra content run once, so `PanelOpenObserver` (an `NSViewRepresentable`) observes `didBecomeKey` and `didChangeOcclusionState` of its window and calls `MenuBarViewModel.panelDidOpen()`: go to today and bump `scrollTrigger`, which makes `TimelineScrollArea` scroll to now − 1 h. An open form is left alone.
 - (v1.6) Right-click on an entry block (`TimeEntryBlock.contextMenu`, shared by window and panel): **Edit…** (`TimelineViewModel.select`) and **Delete** (`TimelineViewModel.delete`, no confirmation). The panel form uses `View.panelBackground()` (opaque `windowBackgroundColor`, also used by `MenuBarContentView`) and fills the whole timeline area; `.background` would resolve to the translucent panel material.
 - (v1.8) The status line is driven by `TrackingStatus` (`Services/Tracking`, via `AppActivityTracker.status`): `.tracking` (red `record.circle`, app name), `.notTracked` (grey `eye.slash`, "Not tracking: X"), `.paused` (grey `pause.circle`). Paused wins; red only while a session is really being recorded. The `MenuBarExtra` label is the `MenuBarIcon` template image: the same clock as the app icon, generated by `Tools/generate-app-icon.swift`.
@@ -471,21 +473,21 @@ Sort rows: by total descending, then by name. Archived projects only shown when 
 
 ## 8. Root / navigation / app
 
-- `TimeTrackerApp`:
+- `TimelaneApp`:
   ```swift
-  @main struct TimeTrackerApp: App {
+  @main struct TimelaneApp: App {
       @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
       @State private var environment = AppEnvironment.live()
       var body: some Scene {
-          Window("TimeTracker", id: "main") { RootView().environment(environment) }
+          Window("Timelane", id: "main") { RootView().environment(environment) }
               .defaultSize(width: 900, height: 750)
-          MenuBarExtra("TimeTracker", systemImage: "clock") { MenuBarContentView().environment(environment) }
+          MenuBarExtra("Timelane", systemImage: "clock") { MenuBarContentView().environment(environment) }
       }
   }
   ```
   Use `Window` (single window) rather than `WindowGroup`; the app doesn't need multiple windows.
 - `AppEnvironment` holds: `AppDatabase`, the three repositories, `AppActivityTracker`, `TimeEntryEditor`. Provides `static func live()` and `static func preview()` (in-memory DB with sample data) for SwiftUI previews.
-- `AppDelegate` gets the environment injected (or the tracker is started from `TimeTrackerApp`'s `init`), and starts tracking on launch.
+- `AppDelegate` gets the environment injected (or the tracker is started from `TimelaneApp`'s `init`), and starts tracking on launch.
 - `RootView`: `NavigationSplitView` with a sidebar (`SidebarItem.timeline` "Timeline" ⌘1, `SidebarItem.projects` "Projects" ⌘2, `SidebarItem.trackedApps` "Tracked Apps" ⌘3) and the detail area showing the screen. Each screen creates its own ViewModel (`@State private var viewModel: TimelineViewModel`) from the environment.
 - Commands: ⌘T → today (timeline) / this month (projects); ⌘← / ⌘→ previous/next day or month.
 

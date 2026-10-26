@@ -1,5 +1,5 @@
 #!/usr/bin/env swift
-// Generates the TimeTracker app icon at every macOS size, and optionally the menu bar icon
+// Generates the Timelane app icon at every macOS size, and optionally the menu bar icon
 // (the same clock as a template image, so the menu bar and the app icon match).
 // Usage: swift Tools/generate-app-icon.swift <appiconset-dir> [<menubar-imageset-dir>]
 import AppKit
