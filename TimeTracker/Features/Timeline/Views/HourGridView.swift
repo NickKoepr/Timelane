@@ -30,6 +30,7 @@ struct HourGridView: View {
             }
         }
         .frame(height: geometry.totalHeight)
+        .allowsHitTesting(false)
         .accessibilityHidden(true)
     }
 }

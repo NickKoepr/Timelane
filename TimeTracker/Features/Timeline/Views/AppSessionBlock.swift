@@ -3,6 +3,7 @@ import SwiftUI
 struct AppSessionBlock: View {
     let block: AppSessionBlockModel
     let height: CGFloat
+    let selectionDrag: SelectionDragGesture
     let onSelect: (AppSessionBlockModel) -> Void
 
     private var tint: Color { StableColor.color(for: block.bundleIdentifier) }
@@ -27,6 +28,7 @@ struct AppSessionBlock: View {
         .clipped()
         .contentShape(Rectangle())
         .onTapGesture { onSelect(block) }
+        .simultaneousGesture(selectionDrag)   // a drag starting here selects a range; a click assigns the session
         .help("\(block.appName)\n\(block.start.formatted(date: .omitted, time: .shortened)) – \(block.end.formatted(date: .omitted, time: .shortened))")
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(block.appName), \(DurationFormatter.short(block.duration))")

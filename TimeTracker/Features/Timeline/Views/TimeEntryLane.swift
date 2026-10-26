@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Lane with the registered time. Dragging on empty space selects a range to register.
+/// Lane with the registered time. Entries sit on top of the gesture layer in `TimelineColumn`, so their own move/resize gestures win.
 struct TimeEntryLane: View {
     let viewModel: TimelineViewModel
 
@@ -8,9 +8,6 @@ struct TimeEntryLane: View {
         let geometry = viewModel.geometry
         ZStack(alignment: .topLeading) {
             Color.clear
-                .contentShape(Rectangle())
-                .onTapGesture { viewModel.entryEditing.deselect() }
-                .gesture(selectionDrag)
             ForEach(viewModel.entries) { entry in
                 block(for: entry, geometry: geometry)
             }
@@ -32,11 +29,5 @@ struct TimeEntryLane: View {
             onDrag: { mode, dy in editing.dragChanged(entry, mode: mode, translationY: dy, geometry: geometry) },
             onDragEnd: { Task { await editing.dragEnded(entry) } })
         .offset(y: frame.y)
-    }
-
-    private var selectionDrag: some Gesture {
-        DragGesture(minimumDistance: 4, coordinateSpace: .named("timeline"))
-            .onChanged { viewModel.updateSelection(startY: $0.startLocation.y, currentY: $0.location.y) }
-            .onEnded { _ in viewModel.finishSelection() }
     }
 }
