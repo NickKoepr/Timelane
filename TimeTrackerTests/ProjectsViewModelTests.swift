@@ -57,4 +57,16 @@ struct ProjectsViewModelTests {
         await viewModel.delete(project)
         #expect(viewModel.errorMessage != nil)
     }
+
+    @Test func hasAnyProjectsDistinguishesEmptyStates() async throws {
+        let (viewModel, projects, _) = try await makeViewModel()
+        let task = Task { await viewModel.task() }
+        await waitUntil { viewModel.hasAnyProjects }
+        #expect(!viewModel.hasAnyProjects)
+        _ = try await projects.save(Project(name: "Idle", colorHex: "#000000"))
+        await waitUntil { viewModel.hasAnyProjects }
+        task.cancel()
+        #expect(viewModel.hasAnyProjects)
+        #expect(viewModel.rows.count == 1)
+    }
 }

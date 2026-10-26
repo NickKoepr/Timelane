@@ -22,6 +22,7 @@ struct ProjectsTotalFooter: View {
             }
             .padding()
         }
+        .frame(maxWidth: .infinity)
         .background(.bar)
     }
 }

@@ -22,6 +22,7 @@ struct MonthNavigationBar: View {
                 .keyboardShortcut("t", modifiers: .command)
                 .disabled(isCurrentMonth)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)
         .padding(.vertical, 10)
     }

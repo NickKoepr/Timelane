@@ -28,6 +28,8 @@ final class ProjectsViewModel {
             }
     }
 
+    /// False when no project exists at all (as opposed to nothing to show this month).
+    var hasAnyProjects: Bool { !allTotals.isEmpty }
     var monthTotal: TimeInterval { rows.reduce(0) { $0 + $1.totalSeconds } }
     var isCurrentMonth: Bool { month == .month(of: now(), calendar: calendar) }
     var monthTitle: String { month.start.formatted(.dateTime.month(.wide).year()) }

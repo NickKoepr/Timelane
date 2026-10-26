@@ -23,6 +23,7 @@ struct ProjectsScreen: View {
             list
             ProjectsTotalFooter(showArchived: $viewModel.showArchived, total: viewModel.monthTotal)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .toolbar {
             ToolbarItem {
                 Button { form = .new } label: { Label("New project", systemImage: "plus") }
@@ -43,8 +44,9 @@ struct ProjectsScreen: View {
 
     @ViewBuilder private var list: some View {
         if viewModel.rows.isEmpty {
-            ContentUnavailableView("No projects yet", systemImage: "folder.badge.plus",
-                                   description: Text("Add a project with the + button."))
+            ProjectsEmptyState(hasAnyProjects: viewModel.hasAnyProjects, monthTitle: viewModel.monthTitle) {
+                form = .new
+            }
         } else {
             List(viewModel.rows) { row in
                 ProjectRow(total: row)
@@ -68,4 +70,8 @@ struct ProjectsScreen: View {
 
 #Preview {
     ProjectsScreen(environment: .preview())
+}
+
+#Preview("Empty") {
+    ProjectsScreen(environment: .inMemory()).frame(width: 800, height: 600)
 }

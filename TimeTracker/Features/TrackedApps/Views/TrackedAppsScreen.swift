@@ -30,8 +30,15 @@ struct TrackedAppsScreen: View {
 
     @ViewBuilder private var content: some View {
         if viewModel.apps.isEmpty {
-            ContentUnavailableView("No apps tracked", systemImage: "app.badge.checkmark",
-                                   description: Text("Add the apps you work in, e.g. Xcode, Terminal, your browser."))
+            ContentUnavailableView {
+                Label("No apps tracked", systemImage: "app.badge.checkmark")
+            } description: {
+                Text("Add the apps you work in, e.g. Xcode, Terminal, your browser.")
+            } actions: {
+                Button("Add App") { showingAdd = true }
+                    .buttonStyle(.borderedProminent)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             List(viewModel.apps, selection: $viewModel.selectedId) { app in
                 TrackedAppRow(app: app) { Task { await viewModel.remove(app) } }
@@ -50,4 +57,8 @@ struct TrackedAppsScreen: View {
 
 #Preview {
     TrackedAppsScreen(environment: .preview()).frame(width: 600, height: 400)
+}
+
+#Preview("Empty") {
+    TrackedAppsScreen(environment: .inMemory()).frame(width: 800, height: 600)
 }
