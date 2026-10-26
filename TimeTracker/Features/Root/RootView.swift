@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct RootView: View {
+    @Environment(AppEnvironment.self) private var environment
     @State private var selection: SidebarItem? = .timeline
 
     var body: some View {
@@ -13,12 +14,12 @@ struct RootView: View {
         } detail: {
             switch selection ?? .timeline {
             case .timeline: Text("Timeline")
-            case .projects: Text("Projects")
+            case .projects: ProjectsScreen(environment: environment)
             }
         }
     }
 }
 
 #Preview {
-    RootView()
+    RootView().environment(AppEnvironment.preview())
 }
