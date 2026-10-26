@@ -6,18 +6,18 @@ import os
 final class AppDatabase: Sendable {
     let writer: any DatabaseWriter
 
-    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "TimeTracker", category: "database")
+    private static let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "Timelane", category: "database")
 
     init(writer: any DatabaseWriter) throws {
         self.writer = writer
         try Migrations.makeMigrator().migrate(writer)
     }
 
-    /// `Application Support/TimeTracker/db.sqlite` (inside the sandbox container).
+    /// `Application Support/Timelane/db.sqlite` (inside the sandbox container).
     static func live() throws -> AppDatabase {
         let directory = try FileManager.default
             .url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
-            .appendingPathComponent("TimeTracker", isDirectory: true)
+            .appendingPathComponent("Timelane", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let path = directory.appendingPathComponent("db.sqlite").path
         #if DEBUG

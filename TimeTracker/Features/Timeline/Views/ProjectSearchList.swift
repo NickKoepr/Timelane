@@ -41,7 +41,7 @@ struct ProjectSearchList: View {
                 VStack(alignment: .leading, spacing: 6) {
                     hint("No projects yet.")
                     if let onManageProjects {
-                        Button("Open TimeTracker to add projects", action: onManageProjects).padding(.leading, 6)
+                        Button("Open Timelane to add projects", action: onManageProjects).padding(.leading, 6)
                     }
                 }
             } else {

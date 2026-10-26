@@ -5,9 +5,9 @@ struct MenuBarFooter: View {
 
     var body: some View {
         HStack {
-            Button("Open TimeTracker", action: openMainWindow)
+            Button("Open Timelane", action: openMainWindow)
             Spacer()
-            Button("Quit TimeTracker") { NSApp.terminate(nil) }
+            Button("Quit Timelane") { NSApp.terminate(nil) }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)

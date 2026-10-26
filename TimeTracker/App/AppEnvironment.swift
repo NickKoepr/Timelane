@@ -35,7 +35,7 @@ final class AppEnvironment {
         do {
             return AppEnvironment(database: try AppDatabase.live())
         } catch {
-            fatalError("Could not open the TimeTracker database: \(error)")
+            fatalError("Could not open the Timelane database: \(error)")
         }
     }
 

@@ -1,6 +1,6 @@
-<p align="center"><img src="docs/icon.png" width="128" alt="TimeTracker app icon"></p>
+<p align="center"><img src="docs/icon.png" width="128" alt="Timelane app icon"></p>
 
-# TimeTracker
+# Timelane
 
 A native macOS app (SwiftUI) for developers to register working hours per project. It records which of your chosen apps are in the foreground and shows them on a day timeline, where you drag to assign time to projects. Everything is stored locally in SQLite.
 
@@ -28,7 +28,7 @@ cd TimeTracker
 open TimeTracker.xcodeproj
 ```
 
-Swift Package Manager resolves [GRDB](https://github.com/groue/GRDB.swift) (7.x) automatically. Select the `TimeTracker` scheme and run. From the command line:
+Swift Package Manager resolves [GRDB](https://github.com/groue/GRDB.swift) (7.x) automatically. Select the `TimeTracker` scheme and run. (The Xcode project, target, scheme and Swift module are still called `TimeTracker`; the app product is `Timelane.app`, bundle ID `nl.nickkoepr.timelane`.) From the command line:
 
 ```sh
 xcodebuild -project TimeTracker.xcodeproj -scheme TimeTracker -destination 'platform=macOS' -derivedDataPath build/DerivedData build
@@ -81,7 +81,7 @@ PLAN.md, PLAN-v1.*.md   Design history and source of truth for each iteration
 
 The database is a single SQLite file inside the app's sandbox container:
 
-`~/Library/Containers/<bundle id>/Data/Library/Application Support/TimeTracker/db.sqlite`
+`~/Library/Containers/nl.nickkoepr.timelane/Data/Library/Application Support/Timelane/db.sqlite`
 
 It stores projects, your time entries (start, end, optional title and note), the list of tracked apps, and app sessions: app name, bundle identifier, start and end. No window titles, keystrokes or screenshots are recorded. Nothing leaves your machine; the app makes no network requests.
 
