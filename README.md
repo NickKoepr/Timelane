@@ -17,7 +17,7 @@ Keyboard: Cmd-1/2/3 switch between Timeline, Projects and Tracked Apps; in the p
 
 ## Requirements
 
-- macOS 27.0 or later (the project's deployment target)
+- macOS 26.0 or later (the project's deployment target)
 - Xcode 27.1 (used to develop it), Swift 6
 - The app runs in the App Sandbox and needs no special permissions.
 

@@ -30,7 +30,7 @@ Guiding principles: **simple, not over-engineered, small files, MVVM, easy to ex
 - R13. A total for the month is shown at the bottom.
 
 ### 1.2 Non-functional
-- Native macOS (SwiftUI), deployment target macOS 27 (as set in the project).
+- Native macOS (SwiftUI), deployment target macOS 26 (lowered from 27 after v1.0 so it also runs on macOS 26).
 - Data is stored locally in SQLite.
 - MVVM: Views contain no business logic; ViewModels contain no SQL; Models are plain value types.
 - Small files: aim for **< 150 lines per file**, hard limit ~250. A View that grows beyond that is split into subviews.
