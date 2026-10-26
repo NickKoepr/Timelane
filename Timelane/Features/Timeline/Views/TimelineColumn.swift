@@ -14,8 +14,6 @@ struct TimelineColumn: View {
                 LaneBackdrop(layout: layout, height: geometry.totalHeight)
                 HourGridView(geometry: geometry, zoom: viewModel.zoomState.zoom)
                 lanes(geometry: geometry, appWidth: layout.appWidth)
-                LaneEmptyHints(layout: layout, y: geometry.y(for: viewModel.initialScrollDate) + 60,
-                               showsAppHint: viewModel.sessionBlocks.isEmpty, showsEntryHint: viewModel.entries.isEmpty)
                 if viewModel.isToday { NowIndicatorView(geometry: geometry) }
                 hoverCard(columnSize: CGSize(width: proxy.size.width, height: geometry.totalHeight))
             }

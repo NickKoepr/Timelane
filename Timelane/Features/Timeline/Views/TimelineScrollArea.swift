@@ -26,6 +26,7 @@ struct TimelineScrollArea: View {
         ScrollView {
             TimelineColumn(viewModel: viewModel, hover: hover, anchor: anchor)
                 .padding(.bottom, 20)
+                .overlay(alignment: .top) { emptyState }
         }
         .onScrollGeometryChange(for: CGFloat.self, of: { $0.contentSize.width }, action: { _, new in contentWidth = new })
         .scrollPosition($scrollPosition)
@@ -45,6 +46,15 @@ struct TimelineScrollArea: View {
 
     private func scrollToInitialPosition() {
         scrollPosition.scrollTo(y: viewModel.geometry.y(for: viewModel.initialScrollDate))
+    }
+
+    @ViewBuilder private var emptyState: some View {
+        if !viewModel.hasActivity {
+            Text("No activity tracked yet")
+                .foregroundStyle(.secondary)
+                .padding(.top, viewModel.geometry.y(for: viewModel.initialScrollDate) + 120)
+                .allowsHitTesting(false)
+        }
     }
 
     private func deleteSelection() -> KeyPress.Result {

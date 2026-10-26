@@ -3,9 +3,6 @@ import CoreGraphics
 /// Horizontal geometry of the two lanes for a given column width (x relative to the column's leading edge).
 /// Used by `TimelineColumn` and `TimelineLaneHeader`, so header and lanes can never drift apart.
 struct TimelineLaneLayout: Equatable {
-    /// Lanes narrower than this show only the title in the header, never a truncated caption.
-    static let captionMinWidth: CGFloat = 160
-
     let totalWidth: CGFloat
 
     init(totalWidth: CGFloat) { self.totalWidth = max(totalWidth, 0) }
@@ -21,6 +18,4 @@ struct TimelineLaneLayout: Equatable {
     var entryWidth: CGFloat { availableWidth - appWidth }
     /// Centre of the gap between the lanes.
     var dividerX: CGFloat { appX + appWidth + TimelineMetrics.laneSpacing / 2 }
-
-    static func showsCaption(laneWidth: CGFloat) -> Bool { laneWidth >= captionMinWidth }
 }

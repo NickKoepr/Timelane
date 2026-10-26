@@ -22,12 +22,4 @@ struct TimelineLaneLayoutTests {
         let l = TimelineLaneLayout(totalWidth: 10)
         #expect(l.appWidth == 0 && l.entryWidth == 0)
     }
-
-    @Test func captionsDropInNarrowLanes() {
-        #expect(!TimelineLaneLayout.showsCaption(laneWidth: 125))
-        #expect(TimelineLaneLayout.showsCaption(laneWidth: 160))
-        // Minimum detail column (480 pt): app lane shows its caption only if it is wide enough.
-        #expect(TimelineLaneLayout.showsCaption(laneWidth: TimelineLaneLayout(totalWidth: 480).appWidth))
-        #expect(!TimelineLaneLayout.showsCaption(laneWidth: TimelineLaneLayout(totalWidth: 380).appWidth))
-    }
 }
