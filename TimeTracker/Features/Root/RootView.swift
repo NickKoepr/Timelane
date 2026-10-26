@@ -13,7 +13,7 @@ struct RootView: View {
             .navigationSplitViewColumnWidth(min: 160, ideal: 180)
         } detail: {
             switch selection ?? .timeline {
-            case .timeline: Text("Timeline")
+            case .timeline: TimelineScreen(environment: environment)
             case .projects: ProjectsScreen(environment: environment)
             }
         }
