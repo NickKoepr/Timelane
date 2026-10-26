@@ -29,7 +29,9 @@ struct TrackedAppsScreen: View {
     }
 
     @ViewBuilder private var content: some View {
-        if viewModel.apps.isEmpty {
+        if !viewModel.isLoaded {
+            Color.clear
+        } else if viewModel.apps.isEmpty {
             ContentUnavailableView {
                 Label("No apps tracked", systemImage: "app.badge.checkmark")
             } description: {

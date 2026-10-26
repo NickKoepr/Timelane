@@ -3,6 +3,8 @@ import Foundation
 @MainActor @Observable
 final class TrackedAppsViewModel {
     private(set) var apps: [TrackedApp] = []
+    /// False until the first list arrives, so the screen doesn't flash its empty state while loading.
+    private(set) var isLoaded = false
     var selectedId: Int64?
     var errorMessage: String?
 
@@ -11,7 +13,10 @@ final class TrackedAppsViewModel {
     init(repository: any TrackedAppRepository) { self.repository = repository }
 
     func task() async {
-        for await value in repository.observeTrackedApps() { apps = value }
+        for await value in repository.observeTrackedApps() {
+            apps = value
+            isLoaded = true
+        }
     }
 
     func remove(_ app: TrackedApp) async {

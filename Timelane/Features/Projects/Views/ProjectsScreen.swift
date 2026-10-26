@@ -44,7 +44,9 @@ struct ProjectsScreen: View {
     }
 
     @ViewBuilder private var list: some View {
-        if viewModel.rows.isEmpty {
+        if !viewModel.isLoaded {
+            Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if viewModel.rows.isEmpty {
             ProjectsEmptyState(hasAnyProjects: viewModel.hasAnyProjects, monthTitle: viewModel.monthTitle) {
                 form = .new
             }

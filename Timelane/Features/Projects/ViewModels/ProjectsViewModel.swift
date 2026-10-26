@@ -4,6 +4,8 @@ import Foundation
 final class ProjectsViewModel {
     private(set) var month: DateRange
     private(set) var allTotals: [ProjectMonthTotal] = []
+    /// False until the first totals arrive, so the screen doesn't flash its empty state while loading.
+    private(set) var isLoaded = false
     var showArchived = false
     var errorMessage: String?
 
@@ -51,6 +53,7 @@ final class ProjectsViewModel {
     func task() async {
         for await totals in repository.observeMonthTotals(in: month) {
             allTotals = totals
+            isLoaded = true
         }
     }
 
