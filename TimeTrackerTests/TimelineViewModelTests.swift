@@ -12,6 +12,7 @@ struct TimelineViewModelTests {
         let vm = TimelineViewModel(timeEntries: GRDBTimeEntryRepository(database: db),
                                    appSessions: GRDBAppSessionRepository(database: db),
                                    projects: GRDBProjectRepository(database: db),
+                                   trackedApps: GRDBTrackedAppRepository(database: db),
                                    editor: TimeEntryEditor(repository: GRDBTimeEntryRepository(database: db)),
                                    lastProject: LastProjectStore(defaults: UserDefaults(suiteName: "TimelineVMTests-\(UUID())")!),
                                    calendar: cal, clock: { now })
@@ -45,6 +46,7 @@ struct TimelineViewModelTests {
         try await GRDBTimeEntryRepository(database: db).save([
             TimeEntry(projectId: project.id!, start: TestCalendar.date(2026, 11, 3, 9), end: TestCalendar.date(2026, 11, 3, 11)),
         ], deleting: [])
+        try await GRDBTrackedAppRepository(database: db).add([TrackedApp(bundleIdentifier: "x", name: "X")])
         _ = try await GRDBAppSessionRepository(database: db).start(
             AppSession(bundleIdentifier: "x", appName: "X", start: TestCalendar.date(2026, 11, 3, 14)))
 
@@ -62,6 +64,36 @@ struct TimelineViewModelTests {
 }
 
 @MainActor
+struct TimelineTrackedAppsTests {
+    @Test func sessionsOfUntrackedAppsAreHidden() async throws {
+        let db = try AppDatabase.inMemory()
+        let now = TestCalendar.date(2026, 11, 3, 14, 30)
+        let repo = GRDBTimeEntryRepository(database: db)
+        let vm = TimelineViewModel(timeEntries: repo, appSessions: GRDBAppSessionRepository(database: db),
+                                   projects: GRDBProjectRepository(database: db), trackedApps: GRDBTrackedAppRepository(database: db),
+                                   editor: TimeEntryEditor(repository: repo),
+                                   lastProject: LastProjectStore(defaults: UserDefaults(suiteName: "TLTA-\(UUID())")!),
+                                   calendar: TestCalendar.make(), clock: { now })
+        let sessions = GRDBAppSessionRepository(database: db)
+        for (id, hour) in [("x", 9), ("y", 11)] {
+            _ = try await sessions.start(AppSession(bundleIdentifier: id, appName: id, start: TestCalendar.date(2026, 11, 3, hour),
+                                                    end: TestCalendar.date(2026, 11, 3, hour + 1)))
+        }
+        let task = Task { await vm.task() }
+        defer { task.cancel() }
+        for _ in 0..<300 where vm.trackedApps == nil { try? await Task.sleep(for: .milliseconds(10)) }
+        #expect(vm.hasNoTrackedApps)
+        #expect(vm.sessionBlocks.isEmpty && vm.trackedTotal == 0)
+
+        try await GRDBTrackedAppRepository(database: db).add([TrackedApp(bundleIdentifier: "x", name: "X")])
+        for _ in 0..<300 where vm.sessionBlocks.isEmpty { try? await Task.sleep(for: .milliseconds(10)) }
+        #expect(vm.sessionBlocks.map(\.bundleIdentifier) == ["x"])
+        #expect(vm.trackedTotal == 3600)
+        #expect(!vm.hasNoTrackedApps)
+    }
+}
+
+@MainActor
 struct TimelineRegistrationTests {
     let cal = TestCalendar.make()
     let now = TestCalendar.date(2026, 11, 3, 14, 30)
@@ -72,7 +104,7 @@ struct TimelineRegistrationTests {
         let projects = GRDBProjectRepository(database: db)
         let project = try await projects.save(Project(name: "A", colorHex: "#000000"))
         let vm = TimelineViewModel(timeEntries: entries, appSessions: GRDBAppSessionRepository(database: db),
-                                   projects: projects, editor: TimeEntryEditor(repository: entries),
+                                   projects: projects, trackedApps: GRDBTrackedAppRepository(database: db), editor: TimeEntryEditor(repository: entries),
                                    lastProject: LastProjectStore(defaults: UserDefaults(suiteName: "TimelineRegTests-\(UUID())")!),
                                    calendar: cal, clock: { now })
         let task = Task { await vm.task() }

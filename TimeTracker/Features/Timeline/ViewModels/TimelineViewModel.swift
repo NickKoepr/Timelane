@@ -12,10 +12,18 @@ final class TimelineViewModel {
     /// The open time entry window (new or edit); presented as a sheet.
     private(set) var form: TimeEntryFormViewModel?
 
-    private var sessions: [AppSession] = []
+    /// nil until the tracked apps list has been loaded.
+    private(set) var trackedApps: [TrackedApp]?
+
+    private var allSessions: [AppSession] = []
+    private var sessions: [AppSession] {
+        let ids = Set((trackedApps ?? []).map(\.bundleIdentifier))
+        return allSessions.filter { ids.contains($0.bundleIdentifier) }
+    }
     private let timeEntries: any TimeEntryRepository
     private let appSessions: any AppSessionRepository
     private let projectRepository: any ProjectRepository
+    private let trackedAppRepository: any TrackedAppRepository
     let entryEditing: EntryEditingViewModel
     private let editor: TimeEntryEditor
     private let lastProject: LastProjectStore
@@ -23,11 +31,12 @@ final class TimelineViewModel {
     private let clock: () -> Date
 
     init(timeEntries: any TimeEntryRepository, appSessions: any AppSessionRepository,
-         projects: any ProjectRepository, editor: TimeEntryEditor, lastProject: LastProjectStore = LastProjectStore(),
+         projects: any ProjectRepository, trackedApps: any TrackedAppRepository, editor: TimeEntryEditor, lastProject: LastProjectStore = LastProjectStore(),
          calendar: Calendar = .current, clock: @escaping () -> Date = { .now }) {
         self.timeEntries = timeEntries
         self.appSessions = appSessions
         self.projectRepository = projects
+        self.trackedAppRepository = trackedApps
         self.editor = editor
         self.entryEditing = EntryEditingViewModel(editor: editor)
         self.lastProject = lastProject
@@ -44,6 +53,8 @@ final class TimelineViewModel {
     var title: String { day.start.formatted(.dateTime.weekday(.wide).day().month(.wide).year()) }
     var registeredTotal: TimeInterval { DayTotals.registered(entries: entries, in: day) }
     var trackedTotal: TimeInterval { DayTotals.tracked(sessions: sessions, in: day, now: now) }
+    /// True once the list is loaded and still empty: the timeline shows a hint instead of sessions.
+    var hasNoTrackedApps: Bool { trackedApps?.isEmpty == true }
     var hasActivity: Bool { !sessionBlocks.isEmpty || !entries.isEmpty }
 
     func project(id: Int64) -> Project? { projects.first { $0.id == id } }
@@ -135,14 +146,15 @@ final class TimelineViewModel {
     func task() async {
         let range = day
         now = clock()
-        sessions = []
+        allSessions = []
         entries = []
         rebuildBlocks()
         async let observedEntries: Void = observeEntries(in: range)
         async let observedSessions: Void = observeSessions(in: range)
         async let observedProjects: Void = observeProjects()
+        async let observedApps: Void = observeTrackedApps()
         async let ticking: Void = tick()
-        _ = await (observedEntries, observedSessions, observedProjects, ticking)
+        _ = await (observedEntries, observedSessions, observedProjects, observedApps, ticking)
     }
 
     private func observeEntries(in range: DateRange) async {
@@ -151,7 +163,7 @@ final class TimelineViewModel {
 
     private func observeSessions(in range: DateRange) async {
         for await value in appSessions.observeSessions(in: range) {
-            sessions = value
+            allSessions = value
             now = clock()
             rebuildBlocks()
         }
@@ -159,6 +171,13 @@ final class TimelineViewModel {
 
     private func observeProjects() async {
         for await value in projectRepository.observeProjects(includeArchived: true) { projects = value }
+    }
+
+    private func observeTrackedApps() async {
+        for await value in trackedAppRepository.observeTrackedApps() {
+            trackedApps = value
+            rebuildBlocks()
+        }
     }
 
     /// The open session grows while viewing today.

@@ -10,6 +10,7 @@ struct TimelineScreen: View {
             timeEntries: environment.timeEntries,
             appSessions: environment.appSessions,
             projects: environment.projects,
+            trackedApps: environment.trackedApps,
             editor: environment.timeEntryEditor))
     }
 

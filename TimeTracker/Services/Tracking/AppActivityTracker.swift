@@ -6,10 +6,14 @@ final class AppActivityTracker {
     private(set) var currentApp: ForegroundApp?
     private(set) var pauseReasons: Set<PauseReason> = []
     private(set) var errorMessage: String?
+    private(set) var trackedBundleIds: Set<String> = []
 
     var isPaused: Bool { !pauseReasons.isEmpty }
+    /// False while the frontmost app is not on the tracked list (or nothing is frontmost).
+    var isCurrentAppTracked: Bool { currentApp.map { trackedBundleIds.contains($0.bundleIdentifier) } ?? false }
 
     private let repository: any AppSessionRepository
+    private let trackedApps: any TrackedAppRepository
     private let heartbeat: any HeartbeatStore
     private let now: () -> Date
     private let frontmostProvider: () -> ForegroundApp?
@@ -20,13 +24,14 @@ final class AppActivityTracker {
     private var systemObserver: SystemEventObserver?
     private var idleMonitor: IdleMonitor?
 
-    init(repository: any AppSessionRepository,
+    init(repository: any AppSessionRepository, trackedApps: any TrackedAppRepository,
          heartbeat: any HeartbeatStore = UserDefaultsHeartbeat(),
          now: @escaping () -> Date = { .now },
          frontmostProvider: @escaping () -> ForegroundApp? = {
              NSWorkspace.shared.frontmostApplication.flatMap(ForegroundApp.init)
          }) {
         self.repository = repository
+        self.trackedApps = trackedApps
         self.heartbeat = heartbeat
         self.now = now
         self.frontmostProvider = frontmostProvider
@@ -38,6 +43,7 @@ final class AppActivityTracker {
     func start() async {
         guard continuation == nil else { return }
         await perform { try await repository.closeDanglingSessions(at: heartbeat.lastBeat) }
+        await perform { trackedBundleIds = Set(try await trackedApps.trackedApps().map(\.bundleIdentifier)) }
         currentApp = frontmostProvider()
         await switchSession(to: currentApp)
         beat()
@@ -51,6 +57,7 @@ final class AppActivityTracker {
         tasks = [
             Task { for await event in stream { await self.handle(event) } },
             Task { await self.runHeartbeat() },
+            Task { await self.observeTrackedApps(into: continuation) },
         ]
     }
 
@@ -81,12 +88,25 @@ final class AppActivityTracker {
             guard !isPaused else { return }
             currentApp = frontmostProvider() ?? currentApp
             await switchSession(to: currentApp)
+        case .trackedAppsChanged(let ids):
+            guard ids != trackedBundleIds else { return }
+            trackedBundleIds = ids
+            if !isPaused { await switchSession(to: currentApp) }
+        }
+    }
+
+    /// Feeds list changes into the event stream so all state changes stay serial.
+    private func observeTrackedApps(into continuation: AsyncStream<ActivityEvent>.Continuation) async {
+        for await apps in trackedApps.observeTrackedApps() {
+            continuation.yield(.trackedAppsChanged(Set(apps.map(\.bundleIdentifier))))
         }
     }
 
     // MARK: Sessions
 
-    private func switchSession(to app: ForegroundApp?) async {
+    /// Opens a session for `app` when it is tracked; otherwise only closes the open one.
+    private func switchSession(to candidate: ForegroundApp?) async {
+        let app = candidate.flatMap { trackedBundleIds.contains($0.bundleIdentifier) ? $0 : nil }
         if let app, openSession?.bundleIdentifier == app.bundleIdentifier { return }
         await closeSession(at: now())
         guard let app else { return }

@@ -7,7 +7,8 @@ struct MenuBarContentView: View {
 
     init(environment: AppEnvironment) {
         _viewModel = State(initialValue: MenuBarViewModel(
-            timeEntries: environment.timeEntries, appSessions: environment.appSessions))
+            timeEntries: environment.timeEntries, appSessions: environment.appSessions,
+            trackedApps: environment.trackedApps))
     }
 
     var body: some View {
@@ -36,9 +37,15 @@ struct MenuBarContentView: View {
         return HStack(spacing: 6) {
             Image(systemName: tracker.isPaused ? "pause.circle" : "record.circle")
                 .foregroundStyle(tracker.isPaused ? Color.secondary : Color.red)
-            Text(tracker.isPaused ? "Paused" : (tracker.currentApp?.name ?? "Not tracking"))
+            Text(statusText(for: tracker))
                 .lineLimit(1)
         }
+    }
+
+    private func statusText(for tracker: AppActivityTracker) -> String {
+        if tracker.isPaused { return "Paused" }
+        guard let app = tracker.currentApp else { return "Not tracking" }
+        return tracker.isCurrentAppTracked ? app.name : "Not tracking: \(app.name)"
     }
 
     private func totalRow(_ title: String, _ seconds: TimeInterval) -> some View {

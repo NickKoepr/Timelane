@@ -9,14 +9,23 @@ final class FakeHeartbeat: HeartbeatStore {
 @MainActor
 final class TrackerFixture {
     let repository: GRDBAppSessionRepository
+    let trackedApps: GRDBTrackedAppRepository
     let heartbeat = FakeHeartbeat()
     var clock = TestCalendar.date(2026, 11, 3, 9)
     var frontmost: ForegroundApp? = ForegroundApp(bundleIdentifier: "xcode", name: "Xcode")
     lazy var tracker = AppActivityTracker(
-        repository: repository, heartbeat: heartbeat,
+        repository: repository, trackedApps: trackedApps, heartbeat: heartbeat,
         now: { [self] in self.clock }, frontmostProvider: { [self] in self.frontmost })
 
-    init() throws { repository = GRDBAppSessionRepository(database: try AppDatabase.inMemory()) }
+    /// Seeds the tracked list synchronously with `tracked` (default: the apps the tests use).
+    init(tracked: [String] = ["xcode", "safari", "slack"]) throws {
+        let database = try AppDatabase.inMemory()
+        repository = GRDBAppSessionRepository(database: database)
+        trackedApps = GRDBTrackedAppRepository(database: database)
+        try database.writer.write { db in
+            for id in tracked { var app = TrackedApp(bundleIdentifier: id, name: id.capitalized); try app.insert(db) }
+        }
+    }
 
     func advance(minutes: Int) { clock = clock.addingTimeInterval(TimeInterval(minutes * 60)) }
 

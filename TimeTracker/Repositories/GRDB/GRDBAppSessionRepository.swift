@@ -42,6 +42,17 @@ struct GRDBAppSessionRepository: AppSessionRepository {
         }
     }
 
+    func knownApps() async throws -> [ForegroundApp] {
+        try await database.writer.read { db in
+            // Bare columns next to MAX() come from the row with the latest start.
+            let rows = try Row.fetchAll(db, sql: """
+                SELECT bundleIdentifier, appName, MAX(start) FROM appSession
+                GROUP BY bundleIdentifier ORDER BY appName COLLATE NOCASE
+                """)
+            return rows.map { ForegroundApp(bundleIdentifier: $0["bundleIdentifier"], name: $0["appName"]) }
+        }
+    }
+
     /// Sessions overlapping the range, including a still-open one (`end IS NULL`).
     private static func fetch(_ db: Database, in range: DateRange) throws -> [AppSession] {
         try AppSession

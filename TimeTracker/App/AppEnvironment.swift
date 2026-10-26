@@ -7,6 +7,7 @@ final class AppEnvironment {
     let projects: any ProjectRepository
     let timeEntries: any TimeEntryRepository
     let appSessions: any AppSessionRepository
+    let trackedApps: any TrackedAppRepository
     let timeEntryEditor: TimeEntryEditor
     let tracker: AppActivityTracker
 
@@ -15,8 +16,9 @@ final class AppEnvironment {
         self.projects = GRDBProjectRepository(database: database)
         self.timeEntries = GRDBTimeEntryRepository(database: database)
         self.appSessions = GRDBAppSessionRepository(database: database)
+        self.trackedApps = GRDBTrackedAppRepository(database: database)
         self.timeEntryEditor = TimeEntryEditor(repository: timeEntries)
-        self.tracker = AppActivityTracker(repository: appSessions)
+        self.tracker = AppActivityTracker(repository: appSessions, trackedApps: trackedApps)
     }
 
     /// The environment of the running app (shared with the app delegate).
