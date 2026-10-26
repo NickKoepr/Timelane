@@ -17,6 +17,18 @@ struct RootView: View {
             case .projects: ProjectsScreen(environment: environment)
             }
         }
+        .background { sidebarShortcuts }
+    }
+
+    /// ⌘1 / ⌘2 switch screens.
+    private var sidebarShortcuts: some View {
+        HStack {
+            Button("Timeline") { selection = .timeline }.keyboardShortcut("1", modifiers: .command)
+            Button("Projects") { selection = .projects }.keyboardShortcut("2", modifiers: .command)
+        }
+        .opacity(0)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 
