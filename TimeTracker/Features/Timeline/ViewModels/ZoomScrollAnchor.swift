@@ -14,14 +14,16 @@ final class ZoomScrollAnchor {
         self.height = height
     }
 
-    /// Call before the scale changes, with the old geometry.
+    /// Call before the scale changes, with the geometry that is currently drawn.
     func capture(with geometry: TimelineGeometry) {
         pendingCenter = TimelineZoomAnchor.centerDate(offset: offsetY, height: height, geometry: geometry)
     }
 
-    /// Call after the scale changed, with the new geometry; nil when nothing was captured.
-    func takeOffset(with geometry: TimelineGeometry) -> CGFloat? {
-        defer { pendingCenter = nil }
-        return pendingCenter.map { TimelineZoomAnchor.offset(keeping: $0, centeredIn: height, geometry: geometry) }
+    /// Offset that keeps the captured time centred at the scale of `geometry`; nil when nothing was captured.
+    /// Stays valid for every frame of an animated zoom, until `finish()`.
+    func offset(with geometry: TimelineGeometry) -> CGFloat? {
+        pendingCenter.map { TimelineZoomAnchor.offset(keeping: $0, centeredIn: height, geometry: geometry) }
     }
+
+    func finish() { pendingCenter = nil }
 }

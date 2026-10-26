@@ -6,6 +6,7 @@ struct TimelineScreen: View {
     @State private var anchor = ZoomScrollAnchor()
     @State private var hover = TimelineHoverState()
     @FocusState private var timelineFocused: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let onShowTrackedApps: () -> Void
 
@@ -50,9 +51,10 @@ struct TimelineScreen: View {
         .navigationTitle("Timeline")
     }
 
-    /// Applies a zoom change and keeps the time in the middle of the view in place.
+    /// Applies a zoom change (animated unless Reduce Motion is on) and keeps the time in the middle of the view in place.
     private func changeZoom(_ change: ZoomChange) {
         anchor.capture(with: viewModel.geometry)
+        viewModel.zoomState.animationDuration = reduceMotion ? 0 : ZoomTransition.defaultDuration
         change(viewModel.zoomState)
     }
 

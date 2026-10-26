@@ -20,9 +20,13 @@ private struct TimelineZoomBehavior: ViewModifier {
                     if step > 0 { apply { $0.zoomIn() } } else if step < 0 { apply { $0.zoomOut() } }
                 }
                 .onEnded { _ in stepper.reset() })
-            .onChange(of: viewModel.zoomState.zoom) {
-                guard let offset = anchor.takeOffset(with: viewModel.geometry) else { return }
-                // Wait for the new content height, otherwise the offset is clamped to the old one.
+            // Every animation frame changes the scale; scroll along so the centred time stays put.
+            .onChange(of: viewModel.zoomState.pointsPerHour) {
+                guard let offset = anchor.offset(with: viewModel.geometry) else { return }
+                scrollPosition.scrollTo(y: offset)
+                guard !viewModel.zoomState.isAnimating else { return }
+                anchor.finish()
+                // Once more after layout: zooming in near the end of the day can be clamped to the old height.
                 Task { @MainActor in scrollPosition.scrollTo(y: offset) }
             }
     }

@@ -26,10 +26,13 @@ struct TimelineZoomAnchorTests {
     @Test func anchorCapturesBeforeAndAppliesAfter() {
         let anchor = ZoomScrollAnchor()
         anchor.visibleAreaChanged(offsetY: 800, height: 400)
-        #expect(anchor.takeOffset(with: geometry(.halfHour)) == nil)
+        #expect(anchor.offset(with: geometry(.halfHour)) == nil)
         anchor.capture(with: geometry(.hour))
-        #expect(anchor.takeOffset(with: geometry(.halfHour)) == 12.5 * 160 - 200)
-        #expect(anchor.takeOffset(with: geometry(.halfHour)) == nil)
+        // Valid for every frame of the animation (12:30 is centred at 80 pt/h), until finished.
+        #expect(anchor.offset(with: geometry(.halfHour)) == 12.5 * 160 - 200)
+        #expect(anchor.offset(with: geometry(.tenMinutes)) == 12.5 * 480 - 200)
+        anchor.finish()
+        #expect(anchor.offset(with: geometry(.halfHour)) == nil)
     }
 
     @Test func pinchStepsOneLevelPerThreshold() {

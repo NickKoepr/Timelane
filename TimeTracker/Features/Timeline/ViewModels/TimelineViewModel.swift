@@ -48,7 +48,7 @@ final class TimelineViewModel {
 
     // MARK: Presentation
 
-    var geometry: TimelineGeometry { TimelineGeometry(day: day, pointsPerHour: zoomState.zoom.pointsPerHour) }
+    var geometry: TimelineGeometry { TimelineGeometry(day: day, pointsPerHour: zoomState.pointsPerHour) }
     var isToday: Bool { day.contains(clock()) }
     var title: String { day.start.formatted(.dateTime.weekday(.wide).day().month(.wide).year()) }
     var registeredTotal: TimeInterval { DayTotals.registered(entries: entries, in: day) }
