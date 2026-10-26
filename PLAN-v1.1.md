@@ -100,7 +100,7 @@ Features/Timeline/
 - Only apps on the **tracked apps list** create app sessions. When the frontmost app is not on the list, the current session is closed and nothing is recorded until a tracked app becomes frontmost again (same as a pause).
 - The list starts **empty** → nothing is tracked until the user adds apps. The timeline then shows a hint: "No apps are tracked yet. Add apps in Tracked Apps." with a button that switches to the Tracked Apps screen.
 - Changes to the list apply immediately: adding the current frontmost app starts a session right away; removing it closes the open session.
-- The timeline only shows sessions of currently tracked apps (filter in `TimelineViewModel` before `AppSessionMerger`). Stored sessions of other apps are kept in the database but hidden; re-adding an app shows its history again. The tracked total follows the same filter. Do the same in `MenuBarViewModel`.
+- **Changed in v1.3: all stored sessions are always shown; this filter was removed (see PLAN-v1.3.md).** The timeline only shows sessions of currently tracked apps (filter in `TimelineViewModel` before `AppSessionMerger`). Stored sessions of other apps are kept in the database but hidden; re-adding an app shows its history again. The tracked total follows the same filter. Do the same in `MenuBarViewModel`.
 - Menu bar: when the frontmost app is untracked show "Not tracking: <App name>" instead of the current app.
 
 ### 4.2 Tracked Apps screen

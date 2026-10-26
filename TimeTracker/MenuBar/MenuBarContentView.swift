@@ -7,8 +7,7 @@ struct MenuBarContentView: View {
 
     init(environment: AppEnvironment) {
         _viewModel = State(initialValue: MenuBarViewModel(
-            timeEntries: environment.timeEntries, appSessions: environment.appSessions,
-            trackedApps: environment.trackedApps))
+            timeEntries: environment.timeEntries, appSessions: environment.appSessions))
     }
 
     var body: some View {

@@ -39,6 +39,11 @@ struct TrackedAppsScreen: View {
                     .contextMenu { Button("Remove") { Task { await viewModel.remove(app) } } }
             }
             .onDeleteCommand { Task { await viewModel.removeSelected() } }
+            .safeAreaInset(edge: .bottom) {
+                Text("Only these apps are recorded. Removing an app stops recording it; time already recorded stays on the timeline.")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(12)
+            }
         }
     }
 }

@@ -19,7 +19,20 @@ final class AppDatabase: Sendable {
             .url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             .appendingPathComponent("TimeTracker", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let queue = try DatabaseQueue(path: directory.appendingPathComponent("db.sqlite").path)
+        let path = directory.appendingPathComponent("db.sqlite").path
+        #if DEBUG
+        if UserDefaults.standard.bool(forKey: "resetDatabase") {
+            for suffix in ["", "-wal", "-shm"] {
+                do {
+                    try FileManager.default.removeItem(atPath: path + suffix)
+                    logger.notice("Reset database: deleted db.sqlite\(suffix, privacy: .public)")
+                } catch CocoaError.fileNoSuchFile {
+                    // Nothing to delete.
+                }
+            }
+        }
+        #endif
+        let queue = try DatabaseQueue(path: path)
         return try AppDatabase(writer: queue)
     }
 

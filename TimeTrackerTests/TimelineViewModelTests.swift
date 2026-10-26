@@ -66,12 +66,13 @@ struct TimelineViewModelTests {
 
 @MainActor
 struct TimelineTrackedAppsTests {
-    @Test func sessionsOfUntrackedAppsAreHidden() async throws {
+    @Test func sessionsStayVisibleWhenAppIsNotOrNoLongerTracked() async throws {
         let db = try AppDatabase.inMemory()
         let now = TestCalendar.date(2026, 11, 3, 14, 30)
         let repo = GRDBTimeEntryRepository(database: db)
+        let tracked = GRDBTrackedAppRepository(database: db)
         let vm = TimelineViewModel(timeEntries: repo, appSessions: GRDBAppSessionRepository(database: db),
-                                   projects: GRDBProjectRepository(database: db), trackedApps: GRDBTrackedAppRepository(database: db),
+                                   projects: GRDBProjectRepository(database: db), trackedApps: tracked,
                                    editor: TimeEntryEditor(repository: repo),
                                    lastProject: LastProjectStore(defaults: UserDefaults(suiteName: "TLTA-\(UUID())")!),
                                    zoomState: TimelineZoomState(defaults: UserDefaults(suiteName: "Zoom-\(UUID())")!),
@@ -83,15 +84,41 @@ struct TimelineTrackedAppsTests {
         }
         let task = Task { await vm.task() }
         defer { task.cancel() }
-        for _ in 0..<300 where vm.trackedApps == nil { try? await Task.sleep(for: .milliseconds(10)) }
+        for _ in 0..<300 where !vm.hasNoTrackedApps || vm.sessionBlocks.count < 2 { try? await Task.sleep(for: .milliseconds(10)) }
+        // Neither app is on the list, both sessions are shown.
         #expect(vm.hasNoTrackedApps)
-        #expect(vm.sessionBlocks.isEmpty && vm.trackedTotal == 0)
+        #expect(vm.sessionBlocks.map(\.bundleIdentifier) == ["x", "y"])
+        #expect(vm.trackedTotal == 7200)
 
-        try await GRDBTrackedAppRepository(database: db).add([TrackedApp(bundleIdentifier: "x", name: "X")])
-        for _ in 0..<300 where vm.sessionBlocks.isEmpty { try? await Task.sleep(for: .milliseconds(10)) }
-        #expect(vm.sessionBlocks.map(\.bundleIdentifier) == ["x"])
-        #expect(vm.trackedTotal == 3600)
-        #expect(!vm.hasNoTrackedApps)
+        try await tracked.add([TrackedApp(bundleIdentifier: "x", name: "X")])
+        for _ in 0..<300 where vm.hasNoTrackedApps { try? await Task.sleep(for: .milliseconds(10)) }
+        #expect(vm.sessionBlocks.count == 2)
+
+        let id = try #require(try await tracked.trackedApps().first?.id)
+        try await tracked.remove(id: id)
+        for _ in 0..<300 where !vm.hasNoTrackedApps { try? await Task.sleep(for: .milliseconds(10)) }
+        #expect(vm.hasNoTrackedApps)
+        #expect(vm.sessionBlocks.map(\.bundleIdentifier) == ["x", "y"])
+        #expect(vm.trackedTotal == 7200)
+    }
+}
+
+@MainActor
+struct MenuBarViewModelTests {
+    @Test func trackedTodayIncludesSessionsOfRemovedApps() async throws {
+        let db = try AppDatabase.inMemory()
+        let cal = Calendar.current
+        let now = Date.now
+        let start = cal.startOfDay(for: now)
+        let sessions = GRDBAppSessionRepository(database: db)
+        _ = try await sessions.start(AppSession(bundleIdentifier: "gone", appName: "Gone", start: start.addingTimeInterval(60),
+                                                end: start.addingTimeInterval(3660)))
+        let vm = MenuBarViewModel(timeEntries: GRDBTimeEntryRepository(database: db), appSessions: sessions,
+                                  calendar: cal)
+        let task = Task { await vm.task() }
+        defer { task.cancel() }
+        for _ in 0..<300 where vm.trackedTotal(now: now) == 0 { try? await Task.sleep(for: .milliseconds(10)) }
+        #expect(vm.trackedTotal(now: now) == 3600)
     }
 }
 

@@ -300,7 +300,7 @@ Hide GRDB-specific types behind `AsyncStream` so ViewModels never import GRDB.
 - `DistributedNotificationCenter`: `com.apple.screenIsLocked` / `com.apple.screenIsUnlocked` → pause / resume.
 - `IdleMonitor`: every 30s check `CGEventSource.secondsSinceLastEventType(.combinedSessionState, eventType: .null)` (use `kCGAnyInputEventType`). When idle > 5 min (configurable constant in `TrackingSettings`): close the current session at `now - idleSeconds` and pause. On the first check after activity returns: resume.
 - On `applicationWillTerminate`: close the current session.
-- **v1.1:** only apps on the tracked apps list (`TrackedAppRepository`) open sessions; list changes arrive as `ActivityEvent.trackedAppsChanged`. Untracked frontmost apps behave like a pause. The app's own bundle id is only recorded if the user adds it.
+- **v1.1:** only apps on the tracked apps list (`TrackedAppRepository`) open sessions; list changes arrive as `ActivityEvent.trackedAppsChanged`. Untracked frontmost apps behave like a pause. The app's own bundle id is only recorded if the user adds it. **v1.3:** the list only decides what is recorded from now on; all stored sessions are always shown on the timeline and in the totals (see PLAN-v1.3.md). DEBUG builds accept the launch argument `-resetDatabase YES`, which deletes the database file before opening it.
 
 Translate all sources into one `ActivityEvent` enum and handle them in a single `handle(_ event:)` method; this keeps the tracker small and testable (inject a clock `() -> Date` and feed events in tests).
 
