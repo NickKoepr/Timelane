@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The menu bar panel: live status on top, then the same timeline as the main window.
-/// Registering and editing open the time entry form as a sheet on the panel, like in the main window.
+/// Registering and editing open the time entry form as a popup over the panel (see `MenuBarFormPopup`).
 struct MenuBarContentView: View {
     static let size = CGSize(width: 380, height: 600)
 
@@ -27,13 +27,15 @@ struct MenuBarContentView: View {
             Divider()
             MenuBarFooter(openMainWindow: { openMainWindow(nil) })
         }
+        .overlay {
+            if let form = timeline.form {
+                MenuBarFormPopup(viewModel: form, onManageProjects: { openMainWindow(.projects) })
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: timeline.form?.id)
         .frame(width: Self.size.width, height: Self.size.height)
         .panelBackground()
-        // The same popup as in the main window, attached to the panel.
-        .sheet(item: Binding(get: { timeline.form }, set: { if $0 == nil { timeline.cancelRegistration() } })) {
-            TimeEntryFormSheet(viewModel: $0, width: Self.size.width - 40,
-                               onManageProjects: { openMainWindow(.projects) })
-        }
         .background { PanelOpenObserver { viewModel.panelDidOpen() } }
     }
 
