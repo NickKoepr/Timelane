@@ -3,6 +3,7 @@ import SwiftUI
 struct TimelineScreen: View {
     @State private var viewModel: TimelineViewModel
     @State private var scrollPosition = ScrollPosition(edge: .top)
+    @State private var anchor = ZoomScrollAnchor()
     @FocusState private var timelineFocused: Bool
 
     private let onShowTrackedApps: () -> Void
@@ -19,7 +20,7 @@ struct TimelineScreen: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            DayNavigationBar(viewModel: viewModel)
+            DayNavigationBar(viewModel: viewModel, changeZoom: changeZoom)
             Divider()
             if viewModel.hasNoTrackedApps { NoTrackedAppsBanner(action: onShowTrackedApps) }
             ScrollView {
@@ -28,6 +29,7 @@ struct TimelineScreen: View {
                     .overlay(alignment: .top) { emptyState }
             }
             .scrollPosition($scrollPosition)
+            .timelineZoom(viewModel: viewModel, scrollPosition: $scrollPosition, anchor: anchor, apply: changeZoom)
             .focusable()
             .focusEffectDisabled()
             .focused($timelineFocused)
@@ -45,6 +47,12 @@ struct TimelineScreen: View {
         .errorAlert(Binding(get: { viewModel.entryEditing.errorMessage },
                            set: { viewModel.entryEditing.errorMessage = $0 }))
         .navigationTitle("Timeline")
+    }
+
+    /// Applies a zoom change and keeps the time in the middle of the view in place.
+    private func changeZoom(_ change: ZoomChange) {
+        anchor.capture(with: viewModel.geometry)
+        change(viewModel.zoomState)
     }
 
     private func deleteSelection() -> KeyPress.Result {

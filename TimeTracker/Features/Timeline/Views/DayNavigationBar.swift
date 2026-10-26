@@ -2,6 +2,7 @@ import SwiftUI
 
 struct DayNavigationBar: View {
     let viewModel: TimelineViewModel
+    let changeZoom: (ZoomChange) -> Void
 
     var body: some View {
         HStack(spacing: 8) {
@@ -22,6 +23,7 @@ struct DayNavigationBar: View {
                 .labelsHidden()
                 .datePickerStyle(.compact)
             Spacer()
+            TimelineZoomControls(zoomState: viewModel.zoomState, apply: changeZoom)
             DayTotalsView(registered: viewModel.registeredTotal, tracked: viewModel.trackedTotal)
         }
         .padding(.horizontal)
