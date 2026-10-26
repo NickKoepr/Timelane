@@ -35,6 +35,8 @@ struct MenuBarContentView: View {
             MenuBarFooter(openMainWindow: { openMainWindow(nil) })
         }
         .frame(width: Self.size.width, height: Self.size.height)
+        // Opaque instead of the panel's translucent material, so the timeline stays readable.
+        .background(Color(nsColor: .windowBackgroundColor))
         .background { PanelOpenObserver { viewModel.panelDidOpen() } }
     }
 
