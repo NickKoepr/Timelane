@@ -3,6 +3,7 @@ import SwiftUI
 /// Lane with the registered time. Entries sit on top of the gesture layer in `TimelineColumn`, so their own move/resize gestures win.
 struct TimeEntryLane: View {
     let viewModel: TimelineViewModel
+    let hover: TimelineHoverState
 
     var body: some View {
         let geometry = viewModel.geometry
@@ -28,6 +29,8 @@ struct TimeEntryLane: View {
             onTap: { viewModel.select(entry) },
             onDrag: { mode, dy in editing.dragChanged(entry, mode: mode, translationY: dy, geometry: geometry) },
             onDragEnd: { Task { await editing.dragEnded(entry) } })
+        .reportsHover(.entry(entry, project: viewModel.project(id: entry.projectId), range: range), to: hover,
+                      y: frame.y, height: max(frame.height - 1, 2))
         .offset(y: frame.y)
     }
 }

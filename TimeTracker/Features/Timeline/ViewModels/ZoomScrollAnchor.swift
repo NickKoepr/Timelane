@@ -5,7 +5,7 @@ import Foundation
 /// Deliberately not observable: it is updated on every scroll frame and must not re-render views.
 @MainActor
 final class ZoomScrollAnchor {
-    private var offsetY: CGFloat = 0
+    private(set) var offsetY: CGFloat = 0
     private(set) var height: CGFloat = 0
     private var pendingCenter: Date?
 

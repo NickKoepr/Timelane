@@ -4,6 +4,7 @@ struct TimelineScreen: View {
     @State private var viewModel: TimelineViewModel
     @State private var scrollPosition = ScrollPosition(edge: .top)
     @State private var anchor = ZoomScrollAnchor()
+    @State private var hover = TimelineHoverState()
     @FocusState private var timelineFocused: Bool
 
     private let onShowTrackedApps: () -> Void
@@ -24,7 +25,7 @@ struct TimelineScreen: View {
             Divider()
             if viewModel.hasNoTrackedApps { NoTrackedAppsBanner(action: onShowTrackedApps) }
             ScrollView {
-                TimelineColumn(viewModel: viewModel)
+                TimelineColumn(viewModel: viewModel, hover: hover, anchor: anchor)
                     .padding(.bottom, 20)
                     .overlay(alignment: .top) { emptyState }
             }

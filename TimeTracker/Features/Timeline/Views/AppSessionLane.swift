@@ -2,6 +2,7 @@ import SwiftUI
 
 struct AppSessionLane: View {
     let width: CGFloat
+    let hover: TimelineHoverState
     let blocks: [AppSessionBlockModel]
     let geometry: TimelineGeometry
     let selectionDrag: SelectionDragGesture
@@ -14,6 +15,7 @@ struct AppSessionLane: View {
                 let frame = geometry.frame(for: block.start, end: block.end)
                 AppSessionBlock(block: block, height: max(frame.height - 1, 2), width: width,
                                 selectionDrag: selectionDrag, onSelect: onSelect)
+                    .reportsHover(.session(block), to: hover, y: frame.y, height: max(frame.height - 1, 2))
                     .offset(y: frame.y)
             }
         }

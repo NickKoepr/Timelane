@@ -30,10 +30,6 @@ struct TimeEntryBlock: View {
         return lines
     }
 
-    private var tooltip: String {
-        ([entry.title, project?.name ?? "Unknown project", timeText, entry.note].compactMap { $0 }).joined(separator: "\n")
-    }
-
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             if height >= 15 {
@@ -55,7 +51,6 @@ struct TimeEntryBlock: View {
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
         .gesture(dragGesture(.move))
-        .help(tooltip)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(primaryText), \(timeText)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])

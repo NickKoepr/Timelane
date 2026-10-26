@@ -21,7 +21,6 @@ struct AppSessionBlock: View {
         .contentShape(Rectangle())
         .onTapGesture { onSelect(block) }
         .simultaneousGesture(selectionDrag)   // a drag starting here selects a range; a click assigns the session
-        .help("\(block.appName)\n\(block.start.formatted(date: .omitted, time: .shortened)) – \(block.end.formatted(date: .omitted, time: .shortened))")
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(block.appName), \(DurationFormatter.short(block.duration))")
     }
