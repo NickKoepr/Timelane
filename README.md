@@ -88,6 +88,8 @@ It stores projects, your time entries (start, end, optional title and note), the
 
 ## Development
 
+- [`AGENTS.md`](AGENTS.md) explains the architecture, conventions, workflow and known pitfalls for anyone (or any AI agent) continuing work on the project; `CLAUDE.md` points to it.
+
 - Tests use Swift Testing (140+ tests) and run with the `xcodebuild ... test` command above. Repository and view model tests use an in-memory database.
 - In DEBUG builds the launch argument `-resetDatabase YES` deletes the database at startup. Use it with care: it wipes your data.
 - The [`plans/`](plans) folder documents the design and each iteration; [`plans/PLAN.md`](plans/PLAN.md) is the base specification.
