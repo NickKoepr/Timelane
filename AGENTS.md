@@ -26,6 +26,7 @@ osascript -e 'quit app "Timelane"'
 xcodebuild -project Timelane.xcodeproj -scheme Timelane -destination 'platform=macOS' -derivedDataPath build/DerivedData build
 open build/DerivedData/Build/Products/Debug/Timelane.app
 ```
+- CI runs the same tests on every PR to `main` via `.github/workflows/tests.yml`, with ad-hoc signing overrides on the command line (`CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= ...`). If a test needs the owner's signing identity or local state, it will fail in CI.
 - `build/` is git-ignored. Always use `-derivedDataPath build/DerivedData` so the user's running app is the one you just built.
 - After every change: run the tests, then rebuild and relaunch the app so the user can try it.
 - **Never** launch with `-resetDatabase YES` unless the user explicitly asks — that DEBUG-only argument deletes the user's database.
