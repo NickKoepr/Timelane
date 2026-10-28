@@ -1,147 +1,107 @@
-# PLAN v1.12 — Undo / Redo for time entries (⌘Z / ⇧⌘Z)
+# Timelane v1.12 — Run the unit tests on every pull request (GitHub Actions)
 
-## Context
+Context: Timelane is a native macOS app (repo folder `/Users/nickk/iosProjects/TimeTracker`, project `Timelane.xcodeproj`, scheme `Timelane`, tests in `TimelaneTests/`, Swift Testing, ~170 tests, ~3 s locally). Remote: github.com/NickKoepr/Timelane (**private** repo). The only dependency is GRDB via Swift Package Manager (`Timelane.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved`). Deployment target macOS 26.0, built locally with Xcode 27.1.
 
-The user wants to undo (⌘Z) and redo (⇧⌘Z) changes to **logged hours** (time entries) only:
-creating an entry, editing it (form, drag-move, drag-resize), and deleting it. Projects, tracked
-apps, settings etc. are out of scope.
+User request: when a pull request is opened, GitHub must run the tests.
 
-All time-entry changes already go through `TimeEntryEditor` (`create` / `update` / `delete`) →
-`TimeEntryOverlapResolver` → one `TimeEntryRepository.save(_:deleting:)` transaction. One user
-action can therefore touch several rows (the new entry plus trimmed / split / deleted neighbours).
-Undo must restore **all** of them.
+Exception to the usual workflow: this change goes through a **pull request** on a branch (`ci/pr-tests`), not directly on `main`. Implementers commit on the branch; the main session pushes and opens the PR — **do not push**.
 
-Callers of the editor: `TimeEntryFormViewModel` (create/update/delete from the form, also used by
-the Record/Stop timer and the menu bar popup) and `EntryEditingViewModel` (drag move/resize,
-delete). The editor instance is `AppEnvironment.timeEntryEditor`, shared by the main window and the
-menu bar panel.
+---
 
-## Design (keep it simple)
+## 1. Behaviour
 
-### 1. `TimeEntryChange` (Models or Services, pure value type)
+- Workflow `.github/workflows/tests.yml`, name `Tests`, one job `test` (display name "Unit tests").
+- Triggers:
+  - `pull_request` with types `opened`, `synchronize`, `reopened`, `ready_for_review` targeting `main` — so new commits on an open PR are tested too.
+  - `workflow_dispatch` (manual run from the Actions tab).
+- Skip runs when a PR only touches docs: `paths-ignore` for `**/*.md`, `plans/**`, `docs/**`. (Note: a required status check would then stay "pending" on docs-only PRs; no branch protection is configured, so this is fine — mention it in the README section.)
+- `concurrency: group: tests-${{ github.event.pull_request.number || github.ref }}`, `cancel-in-progress: true` — a new push cancels the outdated run (macOS minutes are expensive on a private repo: 10× multiplier).
+- `permissions: contents: read`.
+- `timeout-minutes: 30`.
+- Draft PRs: still run (keep it simple; no `if:` on draft).
 
-```swift
-/// One user action on time entries: the affected rows before and after it.
-struct TimeEntryChange: Equatable, Sendable {
-    var before: [TimeEntry]   // rows (with ids) as they were; empty for a pure create
-    var after: [TimeEntry]    // rows (with ids) as they are now; empty for a pure delete
-    var inverted: TimeEntryChange { TimeEntryChange(before: after, after: before) }
-}
+## 2. Runner and Xcode
+
+- `runs-on: macos-26` (the macOS 26 GitHub-hosted image; the app needs the macOS 26 SDK + Xcode 27). Verify the label exists in GitHub's runner-images documentation (github.com/actions/runner-images README, "Available Images"). If `macos-26` is not available, use the newest available macOS label that ships an Xcode able to build for macOS 26.0 and document the choice in this plan's "Notes" section.
+- Select Xcode with a plain shell step (no third-party action): pick the newest `/Applications/Xcode_27*.app` (fall back to `/Applications/Xcode.app`), `sudo xcode-select -s` it, then print `xcodebuild -version` and `swift --version` for the log. Fail with a clear message if no Xcode 27 is found.
+- Allowed actions: only first-party `actions/checkout@v4`, `actions/cache@v4`, `actions/upload-artifact@v4`. No other third-party actions.
+
+## 3. Build + test command
+
+The project uses automatic signing with the owner's team (`DEVELOPMENT_TEAM = R5Q4D5KC5S`), which doesn't exist on the runner. Tests are *hosted* (the test bundle runs inside `Timelane.app`, `TEST_HOST`), and the app is sandboxed, so the app must still be signed — use **ad-hoc signing** via build-setting overrides on the command line; do **not** change the Xcode project:
+
+```sh
+xcodebuild test \
+  -project Timelane.xcodeproj \
+  -scheme Timelane \
+  -destination 'platform=macOS' \
+  -derivedDataPath build/DerivedData \
+  -resultBundlePath build/TestResults.xcresult \
+  -skipPackagePluginValidation \
+  -skipMacroValidation \
+  CODE_SIGN_IDENTITY=- \
+  CODE_SIGN_STYLE=Manual \
+  DEVELOPMENT_TEAM= \
+  PROVISIONING_PROFILE_SPECIFIER= \
+  CODE_SIGNING_REQUIRED=YES \
+  CODE_SIGNING_ALLOWED=YES
 ```
 
-Applying a change "forward" means: delete every id in `before` that is not in `after`, then save
-(upsert) every row of `after` **with its id**. Undo = apply `change.inverted`; redo = apply
-`change`. Because ids are kept, undo → redo → undo keeps working. (GRDB `save` on a record with an
-id updates, or inserts with that explicit id when the row no longer exists — verify this in a
-test.)
+- **Verify this command locally first** (in the worktree) — it must build and pass all tests without using the owner's certificate. If ad-hoc signing fails for the hosted tests, try `CODE_SIGNING_ALLOWED=NO` and record what worked/failed under "Notes". The command in the workflow must be one that passed locally.
+- Pipe through nothing fancy (no `xcpretty`/`xcbeautify` — not installed by default, and no new tools). Keep raw output; use `set -o pipefail` only if piping.
+- Optionally run `-resolvePackageDependencies` as a separate step first so dependency failures are easy to spot in the log.
 
-### 2. Repository changes (`TimeEntryRepository` + `GRDBTimeEntryRepository`)
+## 4. Caching
 
-- `save(_:deleting:)` becomes `@discardableResult ... -> [TimeEntry]` and returns the saved rows
-  with their (new) ids. Existing callers keep compiling.
-- Add `func entries(ids: [Int64]) async throws -> [TimeEntry]` (needed to capture "before": an
-  edited entry may have moved completely out of the range the resolver looked at).
+- Cache SwiftPM checkouts with `actions/cache@v4`: path `build/DerivedData/SourcePackages`, key `spm-${{ runner.os }}-${{ hashFiles('Timelane.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}`, restore-key `spm-${{ runner.os }}-`. Don't cache the whole DerivedData (stale-build risk, large).
 
-### 3. `TimeEntryEditor` changes
+## 5. Test results
 
-- Add `var onChange: @Sendable (TimeEntryChange) async -> Void = { _ in }` (default no-op, so all
-  existing `TimeEntryEditor(repository:)` call sites and tests keep working).
-- In `apply(_:)` (and `delete`): before saving, collect the ids that will be touched
-  (`resolution.toDelete` + ids in `resolution.toSave`) and read them with `entries(ids:)` → `before`.
-  The saved rows returned by `save` → `after`. Call `await onChange(change)`.
-  For `delete`: `before = [current row]`, `after = []`.
-- Add `func revert(_ change: TimeEntryChange) async throws` / or put the "apply a change" logic
-  in the history (below) using the repository directly. It must **not** call `onChange`
-  (otherwise undo would record itself).
-- Keep `create/update/delete` signatures unchanged (another branch — PLAN-v1.13 auto logging — uses
-  them; avoid merge conflicts).
+- On failure (`if: failure()`), upload `build/TestResults.xcresult` with `actions/upload-artifact@v4` (name `TestResults`, `retention-days: 7`), so failures can be inspected in Xcode.
+- Keep the job's own log readable: the raw xcodebuild output already lists failing tests.
 
-### 4. `TimeEntryHistory` (`Features/Timeline/ViewModels/TimeEntryHistory.swift`)
+## 6. Robustness checks (tests on a fresh CI machine)
 
-`@MainActor @Observable final class`, created once in `AppEnvironment` and shared by the main window
-and the menu bar.
+Before finishing, review the test suite for things that might pass locally but fail on a clean runner, and fix them in the tests (not by weakening assertions):
+- Dependence on the machine's **time zone / locale / calendar** (runner is UTC, `en_US`). Run locally with `TZ=UTC` (e.g. `TZ=UTC xcodebuild test ...`) and, if feasible, another zone such as `TZ=Pacific/Auckland`, to catch issues around midnight/DST. Tests should inject a fixed `Calendar`/`TimeZone` where they compute days.
+- Use of `UserDefaults.standard` or the real database/sandbox container (AGENTS.md: shared state must be injected with throw-away suites / in-memory stores).
+- Real wall-clock timing / sleeps that could be flaky on a slower machine.
+- Dependence on installed apps (e.g. `AppCandidates`, `RunningApps`, `NSWorkspace`) — the runner has a different set of apps.
+If nothing needs fixing, say so in "Notes".
 
-- `private(set) var undoStack: [TimeEntryChange]`, `redoStack`, `var canUndo`, `var canRedo`,
-  `var errorMessage: String?`.
-- `func record(_ change: TimeEntryChange)` — push on undo stack, clear redo stack, cap at 50.
-- `func undo() async` — pop, apply `change.inverted` via the repository (`save(change.before,
-  deleting: ids only in after)`), push the change on the redo stack. On error: set `errorMessage`,
-  don't push.
-- `func redo() async` — mirror image.
-- Put the pure stack bookkeeping in a small pure struct (e.g. `UndoStack<Element>`) so it is
-  unit-tested without a database.
+## 7. Documentation
 
-Wiring in `AppEnvironment.init`: create `timeEntryHistory` first, then
-`TimeEntryEditor(repository: timeEntries, onChange: { [history] change in await history.record(change) })`.
-Watch the init order / `self` capture (history must exist before the editor; capture the local,
-not `self`).
+- `README.md`: add a short "Continuous integration" section (or a line in the development section): every PR to `main` runs the unit tests on GitHub Actions (`.github/workflows/tests.yml`, macOS runner, ad-hoc signing); docs-only changes are skipped; how to run it manually (Actions tab → Tests → Run workflow). Optionally a status badge: `![Tests](https://github.com/NickKoepr/Timelane/actions/workflows/tests.yml/badge.svg)` (works for private repos only when signed in — fine).
+- `AGENTS.md`: under "Build, test, run" add one line that CI runs the same tests on every PR via `.github/workflows/tests.yml` with ad-hoc signing overrides; if a test needs the owner's signing identity or local state, it will fail in CI.
+- `plans/PLAN.md`: add a one-line mention under the conventions/workflow section if there is a natural place.
 
-**Important:** only the shared `timeEntryEditor` records history. Any other editor instance
-(e.g. the automatic logger from PLAN-v1.13) uses its own `TimeEntryEditor(repository:)` without
-`onChange`, so automatic writes never land on the undo stack. Mention this in the doc comment on
-`AppEnvironment.timeEntryEditor`.
+## 8. Files
 
-### 5. Keyboard shortcuts
+- New: `.github/workflows/tests.yml`
+- Changed: `README.md`, `AGENTS.md`, possibly `plans/PLAN.md`, possibly test files (only for §6 fixes)
+- This plan: `plans/PLAN-v1.12.md`
 
-Follow the existing "hidden buttons" pattern (see AGENTS.md trap about `ViewThatFits` and
-`RootView.sidebarShortcuts`, `DayNavigationShortcuts`):
+## 9. Order of work
 
-- New view `TimeEntryUndoShortcuts` (in `Features/Timeline/Views/`) with two hidden buttons:
-  "Undo" `.keyboardShortcut("z", modifiers: .command)` and "Redo"
-  `.keyboardShortcut("z", modifiers: [.command, .shift])`, `.disabled(!canUndo / !canRedo)`, each
-  running `Task { await history.undo() }`. Hidden the same way the existing shortcut views are
-  (look at how `sidebarShortcuts` hides them and copy it).
-- Add it as background of `RootView` (works on every main-window screen) and of
-  `MenuBarContentView` (menu bar panel).
-- Show `history.errorMessage`: `.errorAlert` in `RootView`; in the menu bar use the existing inline
-  error banner pattern (never an alert there — see AGENTS.md).
-- Form sheets are separate windows, so ⌘Z inside a sheet's text field keeps its normal text undo.
+1. Create branch `ci/pr-tests` from `main`.
+2. Run the §3 command locally; adjust overrides until it passes; also run with `TZ=UTC`.
+3. Review tests per §6; fix if needed; re-run.
+4. Write `.github/workflows/tests.yml`. Validate the YAML syntax (e.g. `ruby -ryaml -e 'YAML.load_file(".github/workflows/tests.yml")'` or `python3 -c 'import yaml'` if available; `plutil` can't do YAML). If `actionlint` happens to be installed, run it; don't install anything.
+5. Update docs (§7) and fill in "Notes" below.
+6. Run the full test suite once more with the normal AGENTS.md command (with the owner's signing) to make sure nothing regressed.
+7. Commit on `ci/pr-tests` (English message, ends with the session's Co-Authored-By line). Do **not** push.
 
-Note for the user to check by hand: the default Edit menu also has "Undo"; confirm ⌘Z in the main
-window triggers our undo (window key equivalents normally win over the menu). If it doesn't, replace
-the Edit menu's undo group in `TimelaneApp` with `.commands { CommandGroup(replacing: .undoRedo) {…} }`
-that calls the history — only do that if the hidden buttons don't work; report it in the PR.
+## 10. Definition of done
 
-## Files
+- `.github/workflows/tests.yml` exists and matches §1–§5.
+- The exact xcodebuild command used in the workflow passed locally with ad-hoc signing and with `TZ=UTC`.
+- Docs updated; all tests pass; one commit on `ci/pr-tests`, not pushed.
+- After the main session pushes and opens the PR, the `Tests` workflow runs on that PR and passes (verified by the main session).
 
-- New: `Timelane/Models/TimeEntryChange.swift` (pure), `Timelane/Features/Timeline/ViewModels/TimeEntryHistory.swift`,
-  optional `UndoStack.swift` (pure), `Timelane/Features/Timeline/Views/TimeEntryUndoShortcuts.swift` (+ `#Preview`).
-- Changed: `TimeEntryRepository.swift`, `GRDBTimeEntryRepository.swift`, `TimeEntryEditor.swift`,
-  `AppEnvironment.swift` (+ `AppEnvironment+Preview.swift` if needed), `RootView.swift`,
-  `MenuBarContentView.swift` (and `MenuBarViewModel` only if needed for the error banner).
-- Docs: `README.md` (feature list: ⌘Z / ⇧⌘Z for logged hours), `plans/PLAN.md` (short note in the
-  relevant section), this plan as `plans/PLAN-v1.12.md`.
+## Notes
 
-## Tests (Swift Testing, in-memory DB, see existing `TimeEntryEditorTests`)
-
-- `UndoStack`: record clears redo, cap of 50, undo/redo order.
-- `TimeEntryChange.inverted`.
-- Repository: `save` returns ids; `entries(ids:)`; saving a row with an explicit id after it was
-  deleted re-inserts it with the same id.
-- `TimeEntryHistoryTests` (editor + history + in-memory repo):
-  - create → undo → entry gone → redo → entry back with same id.
-  - create that **splits** an existing entry → undo restores the original single entry exactly
-    (start/end/project/title/note) and removes the tail → redo splits again.
-  - update that moves an entry to a completely different time → undo puts it back.
-  - delete → undo → entry restored with same id and fields.
-  - several actions → multiple undos in reverse order; a new action after undo clears redo.
-  - an editor created **without** `onChange` does not add history.
-
-## Order of work
-
-1. `git checkout -b feature/undo-redo` from `main`. Copy this plan to `plans/PLAN-v1.12.md`.
-2. `TimeEntryChange` + `UndoStack` + tests.
-3. Repository changes + tests.
-4. Editor `onChange` + before/after capture.
-5. `TimeEntryHistory` + wiring in `AppEnvironment` + history tests.
-6. Shortcuts view in `RootView` and menu bar, error display.
-7. README / PLAN.md.
-8. Run all tests, build. Commit (message ends with the Co-Authored-By line), push branch, open PR.
-
-## Definition of done
-
-- All tests pass (`xcodebuild ... test` from AGENTS.md); app builds.
-- ⌘Z undoes the last create/edit/move/resize/delete of a time entry, including the neighbours the
-  overlap resolver changed; ⇧⌘Z redoes it. Works in the main window and the menu bar panel.
-- No change to projects/tracked apps undo. No new dependencies. Files stay small (< ~150 lines).
-- PR open on GitHub from `feature/undo-redo` to `main` with a summary and a manual test checklist.
+- Runner: `macos-26` (arm64) exists but only ships Xcode 26.0.1 to 26.6 (per the runner-images macos-26-arm64 readme). The project file uses `objectVersion = 90` (Xcode 27 format) and AGENTS.md says it is built with Xcode 27, so the workflow uses the `xcode-27` image label instead (runner image with Xcode 27 beta, marked preview in runner-images, issue #14404; Xcode at `/Applications/Xcode_27_beta_3.app` with `Xcode_27.0.app` / `Xcode.app` symlinks). Uncertain: the preview image may be unstable and its beta Xcode differs from the local 27.1; not verifiable locally. Switch to `macos-26` once that image ships Xcode 27.
+- Signing: the ad-hoc overrides from section 3 (`CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= CODE_SIGNING_REQUIRED=YES CODE_SIGNING_ALLOWED=YES`) worked first time locally (Xcode 27.1): 172 tests in 45 suites passed. `CODE_SIGNING_ALLOWED=NO` was not needed.
+- TZ runs: `TZ=UTC` and `TZ=Pacific/Auckland` both pass (172 tests).
+- Test review (section 6): no fixes needed. Tests use a fixed `TestCalendar`, in-memory databases and throw-away `UserDefaults` suites; no use of `UserDefaults.standard`, `NSWorkspace`, `Calendar.current` or `TimeZone.current`. Waits are early-exit polling loops (1 to 3 s caps), not fixed sleeps.
+- actionlint is not installed; YAML syntax validated with Ruby `YAML.load_file`.
