@@ -29,6 +29,12 @@ struct GRDBTrackedAppRepository: TrackedAppRepository {
         try await database.writer.write { db in _ = try TrackedApp.deleteOne(db, id: id) }
     }
 
+    func setProject(_ projectId: Int64?, forAppId id: Int64) async throws {
+        try await database.writer.write { db in
+            try TrackedApp.filter(key: id).updateAll(db, Column("projectId").set(to: projectId))
+        }
+    }
+
     private static func fetch(_ db: Database) throws -> [TrackedApp] {
         try TrackedApp.order(Column("name").collating(.nocase)).fetchAll(db)
     }

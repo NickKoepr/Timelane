@@ -20,6 +20,10 @@ extension AppEnvironment {
                 for index in entries.indices { try entries[index].insert(db) }
                 var session = AppSession(bundleIdentifier: "com.apple.dt.Xcode", appName: "Xcode", start: at(9), end: at(11))
                 try session.insert(db)
+                var xcode = TrackedApp(bundleIdentifier: "com.apple.dt.Xcode", name: "Xcode", projectId: alpha.id)
+                var safari = TrackedApp(bundleIdentifier: "com.apple.Safari", name: "Safari")
+                try xcode.insert(db)
+                try safari.insert(db)
             }
             return AppEnvironment(database: database)
         } catch {

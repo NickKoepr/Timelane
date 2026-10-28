@@ -15,6 +15,7 @@ final class AppActivityTracker {
     private let repository: any AppSessionRepository
     private let trackedApps: any TrackedAppRepository
     private let heartbeat: any HeartbeatStore
+    private let autoLogger: AutoTimeLogger?
     private let now: () -> Date
     private let frontmostProvider: () -> ForegroundApp?
 
@@ -26,6 +27,7 @@ final class AppActivityTracker {
 
     init(repository: any AppSessionRepository, trackedApps: any TrackedAppRepository,
          heartbeat: any HeartbeatStore = UserDefaultsHeartbeat(),
+         autoLogger: AutoTimeLogger? = nil,
          now: @escaping () -> Date = { .now },
          frontmostProvider: @escaping () -> ForegroundApp? = {
              NSWorkspace.shared.frontmostApplication.flatMap(ForegroundApp.init)
@@ -33,6 +35,7 @@ final class AppActivityTracker {
         self.repository = repository
         self.trackedApps = trackedApps
         self.heartbeat = heartbeat
+        self.autoLogger = autoLogger
         self.now = now
         self.frontmostProvider = frontmostProvider
     }
@@ -44,6 +47,7 @@ final class AppActivityTracker {
         guard continuation == nil else { return }
         await perform { try await repository.closeDanglingSessions(at: heartbeat.lastBeat) }
         await perform { trackedBundleIds = Set(try await trackedApps.trackedApps().map(\.bundleIdentifier)) }
+        await autoLogger?.load()
         currentApp = frontmostProvider()
         await switchSession(to: currentApp)
         beat()
@@ -59,6 +63,10 @@ final class AppActivityTracker {
             Task { await self.runHeartbeat() },
             Task { await self.observeTrackedApps(into: continuation) },
         ]
+        if let autoLogger {
+            tasks.append(Task { await autoLogger.observe() })
+            tasks.append(Task { await self.runAutoLogTicks(autoLogger) })
+        }
     }
 
     /// Closes the open session; call when the app terminates.
@@ -112,16 +120,25 @@ final class AppActivityTracker {
         guard let app else { return }
         let session = AppSession(bundleIdentifier: app.bundleIdentifier, appName: app.name, start: now())
         await perform { openSession = try await repository.start(session) }
+        await autoLogger?.sessionStarted(bundleIdentifier: app.bundleIdentifier, at: session.start)
     }
 
     private func closeSession(at end: Date) async {
         guard let id = openSession?.id else { return }
         openSession = nil
         await perform { try await repository.close(id: id, at: end) }
+        await autoLogger?.sessionEnded(at: end)
     }
 
     private func perform(_ work: () async throws -> Void) async {
         do { try await work() } catch { errorMessage = error.localizedDescription }
+    }
+
+    private func runAutoLogTicks(_ logger: AutoTimeLogger) async {
+        while !Task.isCancelled {
+            try? await Task.sleep(for: .seconds(TrackingSettings.autoLogInterval))
+            if !Task.isCancelled { await logger.tick() }
+        }
     }
 
     // MARK: Heartbeat

@@ -23,7 +23,9 @@ final class AppEnvironment {
         self.appSessions = GRDBAppSessionRepository(database: database)
         self.trackedApps = GRDBTrackedAppRepository(database: database)
         self.timeEntryEditor = TimeEntryEditor(repository: timeEntries)
-        self.tracker = AppActivityTracker(repository: appSessions, trackedApps: trackedApps)
+        self.tracker = AppActivityTracker(
+            repository: appSessions, trackedApps: trackedApps,
+            autoLogger: AutoTimeLogger(timeEntries: timeEntries, trackedApps: trackedApps))
     }
 
     /// The environment of the running app (shared with the app delegate).
