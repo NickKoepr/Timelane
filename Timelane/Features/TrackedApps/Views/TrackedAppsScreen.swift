@@ -51,7 +51,7 @@ struct TrackedAppsScreen: View {
             }
             .onDeleteCommand { Task { await viewModel.removeSelected() } }
             .safeAreaInset(edge: .bottom) {
-                Text("Only these apps are recorded. Pick a project to log hours for it automatically while you use the app.")
+                Text("Only these apps are recorded. Pick a project to log hours for it automatically while you use the app. Changing the project only affects new hours.")
                     .font(.caption).foregroundStyle(.secondary)
                     .lineLimit(3).fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(12)

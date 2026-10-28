@@ -2,6 +2,11 @@ import Foundation
 
 /// Turns "a linked app is in the foreground" into a time entry that grows live (see `AutoLogPlanner`).
 /// Uses its own editor so automatic writes stay apart from the user's edits.
+///
+/// Links apply to new time only: the logger only ever changes the end of its own entry for the current run.
+/// It never changes the project of an existing entry and never touches time recorded before the current run
+/// (except continuing its own entry across a small gap of the same project). A link change ends the run
+/// and starts a new one.
 @MainActor
 final class AutoTimeLogger {
     private(set) var errorMessage: String?
@@ -76,7 +81,7 @@ final class AutoTimeLogger {
         guard let current = run else { return }
         do {
             let stored = try await ownEntry(until: at)
-            switch AutoLogPlanner.plan(run: current, entry: entry, entryIsIntact: stored != nil, now: at) {
+            switch AutoLogPlanner.plan(run: current, entry: entry, entryIsIntact: stored != nil, now: at, isFinal: isFinal) {
             case .nothing:
                 break
             case .create(let range):
@@ -88,6 +93,9 @@ final class AutoTimeLogger {
                 stored.end = end
                 try await editor.update(stored)
                 entry = AutoLogEntry(id: own.id, projectId: own.projectId, start: own.start, lastEnd: end)
+            case .delete:
+                if let stored { try await editor.delete(stored) }
+                entry = nil
             case .restart:
                 entry = nil
                 if !isFinal { run = AutoLogRun(projectId: current.projectId, start: at) }

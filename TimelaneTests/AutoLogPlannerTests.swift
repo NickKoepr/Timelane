@@ -45,4 +45,29 @@ struct AutoLogPlannerTests {
         #expect(AutoLogPlanner.plan(run: run, entry: other, entryIsIntact: true, now: at(60)) == create)
         #expect(AutoLogPlanner.plan(run: run, entry: touched, entryIsIntact: false, now: at(60)) == create)
     }
+
+    // MARK: Final step (session ended, possibly in the past)
+
+    @Test func finalStepWithinFirstMinuteDeletesGrownEntry() {
+        let entry = AutoLogEntry(id: 1, projectId: 1, start: start, lastEnd: at(300))
+        #expect(AutoLogPlanner.plan(run: run, entry: entry, entryIsIntact: true, now: at(30), isFinal: true) == .delete)
+    }
+
+    @Test func finalStepInThePastShrinksEntry() {
+        let entry = AutoLogEntry(id: 1, projectId: 1, start: start, lastEnd: at(300))
+        #expect(AutoLogPlanner.plan(run: run, entry: entry, entryIsIntact: true, now: at(180), isFinal: true) == .setEnd(at(180)))
+    }
+
+    @Test func finalStepOfMergedEntryNeverEndsBeforeRunStart() {
+        let runStart = at(600)
+        let merged = AutoLogEntry(id: 1, projectId: 1, start: start, lastEnd: at(900))
+        let action = AutoLogPlanner.plan(run: AutoLogRun(projectId: 1, start: runStart), entry: merged, entryIsIntact: true,
+                                         now: at(620), isFinal: true)
+        #expect(action == .setEnd(at(620)))
+    }
+
+    @Test func nonFinalTickWithinFirstMinuteStillDoesNothing() {
+        let entry = AutoLogEntry(id: 1, projectId: 1, start: start, lastEnd: at(300))
+        #expect(AutoLogPlanner.plan(run: run, entry: entry, entryIsIntact: true, now: at(30)) == .nothing)
+    }
 }
