@@ -17,6 +17,16 @@ struct TimeEntryRepositoryTests {
 
     func date(_ d: Int, _ h: Int, _ min: Int = 0) -> Date { TestCalendar.date(2026, 11, d, h, min, calendar: cal) }
 
+    @Test func saveReturnsIdsAndEntriesByIdAndReinsertsDeletedId() async throws {
+        let saved = try await entries.save([TimeEntry(projectId: projectId, start: date(3, 9), end: date(3, 10))], deleting: [])
+        let id = try #require(saved.first?.id)
+        #expect(try await entries.entries(ids: [id, 999]) == saved)
+        try await entries.save([], deleting: [id])
+        #expect(try await entries.entries(ids: [id]).isEmpty)
+        try await entries.save(saved, deleting: [])
+        #expect(try await entries.entries(ids: [id]) == saved)
+    }
+
     @Test func savesDeletesAndFetchesByRange() async throws {
         try await entries.save([
             TimeEntry(projectId: projectId, start: date(3, 9), end: date(3, 10)),

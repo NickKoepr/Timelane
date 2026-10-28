@@ -39,6 +39,7 @@ struct MenuBarContentView: View {
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: timeline.form?.id)
         .frame(width: Self.size.width, height: Self.size.height)
         .panelBackground()
+        .background { TimeEntryUndoShortcuts(history: environment.timeEntryHistory) }
         .background { PanelOpenObserver { viewModel.panelDidOpen() } }
     }
 
@@ -49,6 +50,9 @@ struct MenuBarContentView: View {
             if timeline.hasNoTrackedApps { NoTrackedAppsBanner(action: { openMainWindow(.trackedApps) }) }
             if let message = timeline.entryEditing.errorMessage {
                 MenuBarErrorBanner(message: message) { timeline.entryEditing.errorMessage = nil }
+            }
+            if let message = environment.timeEntryHistory.errorMessage {
+                MenuBarErrorBanner(message: message) { environment.timeEntryHistory.errorMessage = nil }
             }
             TimelineScrollArea(viewModel: timeline, anchor: anchor, changeZoom: changeZoom,
                                scrollTrigger: viewModel.scrollTrigger)

@@ -12,14 +12,22 @@ struct GRDBTimeEntryRepository: TimeEntryRepository {
         try await database.writer.read { db in try Self.fetch(db, in: range) }
     }
 
-    func save(_ entries: [TimeEntry], deleting ids: [Int64]) async throws {
+    func entries(ids: [Int64]) async throws -> [TimeEntry] {
+        try await database.writer.read { db in try TimeEntry.fetchAll(db, ids: ids) }
+    }
+
+    @discardableResult
+    func save(_ entries: [TimeEntry], deleting ids: [Int64]) async throws -> [TimeEntry] {
         guard entries.allSatisfy({ $0.end > $0.start }) else { throw RepositoryError.invalidRange }
-        try await database.writer.write { db in
+        return try await database.writer.write { db in
             _ = try TimeEntry.deleteAll(db, ids: ids)
+            var saved: [TimeEntry] = []
             for entry in entries {
                 var copy = entry
                 try copy.save(db)
+                saved.append(copy)
             }
+            return saved
         }
     }
 
