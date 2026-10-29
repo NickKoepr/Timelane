@@ -30,7 +30,7 @@ Guiding principles: **simple, not over-engineered, small files, MVVM, easy to ex
 - R13. A total for the month is shown at the bottom.
 
 **Overview screen** (v1.20, see `plans/PLAN-v1.20.md`)
-- R14. A yearly activity heatmap of registered hours per day (GitHub-style), year navigation, a project filter, statistic tiles, an hours-per-month chart and a per-project breakdown. Clicking a day opens it on the Timeline. Computed from existing rows; no schema change.
+- R14. A yearly activity heatmap of registered hours per day (GitHub-style), year navigation, a project filter, statistic tiles, an hours-per-month chart and a per-project breakdown. Hovering a day shows a card with the hours per project (v1.21); clicking a day opens it on the Timeline. Computed from existing rows; no schema change.
 
 ### 1.2 Non-functional
 - Native macOS (SwiftUI), deployment target macOS 26 (lowered from 27 after v1.0 so it also runs on macOS 26).
