@@ -35,6 +35,14 @@ struct ActivityHeatmapLayoutTests {
         #expect(layout(2026, firstWeekday: 2).weekdayLabels.map(\.title) == ["Mon", "Wed", "Fri"])
     }
 
+    @Test func weeksPadTheFirstAndLastColumn() {
+        let weeks = layout(2026, firstWeekday: 2).weeks
+        #expect(weeks.allSatisfy { $0.count == 7 })
+        #expect(weeks.first?.prefix(3).allSatisfy { $0 == nil } == true)   // Mon–Wed before Thu 1 Jan
+        #expect(weeks.first?[3] != nil)
+        #expect(weeks.flatMap { $0 }.compactMap { $0 }.count == 365)
+    }
+
     @Test func leapYearHas366Cells() {
         #expect(layout(2028, firstWeekday: 2).cells.count == 366)
     }

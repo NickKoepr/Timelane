@@ -18,6 +18,13 @@ struct ActivityHeatmapLayout: Sendable {
 
     static let minimumLabelSpacing = 3
 
+    /// The cells per column, 7 rows each; `nil` for the padding days before Jan 1 and after Dec 31.
+    var weeks: [[Cell?]] {
+        var weeks = Array(repeating: [Cell?](repeating: nil, count: 7), count: columnCount)
+        for cell in cells { weeks[cell.column][cell.row] = cell }
+        return weeks
+    }
+
     init(year: DateRange, calendar: Calendar) {
         let firstWeekStart = Self.weekStart(of: year.start, calendar: calendar)
         var cells: [Cell] = []

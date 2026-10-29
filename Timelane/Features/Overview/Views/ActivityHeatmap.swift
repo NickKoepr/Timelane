@@ -13,21 +13,23 @@ struct ActivityHeatmap: View {
     private let monthRowHeight: CGFloat = 16
     private let cellRange: ClosedRange<CGFloat> = 9...16
 
+    @State private var width: CGFloat = 0
+
     var body: some View {
-        GeometryReader { proxy in
-            let fitted = (proxy.size.width - labelWidth) / CGFloat(layout.columnCount) - spacing
-            let cell = min(max(fitted, cellRange.lowerBound), cellRange.upperBound)
-            HStack(alignment: .top, spacing: 0) {
-                weekdayLabels(cell: cell)
-                if fitted < cellRange.lowerBound {
-                    ScrollView(.horizontal, showsIndicators: false) { grid(cell: cell) }
-                        .defaultScrollAnchor(.trailing)
-                } else {
-                    grid(cell: cell)
-                }
+        let fitted = (width - labelWidth) / CGFloat(layout.columnCount) - spacing
+        let cell = min(max(fitted, cellRange.lowerBound), cellRange.upperBound)
+        HStack(alignment: .top, spacing: 0) {
+            weekdayLabels(cell: cell)
+            if fitted < cellRange.lowerBound {
+                ScrollView(.horizontal, showsIndicators: false) { grid(cell: cell) }
+                    .defaultScrollAnchor(.trailing)
+            } else {
+                grid(cell: cell)
             }
         }
-        .frame(height: monthRowHeight + 7 * (cellRange.upperBound + spacing))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: monthRowHeight + 7 * step(cell))
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Registered hours per day")
     }
@@ -35,48 +37,62 @@ struct ActivityHeatmap: View {
     private func step(_ cell: CGFloat) -> CGFloat { cell + spacing }
 
     private func weekdayLabels(cell: CGFloat) -> some View {
-        ZStack(alignment: .topLeading) {
-            ForEach(layout.weekdayLabels, id: \.row) { label in
-                Text(label.title)
+        VStack(alignment: .leading, spacing: spacing) {
+            Color.clear.frame(height: monthRowHeight - spacing)
+            ForEach(0..<7, id: \.self) { row in
+                Text(layout.weekdayLabels.first { $0.row == row }?.title ?? "")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .frame(width: labelWidth - 4, height: cell, alignment: .leading)
-                    .offset(y: monthRowHeight + CGFloat(label.row) * step(cell))
             }
         }
         .frame(width: labelWidth, alignment: .topLeading)
         .accessibilityHidden(true)
     }
 
+    /// Real rows and columns (no offsets), so tooltips and clicks land on the square that is drawn.
     private func grid(cell: CGFloat) -> some View {
-        ZStack(alignment: .topLeading) {
-            ForEach(layout.monthLabels, id: \.column) { label in
-                Text(label.title)
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                    .fixedSize()
-                    .offset(x: CGFloat(label.column) * step(cell))
-                    .accessibilityHidden(true)
+        VStack(alignment: .leading, spacing: 0) {
+            ZStack(alignment: .topLeading) {
+                ForEach(layout.monthLabels, id: \.column) { label in
+                    Text(label.title)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .fixedSize()
+                        .offset(x: CGFloat(label.column) * step(cell))
+                }
             }
-            ForEach(layout.cells, id: \.day) { square in
-                let seconds = dailyTotals[square.day] ?? 0
-                let isFuture = square.day > today
-                RoundedRectangle(cornerRadius: 2)
-                    .fill(ActivityLevel(seconds: seconds).color)
-                    .opacity(isFuture ? 0.5 : 1)
-                    .frame(width: cell, height: cell)
-                    .contentShape(Rectangle())
-                    .offset(x: CGFloat(square.column) * step(cell),
-                            y: monthRowHeight + CGFloat(square.row) * step(cell))
-                    .onTapGesture { onSelectDay(square.day) }
-                    .help(description(of: square.day, seconds: seconds))
-                    .accessibilityElement()
-                    .accessibilityLabel(description(of: square.day, seconds: seconds))
+            .frame(width: CGFloat(layout.columnCount) * step(cell), height: monthRowHeight, alignment: .topLeading)
+            .accessibilityHidden(true)
+            HStack(alignment: .top, spacing: spacing) {
+                ForEach(Array(layout.weeks.enumerated()), id: \.offset) { _, week in
+                    VStack(spacing: spacing) {
+                        ForEach(0..<7, id: \.self) { row in
+                            if let day = week[row] {
+                                square(day, cell: cell)
+                            } else {
+                                Color.clear.frame(width: cell, height: cell)
+                            }
+                        }
+                    }
+                }
             }
         }
-        .frame(width: CGFloat(layout.columnCount) * step(cell),
-               height: monthRowHeight + 7 * step(cell), alignment: .topLeading)
+    }
+
+    private func square(_ square: ActivityHeatmapLayout.Cell, cell: CGFloat) -> some View {
+        let seconds = dailyTotals[square.day] ?? 0
+        return RoundedRectangle(cornerRadius: 2)
+            .fill(ActivityLevel(seconds: seconds).color)
+            .opacity(square.day > today ? 0.5 : 1)
+            .frame(width: cell, height: cell)
+            .contentShape(Rectangle())
+            .onTapGesture { onSelectDay(square.day) }
+            .help(description(of: square.day, seconds: seconds))
+            .accessibilityElement()
+            .accessibilityLabel(description(of: square.day, seconds: seconds))
+            .accessibilityAddTraits(.isButton)
     }
 
     /// "Tue, 3 Mar 2026 · 5h 30m" (or "No hours").
