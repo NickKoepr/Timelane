@@ -17,12 +17,17 @@ struct TrackedAppRow: View {
                     .lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: 8)
-            Picker("Project", selection: Binding(get: { app.projectId }, set: onProjectChange)) {
-                Text("No project").tag(Int64?.none)
-                ForEach(projects) { project in Text(project.name).tag(project.id) }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Log hours automatically to")
+                    .font(.caption).foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Picker("Log hours automatically to", selection: Binding(get: { app.projectId }, set: onProjectChange)) {
+                    Text("No project").tag(Int64?.none)
+                    ForEach(projects) { project in Text(project.name).tag(project.id) }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
             }
-            .labelsHidden()
-            .pickerStyle(.menu)
             .fixedSize()
             .help("Project that gets hours automatically while you use \(app.name)")
             Button(action: onRemove) { Image(systemName: "minus.circle") }
