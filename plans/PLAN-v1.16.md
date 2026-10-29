@@ -1,173 +1,90 @@
-# PLAN v1.16 — Fix drag snap-back and the failing repository test (undo/redo branch)
+# PLAN v1.16 — Trackpad pinch zoom in the menu bar panel
 
-Branch: `feature/undo-redo` (open PR NickKoepr/Timelane#1). Builds on PLAN-v1.15 (undo/redo).
-Work on this branch, commit, and push to `origin feature/undo-redo` (do **not** merge into `main`).
+## Context
 
-## Problems
+The timeline can be zoomed with the zoom controls, ⌘+/⌘−/⌘0 and a trackpad pinch (PLAN-v1.2, PLAN.md §Zoom).
+In the **main window** pinch works. In the **menu bar panel** (`MenuBarExtra`, `.menuBarExtraStyle(.window)`)
+pinching does nothing; the zoom buttons in `MenuBarDayBar` do work.
 
-### A. Dragged entry briefly jumps back to its old place on release
+Both windows use the same code: `TimelineScrollArea` → `.timelineZoom(...)` (`TimelineZoomBehavior`), which attaches
+`.simultaneousGesture(MagnifyGesture())` to the `ScrollView` and turns the magnification into steps with
+`PinchZoomStepper`. So the zoom logic is fine; the gesture never fires in the panel.
 
-Repro: drag a logged-hours block (move or resize) on the timeline and release. The block flashes at
-its *old* position for a moment, then appears at the new position.
+## Cause
 
-**Cause.** `EntryEditingViewModel.dragEnded(_:)` does
+The panel is a non-activating `NSPanel`: Timelane stays the *inactive* app while it is open (see the AGENTS.md
+traps: a sheet from the panel makes the inactive app bounce in the Dock). Keyboard input still reaches the panel
+because it can become key without activating the app, but SwiftUI's `MagnifyGesture` does not recognise the
+trackpad magnify events in that window. Scroll events, clicks and drags do work, so the window does receive
+pointer input.
 
-```swift
-defer { self.preview = nil }
-...
-await perform { try await editor.update(changed) }
-```
-
-so the live drag preview is cleared as soon as the editor's `update` returns. But the timeline
-draws entries from `TimelineViewModel.entries`, which only changes when the GRDB
-`ValueObservation` (→ `AsyncStream`, `observeEntries(in:)`) delivers the new rows. That delivery is
-asynchronous and can arrive *after* `update` returns. In between, `displayRange(for:)` has no
-preview and falls back to the stale `entry.range` → the block jumps back.
-
-On `main` the race was (mostly) won by luck. PLAN-v1.15 added two extra suspension points to
-`TimeEntryEditor.apply` / `delete` (`repository.entries(ids:)` before the save and
-`await onChange(...)` — a hop to the main actor for `TimeEntryHistory.record` — after it), which
-makes the window between "update returned" and "observation delivered" reliably visible.
-
-Do **not** "fix" this by removing the undo bookkeeping or by reordering awaits; the view must not
-depend on timing at all.
-
-### B. Failing test `TimeEntryRepositoryTests.saveReturnsIdsAndEntriesByIdAndReinsertsDeletedId`
-
-```
-Expectation failed: try await entries.entries(ids: [id, 999]) == saved      (line 23)
-Expectation failed: try await entries.entries(ids: [id]) == saved           (line 27)
-```
-
-**Cause.** `GRDBTimeEntryRepository.save` returns the in-memory copies it wrote. `createdAt` /
-`updatedAt` default to `Date.now` (sub-second precision). Dates are stored as
-`timeIntervalSince1970` Doubles; `Date` internally uses `timeIntervalSinceReferenceDate`, so the
-round trip loses the last bits and the fetched `Date`s are not `==` to the originals. Hence the
-returned rows differ from what `entries(ids:)` reads back.
-
-This is not only a test problem: `TimeEntryChange.after` (returned by `save`) and `before` (read
-via `entries(ids:)`) should both be exactly what the database holds, so a change and its inverse are
-symmetric.
+We cannot drive the UI from the agent, so the fix must not depend on SwiftUI's gesture recogniser in that window,
+and it must log enough for the owner to confirm by hand where the events end up.
 
 ## Design
 
-### B. `save` returns the stored rows
+Replace the SwiftUI `MagnifyGesture` with an AppKit-level magnify handler, used by **both** windows (one code path,
+so the main window cannot zoom twice per pinch).
 
-In `GRDBTimeEntryRepository.save(_:deleting:)`, after writing all entries **inside the same write
-transaction**, re-fetch them by id and return those, in the same order as the input:
+1. **`PinchZoomStepper`** (pure, `Layout/`): add an AppKit-friendly entry point. `NSEvent.magnification` is a
+   *delta* per event (e.g. `0.02`), not the total scale. Add
+   `mutating func step(forDelta delta: CGFloat) -> Int` that keeps a running total (`total *= 1 + delta`, start 1)
+   and returns `step(for: total)`. `reset()` also resets the total. Keep the existing `step(for:)` API and
+   behaviour (existing tests must still pass).
 
-```swift
-return try await database.writer.write { db in
-    _ = try TimeEntry.deleteAll(db, ids: ids)
-    var savedIds: [Int64] = []
-    for entry in entries {
-        var copy = entry
-        try copy.save(db)
-        savedIds.append(copy.id!)   // set by save / didInsert
-    }
-    let byId = Dictionary(uniqueKeysWithValues: try TimeEntry.fetchAll(db, ids: savedIds).map { ($0.id!, $0) })
-    return savedIds.compactMap { byId[$0] }
-}
-```
+2. **`MagnifyEventMonitor`** (new, `Features/Timeline/Views/MagnifyEventMonitor.swift`): an `NSViewRepresentable`
+   placed as a `.background` of the timeline scroll view. Its `NSView`:
+   - In `viewDidMoveToWindow`, (re)installs `NSEvent.addLocalMonitorForEvents(matching: .magnify)`; removes the
+     monitor when the window becomes nil and in `deinit` / `dismantleNSView`.
+   - For each event: only handle it when `event.window === self.window` and the pointer
+     (`convert(event.locationInWindow, from: nil)`) is inside `bounds`. Then call
+     `onMagnify(event.magnification, event.phase)`. Always **return the event** (never swallow it).
+   - Logs at `.debug` with `Logger(subsystem: Bundle.main.bundleIdentifier ?? "Timelane", category: "zoom")`
+     when the monitor is installed (with the window class name) and on each `.began` phase, so the owner can check
+     with `log show` whether magnify events reach the panel.
+   - `updateNSView` refreshes the closure (like `PanelOpenObserver`).
 
-(Use `try #require`-free code; a `guard let id = copy.id` with a thrown `RepositoryError` is fine
-instead of `!` if you prefer — match the file's style.) Update the doc comment in
-`TimeEntryRepository.swift` ("Returns the saved rows with ids, as stored"). Keep the test unchanged:
-it should now pass. Do not loosen the test with tolerances.
+3. **`TimelineZoomBehavior`**: remove the `.simultaneousGesture(MagnifyGesture()...)`. Add
+   `.background { MagnifyEventMonitor { delta, phase in ... } }`:
+   - `phase.contains(.began)` → `stepper.reset()` before using the delta.
+   - `let step = stepper.step(forDelta: delta)`; `> 0` → `apply { $0.zoomIn() }`, `< 0` → `apply { $0.zoomOut() }`.
+   - `phase.contains(.ended) || phase.contains(.cancelled)` → `stepper.reset()`.
+   The anchored scrolling (`onScrollGeometryChange` / `onChange(of: pointsPerHour)`) stays exactly as it is.
+   Update the type's doc comment (it no longer talks about a simultaneous gesture; the selection drag and entry
+   drags are unaffected because the monitor never consumes events).
 
-Also check `entries(ids:)` returns rows in a deterministic order; the test compares with a
-one-element array so order does not matter there, but add `.order(Column("start"))` only if needed
-— don't change behaviour otherwise.
-
-### A. Keep the preview until the new rows are observed
-
-Make the drag preview survive until the timeline actually shows the committed range.
-
-`EntryEditingViewModel`:
-
-- Add a private flag/state for "committed, waiting for observation", e.g.
-  `private var awaitingCommit = false` (or put a `isCommitting: Bool` on `EntryDragPreview`).
-- `dragEnded(_:)`:
-  - no preview / different entry → return (unchanged);
-  - `preview.range == entry.range` → clear preview, return (unchanged);
-  - otherwise mark the preview as committing, run `editor.update(changed)`;
-    - on **error**: clear the preview immediately and set `errorMessage` (block returns to its old
-      place, which is correct);
-    - on **success**: leave the preview in place.
-  - Remove the `defer { self.preview = nil }`.
-- Add `func entriesDidChange(_ entries: [TimeEntry])`: if the preview is committing and the entry
-  with `preview.entryId` is either missing from `entries` or its range equals the preview range
-  (compare start/end with a small tolerance, e.g. `abs(a.timeIntervalSince(b)) < 1`, because of the
-  Double round trip described in B — add a tiny helper, e.g. `DateRange.isApproximatelyEqual(to:)`
-  or a private func), clear the preview.
-  A preview that is still being *dragged* (not committing) must never be cleared by this.
-- `dragChanged` starting a new drag replaces the preview as today (also clears the committing flag).
-- `reset()` keeps clearing everything (day change etc.).
-
-`TimelineViewModel.observeEntries(in:)`:
-
-```swift
-for await value in timeEntries.observeEntries(in: range) {
-    entries = value
-    entryEditing.entriesDidChange(value)
-}
-```
-
-(Keep `TimelineViewModel.swift` ≤ ~205 lines; this is a one-line change.)
-
-Edge cases to reason about (and cover in tests where noted):
-- The overlap resolver never changes the dragged entry itself (newest action wins), so the observed
-  range equals the preview range after a successful save.
-- An observation that arrives while the save is still running carries the *old* range → preview
-  must stay (tolerance compare fails) ✔.
-- Undo right after a drop: by then the observation has arrived and the preview is gone; undo changes
-  `entries` normally.
-- The menu bar panel has its own `TimelineViewModel` with the same code path → fixed too.
+4. **If magnify events never reach the app while it is inactive** (the owner will see no `zoom` log lines when
+   pinching in the panel): do NOT activate the app automatically (it would bring the main window forward and
+   bounce the Dock). Report this in the PR description as an open point instead; the owner decides.
 
 ## Files
 
-- `Timelane/Repositories/GRDB/GRDBTimeEntryRepository.swift` — return re-fetched rows.
-- `Timelane/Repositories/TimeEntryRepository.swift` — doc comment.
-- `Timelane/Features/Timeline/ViewModels/EntryEditingViewModel.swift` — committing preview,
-  `entriesDidChange`.
-- `Timelane/Features/Timeline/ViewModels/TimelineViewModel.swift` — forward observed entries.
-- Possibly `Timelane/Features/Timeline/Layout/EntryDragPreview.swift` (wherever it lives) if the
-  flag goes there.
-- Tests: `TimelaneTests/EntryEditingViewModelTests.swift`, maybe `TimelineViewModelTests.swift`.
-- `plans/PLAN.md`: one line under the iteration list for v1.16 (match existing format).
+- `Timelane/Features/Timeline/Layout/PinchZoomStepper.swift` — `step(forDelta:)`, reset of the total.
+- `Timelane/Features/Timeline/Views/MagnifyEventMonitor.swift` — new.
+- `Timelane/Features/Timeline/Views/TimelineZoomBehavior.swift` — use the monitor instead of `MagnifyGesture`.
+- `TimelaneTests/PinchZoomStepperTests.swift` — new (or extend `TimelineZoomAnchorTests` where the stepper test
+  lives now; a separate file is preferred).
+- `plans/PLAN.md` (§Zoom line mentioning `MagnifyGesture`) and `README.md` only if the wording becomes wrong.
 
 ## Tests
 
-1. `TimeEntryRepositoryTests.saveReturnsIdsAndEntriesByIdAndReinsertsDeletedId` passes unchanged.
-2. Update `EntryEditingViewModelTests.movingCommitsSnappedRangeAndResolvesOverlap` (and any other
-   test asserting `preview == nil` right after a successful `dragEnded`): after `dragEnded` the
-   preview is **still set** and `displayRange(for: moving)` is the new range; after
-   `vm.entriesDidChange(try await repo.entries(in: day))` the preview is `nil`.
-3. New: `previewSurvivesStaleObservation` — after a successful `dragEnded`, calling
-   `entriesDidChange([moving])` (old range) keeps the preview and `displayRange` stays the new range.
-4. New: `failedCommitClearsPreview` — make the save fail (e.g. a fake `TimeEntryRepository` that
-   throws, or an editor error such as a too-short range if reachable) → preview `nil`,
-   `errorMessage` set.
-5. New: `observationDoesNotClearActiveDrag` — during `dragChanged` (no `dragEnded`), calling
-   `entriesDidChange` keeps the preview.
-6. New: committing preview is cleared when the entry disappears from the observed list.
-7. All existing tests (incl. `TimeEntryHistoryTests`, `TimeEntryEditorTests`) stay green.
+- `step(forDelta:)`: a series of small positive deltas yields exactly one `+1` once the product passes 1.25, then
+  `0`s, then another `+1` after a further 25 %; negative deltas yield `-1` symmetrically; one big jump never returns
+  more than one step per call; `reset()` starts from 1 again; deltas ≤ −1 (total ≤ 0) return 0 and don't crash.
+- Existing `step(for:)` tests unchanged and green.
+- No UI test is possible; `MagnifyEventMonitor` stays thin (no logic beyond filtering and forwarding).
 
 ## Order of work
 
-1. Fix B, run the tests (expect only drag tests possibly unaffected / the repo test green).
-2. Implement A + tests.
-3. Full test run:
-   `xcodebuild -project Timelane.xcodeproj -scheme Timelane -destination 'platform=macOS' -derivedDataPath build/DerivedData test`
-4. Rebuild and relaunch the Debug app (see AGENTS.md; never `-resetDatabase YES`).
-5. Commit on `feature/undo-redo` ("Fix drag snap-back after drop and stored-row return of save"
-   + Co-Authored-By line) and push to `origin feature/undo-redo`.
+1. Stepper + tests. 2. `MagnifyEventMonitor`. 3. Wire into `TimelineZoomBehavior`, remove `MagnifyGesture`.
+4. Run the full test suite (command in AGENTS.md, `-derivedDataPath build/DerivedData` inside this worktree).
+5. Update `PLAN.md` / README wording. 6. Commit on branch `fix/menu-bar-pinch-zoom`.
 
 ## Definition of done
 
-- All unit tests pass (0 issues).
-- Dropping a dragged/resized block leaves it at the new place with no flash back (manual check by
-  the owner — the agent cannot see the UI).
-- A failed drop returns the block to its original place and shows the error.
-- Undo/redo of a drag still works (⌘Z puts it back, ⇧⌘Z moves it again).
-- Changes committed and pushed to the PR branch; no changes to `main`.
+- All unit tests pass; the app builds without warnings introduced by this change.
+- Pinch zooms one level per ~25 % in the main window (unchanged feel) and in the menu bar panel, anchored on the
+  centre of the visible area; selection drag, entry move/resize and scrolling still work in both.
+- Manual check for the owner (written in the PR): open the panel, pinch over the timeline, verify the level
+  changes; run `/usr/bin/log show --last 5m --info --debug --predicate 'subsystem == "nl.nickkoepr.timelane" && category == "zoom"'`
+  if it does not.
