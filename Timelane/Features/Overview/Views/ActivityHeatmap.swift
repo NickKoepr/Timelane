@@ -51,7 +51,7 @@ struct ActivityHeatmap: View {
         }
     }
 
-    private func heatmapSizing(for width: CGFloat) -> ActivityHeatmapSizing {
+    private nonisolated func heatmapSizing(for width: CGFloat) -> ActivityHeatmapSizing {
         ActivityHeatmapSizing(availableWidth: width, columnCount: layout.columnCount,
                               labelWidth: labelWidth, spacing: spacing, cellRange: cellRange)
     }
