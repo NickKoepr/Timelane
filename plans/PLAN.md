@@ -29,6 +29,9 @@ Guiding principles: **simple, not over-engineered, small files, MVVM, easy to ex
 - R12. Add a project quickly (name + color). Edit name/color. Archive a project (hidden from the project picker, but historical hours remain). Deleting is only allowed when a project has no entries.
 - R13. A total for the month is shown at the bottom.
 
+**Overview screen** (v1.20, see `plans/PLAN-v1.20.md`)
+- R14. A yearly activity heatmap of registered hours per day (GitHub-style), year navigation, a project filter, statistic tiles, an hours-per-month chart and a per-project breakdown. Clicking a day opens it on the Timeline. Computed from existing rows; no schema change.
+
 ### 1.2 Non-functional
 - Native macOS (SwiftUI), deployment target macOS 26 (lowered from 27 after v1.0 so it also runs on macOS 26).
 - Data is stored locally in SQLite.
@@ -491,7 +494,7 @@ Sort rows: by total descending, then by name. Archived projects are only shown w
   Use `Window` (single window) rather than `WindowGroup`; the app doesn't need multiple windows.
 - `AppEnvironment` holds: `AppDatabase`, the three repositories, `AppActivityTracker`, `TimeEntryEditor`. Provides `static func live()` and `static func preview()` (in-memory DB with sample data) for SwiftUI previews.
 - `AppDelegate` gets the environment injected (or the tracker is started from `TimelaneApp`'s `init`), and starts tracking on launch.
-- `RootView`: `NavigationSplitView` with a sidebar (`SidebarItem.timeline` "Timeline" ⌘1, `SidebarItem.projects` "Projects" ⌘2, `SidebarItem.trackedApps` "Tracked Apps" ⌘3) and the detail area showing the screen. Each screen creates its own ViewModel (`@State private var viewModel: TimelineViewModel`) from the environment.
+- `RootView`: `NavigationSplitView` with a sidebar (`SidebarItem.timeline` "Timeline" ⌘1, `SidebarItem.projects` "Projects" ⌘2, `SidebarItem.trackedApps` "Tracked Apps" ⌘3, `SidebarItem.overview` "Overview" ⌘4) and the detail area showing the screen. Each screen creates its own ViewModel (`@State private var viewModel: TimelineViewModel`) from the environment.
 - Commands: ⌘T → today (timeline) / this month (projects); ⌘← / ⌘→ previous/next day or month.
 
 ---
