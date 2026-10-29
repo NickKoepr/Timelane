@@ -18,8 +18,7 @@ struct ActivityHeatmap: View {
     @State private var hover = HeatmapHoverState()
 
     var body: some View {
-        let sizing = ActivityHeatmapSizing(availableWidth: width, columnCount: layout.columnCount,
-                                           labelWidth: labelWidth, spacing: spacing, cellRange: cellRange)
+        let sizing = heatmapSizing(for: width)
         let cell = sizing.cell
         HStack(alignment: .top, spacing: 0) {
             weekdayLabels(cell: cell)
@@ -34,7 +33,9 @@ struct ActivityHeatmap: View {
         // minWidth 0: measure the offered width, not the grid's, or the heatmap never switches to scrolling.
         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .frame(height: monthRowHeight + 7 * step(cell))
-        .alignmentGuide(.heatmapTrailing) { _ in sizing.visibleTrailing(in: width) }
+        // From the laid-out width, not the `width` state: that lags one pass behind while resizing, and a guide
+        // past the frame makes the stack wider than its column, which re-triggers layout in a loop (AppKit crash).
+        .alignmentGuide(.heatmapTrailing) { d in heatmapSizing(for: d.width).visibleTrailing(in: d.width) }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .coordinateSpace(name: "heatmap")
         .overlay(alignment: .topLeading) { hoverCard }
@@ -48,6 +49,11 @@ struct ActivityHeatmap: View {
         if let day = hover.day, let frame = hover.frame {
             HeatmapDayHoverCard(detail: dayDetail(day), squareFrame: frame, heatmapWidth: width)
         }
+    }
+
+    private func heatmapSizing(for width: CGFloat) -> ActivityHeatmapSizing {
+        ActivityHeatmapSizing(availableWidth: width, columnCount: layout.columnCount,
+                              labelWidth: labelWidth, spacing: spacing, cellRange: cellRange)
     }
 
     private func step(_ cell: CGFloat) -> CGFloat { cell + spacing }
