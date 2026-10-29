@@ -45,7 +45,7 @@ struct YearNavigationBar: View {
             }
             .pickerStyle(.menu)
             .labelsHidden()
-            .fixedSize()
+            .frame(maxWidth: 180) // a long project name truncates instead of pushing the bar past the column
         }
         .lineLimit(1)
     }

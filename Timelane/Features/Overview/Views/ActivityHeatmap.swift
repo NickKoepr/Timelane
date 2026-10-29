@@ -18,11 +18,11 @@ struct ActivityHeatmap: View {
     @State private var hover = HeatmapHoverState()
 
     var body: some View {
-        let fitted = (width - labelWidth) / CGFloat(layout.columnCount) - spacing
-        let cell = min(max(fitted, cellRange.lowerBound), cellRange.upperBound)
+        let sizing = heatmapSizing(for: width)
+        let cell = sizing.cell
         HStack(alignment: .top, spacing: 0) {
             weekdayLabels(cell: cell)
-            if fitted < cellRange.lowerBound {
+            if sizing.scrolls {
                 ScrollView(.horizontal, showsIndicators: false) { grid(cell: cell) }
                     .defaultScrollAnchor(.trailing)
                     .onScrollPhaseChange { _, phase in if phase != .idle { hover.clear() } }
@@ -30,8 +30,12 @@ struct ActivityHeatmap: View {
                 grid(cell: cell)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // minWidth 0: measure the offered width, not the grid's, or the heatmap never switches to scrolling.
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .frame(height: monthRowHeight + 7 * step(cell))
+        // From the laid-out width, not the `width` state: that lags one pass behind while resizing, and a guide
+        // past the frame makes the stack wider than its column, which re-triggers layout in a loop (AppKit crash).
+        .alignmentGuide(.heatmapTrailing) { d in heatmapSizing(for: d.width).visibleTrailing(in: d.width) }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .coordinateSpace(name: "heatmap")
         .overlay(alignment: .topLeading) { hoverCard }
@@ -45,6 +49,11 @@ struct ActivityHeatmap: View {
         if let day = hover.day, let frame = hover.frame {
             HeatmapDayHoverCard(detail: dayDetail(day), squareFrame: frame, heatmapWidth: width)
         }
+    }
+
+    private func heatmapSizing(for width: CGFloat) -> ActivityHeatmapSizing {
+        ActivityHeatmapSizing(availableWidth: width, columnCount: layout.columnCount,
+                              labelWidth: labelWidth, spacing: spacing, cellRange: cellRange)
     }
 
     private func step(_ cell: CGFloat) -> CGFloat { cell + spacing }
@@ -132,7 +141,7 @@ struct ActivityHeatmap: View {
     let totals = Dictionary(uniqueKeysWithValues: (0..<60).compactMap { offset -> (Date, TimeInterval)? in
         calendar.date(byAdding: .day, value: -offset, to: start).map { ($0, Double(offset % 7) * 3600) }
     })
-    return VStack(alignment: .trailing) {
+    return VStack(alignment: .heatmapTrailing) {
         ActivityHeatmap(layout: ActivityHeatmapLayout(year: year, calendar: calendar),
                         dailyTotals: totals, today: start,
                         dayDetail: { OverviewDayDetail(day: $0, secondsByProject: [:], projects: [], highlightedProjectId: nil) },
