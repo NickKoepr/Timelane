@@ -256,4 +256,35 @@ struct TimelineRegistrationTests {
         form.form.projectId = nil
         #expect(!form.canSave)
     }
+
+    @Test func runningAutomaticEntryEndsAtTheSameNowAsTheOpenSession() async throws {
+        let db = try AppDatabase.inMemory()
+        let entriesRepo = GRDBTimeEntryRepository(database: db)
+        let project = try await GRDBProjectRepository(database: db).save(Project(name: "A", colorHex: "#000000"))
+        let start = TestCalendar.date(2026, 11, 3, 14)
+        let saved = try await entriesRepo.save([TimeEntry(projectId: project.id!, start: start, end: start.addingTimeInterval(60))], deleting: [])
+        try await GRDBTrackedAppRepository(database: db).add([TrackedApp(bundleIdentifier: "x", name: "X")])
+        _ = try await GRDBAppSessionRepository(database: db).start(AppSession(bundleIdentifier: "x", appName: "X", start: start))
+        let live = LiveAutoEntry()
+        let at = start.addingTimeInterval(23 * 60 + 40)
+        let vm = TimelineViewModel(timeEntries: entriesRepo, appSessions: GRDBAppSessionRepository(database: db),
+                                   projects: GRDBProjectRepository(database: db), trackedApps: GRDBTrackedAppRepository(database: db),
+                                   editor: TimeEntryEditor(repository: entriesRepo),
+                                   lastProject: LastProjectStore(defaults: UserDefaults(suiteName: "LiveVM-\(UUID())")!),
+                                   zoomState: TimelineZoomState(defaults: UserDefaults(suiteName: "LiveZoom-\(UUID())")!),
+                                   liveAutoEntry: live, calendar: cal, clock: { at })
+        let id = try #require(saved.first?.id)
+        live.set(id)
+        let task = Task { await vm.task() }
+        for _ in 0..<300 where vm.entries.isEmpty || vm.sessionBlocks.isEmpty { try? await Task.sleep(for: .milliseconds(10)) }
+        task.cancel()
+
+        let block = try #require(vm.sessionBlocks.first), shown = try #require(vm.entries.first)
+        #expect(block.duration == 23 * 60 + 40 && shown.end.timeIntervalSince(shown.start) == block.duration)
+        #expect(DurationFormatter.short(block.duration) == DurationFormatter.short(shown.end.timeIntervalSince(shown.start)))
+        #expect(vm.stored(shown).end == start.addingTimeInterval(60))
+
+        vm.goToPreviousDay()
+        #expect(vm.entries == vm.storedEntries)
+    }
 }

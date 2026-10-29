@@ -19,6 +19,7 @@ final class AutoTimeLogger {
     private let editor: TimeEntryEditor
     private let trackedApps: any TrackedAppRepository
     private let now: () -> Date
+    private let live: LiveAutoEntry
 
     private var projectByBundleId: [String: Int64] = [:]
     private var activeBundleId: String?
@@ -28,7 +29,7 @@ final class AutoTimeLogger {
     private var pending: AutoLogPending? { didSet { saveState() } }
 
     init(timeEntries: any TimeEntryRepository, trackedApps: any TrackedAppRepository,
-         store: any AutoLogStateStore = InMemoryAutoLogStateStore(), now: @escaping () -> Date = { .now }) {
+         store: any AutoLogStateStore = InMemoryAutoLogStateStore(), live: LiveAutoEntry = LiveAutoEntry(), now: @escaping () -> Date = { .now }) {
         self.store = store
         self.entry = store.state.entry
         self.pending = store.state.pending
@@ -36,6 +37,7 @@ final class AutoTimeLogger {
         self.editor = TimeEntryEditor(repository: timeEntries)
         self.trackedApps = trackedApps
         self.now = now
+        self.live = live
     }
 
     // MARK: Tracked app mapping
@@ -97,6 +99,7 @@ final class AutoTimeLogger {
         guard run != nil else { return }
         await step(at: at, isFinal: true)
         run = nil
+        publishLive()
     }
 
     private func step(at: Date, isFinal: Bool) async {
@@ -124,8 +127,18 @@ final class AutoTimeLogger {
                 if !isFinal { run = AutoLogRun(projectId: current.projectId, start: at) }
             }
             notePending(run: run ?? current, at: at)
+            publishLive()
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Publishes the entry created or continued by the current run (same condition as `notePending`), else nil.
+    private func publishLive() {
+        if let run, let entry, entry.projectId == run.projectId, entry.lastEnd > run.start {
+            live.set(entry.id)
+        } else {
+            live.set(nil)
         }
     }
 

@@ -10,7 +10,8 @@ final class LoggerFixture {
     let projectId: Int64
     let store = InMemoryAutoLogStateStore()
     var clock = TestCalendar.date(2026, 11, 3, 9)
-    lazy var logger = AutoTimeLogger(timeEntries: entries, trackedApps: trackedApps, store: store, now: { [self] in self.clock })
+    let live = LiveAutoEntry()
+    lazy var logger = AutoTimeLogger(timeEntries: entries, trackedApps: trackedApps, store: store, live: live, now: { [self] in self.clock })
 
     /// "xcode" and "sim" are linked to the project, "safari" is tracked without a project.
     init() async throws {
@@ -34,7 +35,7 @@ final class LoggerFixture {
 
     /// Simulates quitting and relaunching Timelane: a new logger on the same database (and store).
     func restart() async {
-        logger = AutoTimeLogger(timeEntries: entries, trackedApps: trackedApps, store: store, now: { [self] in self.clock })
+        logger = AutoTimeLogger(timeEntries: entries, trackedApps: trackedApps, store: store, live: live, now: { [self] in self.clock })
         await logger.load()
     }
 
@@ -264,5 +265,58 @@ struct AutoLogTrackerIntegrationTests {
         #expect(try await f.stored().map(\.end) == [f.at(2)])
         await tracker.stop()
         #expect(try await f.stored().count == 1)
+    }
+}
+
+@MainActor
+struct AutoTimeLoggerLiveEntryTests {
+    @Test func publishesTheRunningEntryAndClearsItAtTheEnd() async throws {
+        let f = try await LoggerFixture()
+        await f.logger.sessionStarted(bundleIdentifier: "xcode", at: f.clock)
+        #expect(f.live.entryId == nil)
+        await f.run(minutes: 0.5)
+        #expect(f.live.entryId == nil)                       // not written yet
+        await f.run(minutes: 1)
+        let id = try #require(try await f.stored().first?.id)
+        #expect(f.live.entryId == id)
+        await f.run(minutes: 1)
+        #expect(f.live.entryId == id)                        // kept while extending
+        await f.logger.sessionEnded(at: f.clock)
+        #expect(f.live.entryId == nil)
+    }
+
+    @Test func continuingAnEarlierEntryAcrossAGapPublishesIt() async throws {
+        let f = try await LoggerFixture()
+        await f.logger.sessionStarted(bundleIdentifier: "xcode", at: f.clock)
+        await f.run(minutes: 3)
+        let id = try #require(try await f.stored().first?.id)
+        await f.logger.sessionEnded(at: f.clock)
+        f.advance(seconds: 60)
+        await f.logger.sessionStarted(bundleIdentifier: "sim", at: f.clock)
+        #expect(f.live.entryId == nil)
+        await f.run(minutes: 1)
+        #expect(f.live.entryId == id)
+    }
+
+    @Test func userDeletingTheEntryClearsIt() async throws {
+        let f = try await LoggerFixture()
+        await f.logger.sessionStarted(bundleIdentifier: "xcode", at: f.clock)
+        await f.run(minutes: 2)
+        let entry = try #require(try await f.stored().first)
+        #expect(f.live.entryId == entry.id)
+        try await f.entries.save([], deleting: [entry.id!])
+        f.advance(seconds: 30); await f.logger.tick()
+        #expect(f.live.entryId == nil)
+    }
+
+    @Test func linkChangeClearsIt() async throws {
+        let f = try await LoggerFixture()
+        let observer = Task { await f.logger.observe() }
+        await f.logger.sessionStarted(bundleIdentifier: "xcode", at: f.clock)
+        await f.run(minutes: 2)
+        #expect(f.live.entryId != nil)
+        try await f.link("xcode", to: nil)
+        #expect(f.live.entryId == nil)
+        observer.cancel()
     }
 }

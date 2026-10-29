@@ -87,7 +87,8 @@ struct DayNavigationBar: View {
     return DayNavigationBar(
         viewModel: TimelineViewModel(
             timeEntries: environment.timeEntries, appSessions: environment.appSessions,
-            projects: environment.projects, trackedApps: environment.trackedApps, editor: environment.timeEntryEditor),
+            projects: environment.projects, trackedApps: environment.trackedApps, editor: environment.timeEntryEditor,
+            liveAutoEntry: environment.liveAutoEntry),
         changeZoom: { _ in })
         .frame(width: width)
 }
