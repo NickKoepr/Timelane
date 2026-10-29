@@ -32,18 +32,33 @@ struct AutoLogPlannerTests {
     }
 
     @Test func mergesWithinGapOfSameProject() {
-        let previous = AutoLogEntry(id: 1, projectId: 1, start: at(-600), lastEnd: at(-120))
+        let previous = AutoLogEntry(id: 1, projectId: 1, start: at(-600), lastEnd: at(-TrackingSettings.mergeGap))
         #expect(AutoLogPlanner.plan(run: run, entry: previous, entryIsIntact: true, now: at(60)) == .setEnd(at(60)))
     }
 
     @Test func doesNotMergeOtherProjectOrLargerGapOrChangedEntry() {
-        let late = AutoLogEntry(id: 1, projectId: 1, start: at(-600), lastEnd: at(-121))
+        let late = AutoLogEntry(id: 1, projectId: 1, start: at(-600), lastEnd: at(-TrackingSettings.mergeGap - 1))
         let other = AutoLogEntry(id: 1, projectId: 2, start: at(-600), lastEnd: at(-30))
         let touched = AutoLogEntry(id: 1, projectId: 1, start: at(-600), lastEnd: at(-30))
         let create = AutoLogAction.create(DateRange(start: start, end: at(60)))
         #expect(AutoLogPlanner.plan(run: run, entry: late, entryIsIntact: true, now: at(60)) == create)
         #expect(AutoLogPlanner.plan(run: run, entry: other, entryIsIntact: true, now: at(60)) == create)
         #expect(AutoLogPlanner.plan(run: run, entry: touched, entryIsIntact: false, now: at(60)) == create)
+    }
+
+    @Test func continuationExtendsWithinFirstMinute() {
+        let previous = AutoLogEntry(id: 1, projectId: 1, start: at(-600), lastEnd: at(-30))
+        #expect(AutoLogPlanner.plan(run: run, entry: previous, entryIsIntact: true, now: at(5)) == .setEnd(at(5)))
+    }
+
+    @Test func continuationOfChangedEntryWaitsForTheMinute() {
+        let previous = AutoLogEntry(id: 1, projectId: 1, start: at(-600), lastEnd: at(-30))
+        #expect(AutoLogPlanner.plan(run: run, entry: previous, entryIsIntact: false, now: at(5)) == .nothing)
+    }
+
+    @Test func continuationKeepsExtendingWithinFirstMinute() {
+        let grown = AutoLogEntry(id: 1, projectId: 1, start: at(-600), lastEnd: at(5))
+        #expect(AutoLogPlanner.plan(run: run, entry: grown, entryIsIntact: true, now: at(10)) == .setEnd(at(10)))
     }
 
     // MARK: Final step (session ended, possibly in the past)

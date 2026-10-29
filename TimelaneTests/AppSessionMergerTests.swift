@@ -63,4 +63,8 @@ struct AppSessionMergerTests {
         ], in: day, now: d(12))
         #expect(blocks.map(\.bundleIdentifier) == ["a", "b"])
     }
+
+    @Test func minimumDurationMatchesTheEntryEditor() {
+        #expect(AppSessionMerger.minimumDuration == TimeEntryEditor.minimumDuration)
+    }
 }

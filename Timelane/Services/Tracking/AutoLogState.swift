@@ -7,7 +7,7 @@ struct AutoLogState: Equatable, Codable, Sendable {
 }
 
 /// A run of `projectId` that was too short to write an entry. A new run of the same project within
-/// `TrackingSettings.autoLogMergeGap` after `lastSeen` starts at `start` instead.
+/// `TrackingSettings.mergeGap` after `lastSeen` starts at `start` instead.
 struct AutoLogPending: Equatable, Codable, Sendable {
     var projectId: Int64
     var start: Date

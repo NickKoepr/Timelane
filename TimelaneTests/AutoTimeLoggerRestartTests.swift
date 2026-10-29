@@ -69,7 +69,7 @@ struct AutoTimeLoggerRestartTests {
         await f.logger.sessionStarted(bundleIdentifier: "xcode", at: f.clock)
         await tick(f, seconds: 40)
         await f.logger.sessionEnded(at: f.clock)
-        f.advance(seconds: TrackingSettings.autoLogMergeGap + 1)
+        f.advance(seconds: TrackingSettings.mergeGap + 1)
         let secondStart = f.clock
         await f.logger.sessionStarted(bundleIdentifier: "xcode", at: secondStart)
         await tick(f, seconds: 70)
@@ -122,5 +122,50 @@ struct AutoTimeLoggerRestartTests {
         await f.run(minutes: 2)
         let all = try await f.stored().sorted { $0.start < $1.start }
         #expect(all.count == 2 && all[0].start == f.at(-30) && all[0].end == f.at(3))
+    }
+
+    // MARK: Returning to a linked app
+
+    /// 2 minutes on xcode (entry exists), `away` seconds on safari, back on xcode.
+    private func returnFixture(away: Double) async throws -> LoggerFixture {
+        let f = try await LoggerFixture()
+        await f.logger.sessionStarted(bundleIdentifier: "xcode", at: f.clock)
+        await f.run(minutes: 2)
+        await f.logger.sessionEnded(at: f.clock)
+        await f.logger.sessionStarted(bundleIdentifier: "safari", at: f.clock)
+        f.advance(seconds: away)
+        await f.logger.sessionEnded(at: f.clock)
+        await f.logger.sessionStarted(bundleIdentifier: "xcode", at: f.clock)
+        return f
+    }
+
+    @Test func returnWithinTheGapKeepsPaceFromTheFirstMoment() async throws {
+        let f = try await returnFixture(away: 20)
+        let id = try #require(try await f.stored().first?.id)
+        #expect(f.live.entryId == id)                        // before any tick
+        f.advance(seconds: 5)
+        await f.logger.tick()
+        let all = try await f.stored()
+        #expect(all.count == 1 && all[0].end == f.clock)
+    }
+
+    @Test func shortReturnEndsTheEntryWhereTheSessionEnds() async throws {
+        let f = try await returnFixture(away: 20)
+        f.advance(seconds: 10)
+        await f.logger.sessionEnded(at: f.clock)
+        let all = try await f.stored()
+        #expect(all.count == 1 && all[0].end == f.clock)
+    }
+
+    @Test func returnAfterALargerGapStartsANewEntryAfterAMinute() async throws {
+        let f = try await returnFixture(away: TrackingSettings.mergeGap + 1)
+        let first = try #require(try await f.stored().first)
+        #expect(f.live.entryId == nil)
+        await tick(f, seconds: 30)
+        #expect(f.live.entryId == nil)
+        await tick(f, seconds: 35)
+        let all = try await f.stored().sorted { $0.start < $1.start }
+        #expect(all.count == 2 && all[0] == first)
+        #expect(f.live.entryId == all[1].id)
     }
 }

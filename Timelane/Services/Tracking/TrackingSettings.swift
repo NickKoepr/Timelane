@@ -7,6 +7,10 @@ enum TrackingSettings {
     static let heartbeatInterval: TimeInterval = 60
     /// How often the entry of a linked app grows while the app is in use.
     static let autoLogInterval: TimeInterval = 5
-    /// A new automatic entry within this gap after the previous one (same project) extends it instead.
-    static let autoLogMergeGap: TimeInterval = 2 * 60
+    /// Same-app sessions closer than this are drawn as one block, and an automatic entry of the same
+    /// project continues across a gap this small.
+    static let mergeGap: TimeInterval = 60
+    /// Shorter app blocks are not drawn, and shorter automatic runs never create an entry.
+    /// `TimeEntryEditor.minimumDuration` must stay equal (checked by a test).
+    static let minimumBlockDuration: TimeInterval = 60
 }
