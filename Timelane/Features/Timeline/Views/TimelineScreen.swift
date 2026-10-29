@@ -5,9 +5,11 @@ struct TimelineScreen: View {
     @State private var anchor = ZoomScrollAnchor()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    private let environment: AppEnvironment
     private let onShowTrackedApps: () -> Void
 
     init(environment: AppEnvironment, onShowTrackedApps: @escaping () -> Void = {}) {
+        self.environment = environment
         self.onShowTrackedApps = onShowTrackedApps
         _viewModel = State(initialValue: TimelineViewModel(
             timeEntries: environment.timeEntries,
@@ -31,6 +33,11 @@ struct TimelineScreen: View {
         .errorAlert(Binding(get: { viewModel.entryEditing.errorMessage },
                            set: { viewModel.entryEditing.errorMessage = $0 }))
         .navigationTitle("Timeline")
+        .onChange(of: environment.requestedTimelineDay, initial: true) {
+            guard let day = environment.requestedTimelineDay else { return }
+            viewModel.go(to: day)
+            environment.requestedTimelineDay = nil
+        }
     }
 
     private func changeZoom(_ change: ZoomChange) {

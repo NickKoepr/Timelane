@@ -17,6 +17,8 @@ final class AppEnvironment {
     let recordingTimer: RecordingTimer
     /// Set by the menu bar to open the main window on a specific screen; `RootView` consumes it.
     var requestedSidebarItem: SidebarItem?
+    /// Set by the Overview heatmap to open the Timeline on a specific day; `TimelineScreen` consumes it.
+    var requestedTimelineDay: Date?
 
     init(database: AppDatabase, recordingTimerStore: any RecordingTimerStore = InMemoryRecordingTimerStore()) {
         self.database = database
