@@ -7,7 +7,8 @@ import Testing
 struct InfoPopoverTextTests {
     @Test func popoverFitsTheFullWrappedText() {
         let text = "Hours are logged automatically to this project while you use the app. Changing it only affects new hours."
-        let hosting = NSHostingView(rootView: InfoPopoverText(text: text))
+        // The info icon sits in a List section header, which limits text to one line.
+        let hosting = NSHostingView(rootView: InfoPopoverText(text: text).lineLimit(1))
         let size = hosting.fittingSize
 
         let font = NSFont.preferredFont(forTextStyle: .callout)

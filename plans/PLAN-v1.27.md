@@ -25,12 +25,15 @@ Text(text)
     .padding(10)
 ```
 
-On macOS the popover is sized from the hosting view's *ideal* size, which SwiftUI
-measures with an unspecified (nil) proposal. Multiline `Text` reports its ideal size
-as one long line in that pass, and the wrapped height at width 240 is not always what
-the `NSPopover` ends up with, so the popover window gets a content height that is too
-small for the wrapped text and the bottom is clipped. (Verify this; if the real cause
-turns out different, describe it here before committing.)
+The first guess was popover sizing (the popover is sized from the hosting view's ideal
+size). Making the size definite was not enough: on screen the popover still showed one
+line ending in "…". The real cause: `TrackedAppsColumnHeader` is the header of a `List`
+`Section`, and on macOS a section header sets `lineLimit(1)` in the environment. A popover's
+content inherits the environment of the view it is attached to, so the explanation was
+limited to one line and truncated.
+
+Fix: set `.lineLimit(nil)` on the popover text explicitly (in addition to the definite
+sizing below). The unit test hosts the content under `.lineLimit(1)` to reproduce this.
 
 ## Design
 

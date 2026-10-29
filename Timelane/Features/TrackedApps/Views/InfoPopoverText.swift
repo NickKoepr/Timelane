@@ -10,6 +10,8 @@ struct InfoPopoverText: View {
     var body: some View {
         Text(text)
             .font(.callout)
+            // A List section header passes `lineLimit(1)` down into its popovers.
+            .lineLimit(nil)
             .multilineTextAlignment(.leading)
             .frame(width: Self.width, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
