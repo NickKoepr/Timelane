@@ -7,6 +7,9 @@ struct TimeEntryEditor: Sendable {
 
     let repository: any TimeEntryRepository
     var now: @Sendable () -> Date = { .now }
+    /// Called after every successful create/update/delete (undo/redo write through the repository directly). Only the shared editor
+    /// of `AppEnvironment` sets it, so other writers never land on the undo stack.
+    var onChange: @Sendable (TimeEntryChange) async -> Void = { _ in }
 
     func create(projectId: Int64, range: DateRange, title: String? = nil, note: String?) async throws {
         let entry = TimeEntry(projectId: projectId, start: range.start, end: range.end,
@@ -24,7 +27,9 @@ struct TimeEntryEditor: Sendable {
 
     func delete(_ entry: TimeEntry) async throws {
         guard let id = entry.id else { return }
+        let before = try await repository.entries(ids: [id])
         try await repository.save([], deleting: [id])
+        await onChange(TimeEntryChange(before: before, after: []))
     }
 
     /// Trimmed text, or nil when empty.
@@ -37,6 +42,10 @@ struct TimeEntryEditor: Sendable {
         guard entry.duration >= Self.minimumDuration else { throw TimeEntryEditorError.tooShort }
         let existing = try await repository.entries(in: entry.range)
         let resolution = TimeEntryOverlapResolver.resolve(existing: existing, applying: entry, now: now())
-        try await repository.save(resolution.toSave, deleting: resolution.toDelete)
+        // Capture the rows as they are now: an edited entry may have moved outside the range read above.
+        let touchedIds = resolution.toDelete + resolution.toSave.compactMap(\.id)
+        let before = try await repository.entries(ids: touchedIds)
+        let after = try await repository.save(resolution.toSave, deleting: resolution.toDelete)
+        await onChange(TimeEntryChange(before: before, after: after))
     }
 }

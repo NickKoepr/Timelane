@@ -34,10 +34,51 @@ struct EntryEditingViewModelTests {
         f.vm.dragChanged(moving, mode: .move, translationY: 80 * 2 + 1, geometry: f.geometry)   // +2h → 11:00–12:00
         #expect(f.vm.displayRange(for: moving) == DateRange(start: d(11), end: d(12)))
         await f.vm.dragEnded(moving)
-        #expect(f.vm.preview == nil)
+        #expect(f.vm.preview != nil)   // kept until the observation delivers the new rows
+        #expect(f.vm.displayRange(for: moving) == DateRange(start: d(11), end: d(12)))
         let saved = try await f.repo.entries(in: f.geometry.day)
         #expect(saved.count == 1)
         #expect(saved[0].id == moving.id && saved[0].start == d(11))
+        f.vm.entriesDidChange(saved)
+        #expect(f.vm.preview == nil)
+    }
+
+    @Test func previewSurvivesStaleObservation() async throws {
+        let f = try await makeFixture()
+        let moving = try await entry(f, d(9), d(10))
+        f.vm.dragChanged(moving, mode: .move, translationY: 80 * 2 + 1, geometry: f.geometry)
+        await f.vm.dragEnded(moving)
+        f.vm.entriesDidChange([moving])
+        #expect(f.vm.preview != nil)
+        #expect(f.vm.displayRange(for: moving) == DateRange(start: d(11), end: d(12)))
+    }
+
+    @Test func committingPreviewClearsWhenEntryDisappears() async throws {
+        let f = try await makeFixture()
+        let moving = try await entry(f, d(9), d(10))
+        f.vm.dragChanged(moving, mode: .move, translationY: 80 * 2 + 1, geometry: f.geometry)
+        await f.vm.dragEnded(moving)
+        f.vm.entriesDidChange([])
+        #expect(f.vm.preview == nil)
+    }
+
+    @Test func observationDoesNotClearActiveDrag() async throws {
+        let f = try await makeFixture()
+        let moving = try await entry(f, d(9), d(10))
+        f.vm.dragChanged(moving, mode: .move, translationY: 80 * 2 + 1, geometry: f.geometry)
+        f.vm.entriesDidChange([])
+        #expect(f.vm.preview != nil)
+    }
+
+    @Test func failedCommitClearsPreview() async throws {
+        let f = try await makeFixture()
+        let moving = try await entry(f, d(9), d(10))
+        let vm = EntryEditingViewModel(editor: TimeEntryEditor(repository: FailingTimeEntryRepository(base: f.repo)))
+        vm.dragChanged(moving, mode: .move, translationY: 80 * 2 + 1, geometry: f.geometry)
+        await vm.dragEnded(moving)
+        #expect(vm.preview == nil)
+        #expect(vm.errorMessage != nil)
+        #expect(vm.displayRange(for: moving) == moving.range)
     }
 
     @Test func unchangedDragDoesNotWrite() async throws {
@@ -65,4 +106,14 @@ struct EntryEditingViewModelTests {
         #expect(try await f.repo.entries(in: f.geometry.day).isEmpty)
         #expect(f.vm.selectedEntryId == nil)
     }
+}
+
+/// Reads like the base repository, but every save fails.
+private struct FailingTimeEntryRepository: TimeEntryRepository {
+    let base: GRDBTimeEntryRepository
+
+    func observeEntries(in range: DateRange) -> AsyncStream<[TimeEntry]> { base.observeEntries(in: range) }
+    func entries(in range: DateRange) async throws -> [TimeEntry] { try await base.entries(in: range) }
+    func entries(ids: [Int64]) async throws -> [TimeEntry] { try await base.entries(ids: ids) }
+    func save(_ entries: [TimeEntry], deleting ids: [Int64]) async throws -> [TimeEntry] { throw RepositoryError.invalidRange }
 }

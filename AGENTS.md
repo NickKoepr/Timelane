@@ -55,9 +55,11 @@ Timelane/                     app target (folder is a synchronized group: new fi
       Layout/                 PURE, unit-tested: TimelineGeometry, TimelineZoom, TimelineLaneLayout, AppSessionMerger,
                               SessionLabelStyle, HourGridLayout, EntryDragCalculator, HoverCardPlacement, ZoomTransition, ...
       ViewModels/             TimelineViewModel (+Recording), TimeEntryForm/FormViewModel, ProjectSearch, EntryEditingViewModel,
-                              TimelineZoomState, ZoomScrollAnchor, TimelineHoverState, TimeEntryEditor, LastProjectStore
+                              TimelineZoomState, ZoomScrollAnchor, TimelineHoverState, TimeEntryEditor, LastProjectStore,
+                              TimeEntryHistory (undo/redo)
       Views/                  TimelineScreen, TimelineScrollArea (shared by window + menu bar), TimelineColumn, lanes, blocks,
-                              DayNavigationBar (ViewThatFits variants), hover card, form sheet/content, RecordButton
+                              DayNavigationBar (ViewThatFits variants), hover card, form sheet/content, RecordButton,
+                              TimeEntryUndoShortcuts (⌘Z / ⇧⌘Z)
     Projects/                 ProjectsViewModel, ProjectFormViewModel + views
     TrackedApps/              TrackedAppsViewModel, AddTrackedAppViewModel + views (incl. NSOpenPanel wrapper)
   MenuBar/                    MenuBarContentView, MenuBarViewModel, status line, day bar, MenuBarFormPopup, PanelOpenObserver
@@ -78,6 +80,7 @@ docs/icon.png                 README image
 - **Composition root**: `AppEnvironment` wires everything; `.live()`, `.inMemory()`, `.preview()` (sample data for `#Preview`). Hosted unit tests automatically get an in-memory environment and no tracking.
 - Default actor isolation is *nonisolated* (project setting removed); mark main-actor types explicitly.
 - All time-entry changes go through `TimeEntryEditor` → `TimeEntryOverlapResolver` (entries never overlap; newest action wins) → one repository transaction.
+- **Undo/redo**: the shared `AppEnvironment.timeEntryEditor` reports every change as a `TimeEntryChange` (all touched rows before/after) to `TimeEntryHistory`; undo/redo write straight through the repository so they never record themselves. Automatic writers must use their own `TimeEntryEditor(repository:)` without `onChange`, so they stay off the undo stack.
 - Schema changes: add a **new** migration (`v3`, …) in `Migrations.swift`; never edit `v1`/`v2`.
 
 ## Conventions
@@ -104,6 +107,8 @@ docs/icon.png                 README image
 - **Narrow windows**: bars use `ViewThatFits` variants with single-line, `fixedSize` texts; minimum window size is in `WindowMetrics` (700 × 520, detail ≥ 480). The menu bar panel is fixed at 380 × 600.
 - **Lane alignment**: header, lanes, divider and tint all take x positions from `TimelineLaneLayout`; app lane = 1/3 (`TimelineMetrics.appLaneFraction`).
 - **Loading states**: view models expose `isLoaded`; show empty states only after the first observed value (otherwise they flash).
+- **Drag preview vs. observation**: a dropped entry keeps its drag preview (`isCommitting`) until `TimelineViewModel` observes the new rows (`EntryEditingViewModel.entriesDidChange`). Clearing it when the save returns makes the block flash back, because the GRDB observation arrives later.
+- **Dates round-trip through Double**: stored dates are not bit-identical to in-memory `Date.now`; compare with what the database returns (`save` returns re-read rows) or with a tolerance.
 - **Tracking rule**: the tracked-apps list only decides what is *recorded*; everything already recorded is always shown.
 - **App icons**: never use SF Symbols in the app icon (licence); regenerate with `swift Tools/generate-app-icon.swift Timelane/Assets.xcassets/AppIcon.appiconset Timelane/Assets.xcassets/MenuBarIcon.imageset`. The Dock caches icons: `touch` the app and run `lsregister -f` on it after changing the icon.
 - **Tests**: shared state (UserDefaults keys, timer store) must be injected with throw-away suites / in-memory stores in tests; one unexplained flaky run was seen once while the app was running.

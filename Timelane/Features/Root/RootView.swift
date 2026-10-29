@@ -16,6 +16,8 @@ struct RootView: View {
         }
         .frame(minWidth: WindowMetrics.minimumSize.width, minHeight: WindowMetrics.minimumSize.height)
         .background { sidebarShortcuts }
+        .background { TimeEntryUndoShortcuts(history: environment.timeEntryHistory) }
+        .errorAlert(Bindable(environment.timeEntryHistory).errorMessage)
         .onChange(of: environment.requestedSidebarItem, initial: true) {
             guard let item = environment.requestedSidebarItem else { return }
             selection = item
