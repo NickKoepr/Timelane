@@ -1,8 +1,8 @@
 import SwiftUI
 
 /// Pinch to zoom and anchored scrolling on the timeline scroll view.
-/// The pinch is a simultaneous gesture on the scroll view only: it never competes with the one-finger
-/// selection drag or the entry move/resize drags on the blocks.
+/// The pinch comes from an AppKit event monitor (SwiftUI's `MagnifyGesture` does not fire in the menu bar panel).
+/// The monitor never consumes events, so the one-finger selection drag and the entry move/resize drags are unaffected.
 private struct TimelineZoomBehavior: ViewModifier {
     let viewModel: TimelineViewModel
     @Binding var scrollPosition: ScrollPosition
@@ -14,12 +14,14 @@ private struct TimelineZoomBehavior: ViewModifier {
         content
             .onScrollGeometryChange(for: CGSize.self, of: { CGSize(width: $0.contentOffset.y, height: $0.containerSize.height) },
                                     action: { _, new in anchor.visibleAreaChanged(offsetY: new.width, height: new.height) })
-            .simultaneousGesture(MagnifyGesture()
-                .onChanged { value in
-                    let step = stepper.step(for: value.magnification)
+            .background {
+                MagnifyEventMonitor { delta, phase in
+                    if phase.contains(.began) { stepper.reset() }
+                    let step = stepper.step(forDelta: delta)
                     if step > 0 { apply { $0.zoomIn() } } else if step < 0 { apply { $0.zoomOut() } }
+                    if phase.contains(.ended) || phase.contains(.cancelled) { stepper.reset() }
                 }
-                .onEnded { _ in stepper.reset() })
+            }
             // Every animation frame changes the scale; scroll along so the centred time stays put.
             .onChange(of: viewModel.zoomState.pointsPerHour) {
                 guard let offset = anchor.offset(with: viewModel.geometry) else { return }
