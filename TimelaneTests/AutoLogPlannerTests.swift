@@ -70,4 +70,9 @@ struct AutoLogPlannerTests {
         let entry = AutoLogEntry(id: 1, projectId: 1, start: start, lastEnd: at(300))
         #expect(AutoLogPlanner.plan(run: run, entry: entry, entryIsIntact: true, now: at(30)) == .nothing)
     }
+
+    @Test func runStartingBeforeRestoredEntryEndExtendsIt() {
+        let entry = AutoLogEntry(id: 1, projectId: 1, start: at(-300), lastEnd: at(20))
+        #expect(AutoLogPlanner.plan(run: run, entry: entry, entryIsIntact: true, now: at(60)) == .setEnd(at(60)))
+    }
 }

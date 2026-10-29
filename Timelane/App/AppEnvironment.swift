@@ -20,7 +20,8 @@ final class AppEnvironment {
     /// Set by the Overview heatmap to open the Timeline on a specific day; `TimelineScreen` consumes it.
     var requestedTimelineDay: Date?
 
-    init(database: AppDatabase, recordingTimerStore: any RecordingTimerStore = InMemoryRecordingTimerStore()) {
+    init(database: AppDatabase, recordingTimerStore: any RecordingTimerStore = InMemoryRecordingTimerStore(),
+         autoLogStore: any AutoLogStateStore = InMemoryAutoLogStateStore()) {
         self.database = database
         self.recordingTimer = RecordingTimer(store: recordingTimerStore)
         self.projects = GRDBProjectRepository(database: database)
@@ -34,7 +35,7 @@ final class AppEnvironment {
         })
         self.tracker = AppActivityTracker(
             repository: appSessions, trackedApps: trackedApps,
-            autoLogger: AutoTimeLogger(timeEntries: timeEntries, trackedApps: trackedApps))
+            autoLogger: AutoTimeLogger(timeEntries: timeEntries, trackedApps: trackedApps, store: autoLogStore))
     }
 
     /// The environment of the running app (shared with the app delegate).
@@ -47,7 +48,8 @@ final class AppEnvironment {
 
     static func live() -> AppEnvironment {
         do {
-            return AppEnvironment(database: try AppDatabase.live(), recordingTimerStore: UserDefaultsRecordingTimerStore())
+            return AppEnvironment(database: try AppDatabase.live(), recordingTimerStore: UserDefaultsRecordingTimerStore(),
+                                  autoLogStore: UserDefaultsAutoLogStateStore())
         } catch {
             fatalError("Could not open the Timelane database: \(error)")
         }

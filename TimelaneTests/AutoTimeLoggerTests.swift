@@ -8,8 +8,9 @@ final class LoggerFixture {
     let entries: GRDBTimeEntryRepository
     let trackedApps: GRDBTrackedAppRepository
     let projectId: Int64
+    let store = InMemoryAutoLogStateStore()
     var clock = TestCalendar.date(2026, 11, 3, 9)
-    lazy var logger = AutoTimeLogger(timeEntries: entries, trackedApps: trackedApps, now: { [self] in self.clock })
+    lazy var logger = AutoTimeLogger(timeEntries: entries, trackedApps: trackedApps, store: store, now: { [self] in self.clock })
 
     /// "xcode" and "sim" are linked to the project, "safari" is tracked without a project.
     init() async throws {
@@ -29,6 +30,12 @@ final class LoggerFixture {
     /// Moves the clock in 30 s steps, ticking each time, like the tracker's loop.
     func run(minutes: Double) async {
         for _ in 0..<Int(minutes * 2) { advance(seconds: 30); await logger.tick() }
+    }
+
+    /// Simulates quitting and relaunching Timelane: a new logger on the same database (and store).
+    func restart() async {
+        logger = AutoTimeLogger(timeEntries: entries, trackedApps: trackedApps, store: store, now: { [self] in self.clock })
+        await logger.load()
     }
 
     func makeProject(_ name: String) async throws -> Int64 {

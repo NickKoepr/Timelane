@@ -7,6 +7,10 @@ import Foundation
 /// It never changes the project of an existing entry and never touches time recorded before the current run
 /// (except continuing its own entry across a small gap of the same project). A link change ends the run
 /// and starts a new one.
+///
+/// Its state (own entry, and a run too short to write anything yet) lives in an `AutoLogStateStore`, so it
+/// survives a restart of Timelane: the entry is continued, and short runs of the same project within
+/// `TrackingSettings.autoLogMergeGap` of each other add up to one run.
 @MainActor
 final class AutoTimeLogger {
     private(set) var errorMessage: String?
@@ -19,9 +23,15 @@ final class AutoTimeLogger {
     private var projectByBundleId: [String: Int64] = [:]
     private var activeBundleId: String?
     private var run: AutoLogRun?
-    private var entry: AutoLogEntry?
+    private let store: any AutoLogStateStore
+    private var entry: AutoLogEntry? { didSet { saveState() } }
+    private var pending: AutoLogPending? { didSet { saveState() } }
 
-    init(timeEntries: any TimeEntryRepository, trackedApps: any TrackedAppRepository, now: @escaping () -> Date = { .now }) {
+    init(timeEntries: any TimeEntryRepository, trackedApps: any TrackedAppRepository,
+         store: any AutoLogStateStore = InMemoryAutoLogStateStore(), now: @escaping () -> Date = { .now }) {
+        self.store = store
+        self.entry = store.state.entry
+        self.pending = store.state.pending
         self.repository = timeEntries
         self.editor = TimeEntryEditor(repository: timeEntries)
         self.trackedApps = trackedApps
@@ -42,6 +52,7 @@ final class AutoTimeLogger {
             guard let activeBundleId, projectByBundleId[activeBundleId] != run?.projectId else { continue }
             let at = now()
             await finish(at: at)
+            pending = nil                                  // a new link starts from scratch
             run = projectByBundleId[activeBundleId].map { AutoLogRun(projectId: $0, start: at) }
         }
     }
@@ -55,8 +66,19 @@ final class AutoTimeLogger {
     func sessionStarted(bundleIdentifier: String, at: Date) async {
         await finish(at: at)
         activeBundleId = bundleIdentifier
-        run = projectByBundleId[bundleIdentifier].map { AutoLogRun(projectId: $0, start: at) }
+        run = projectByBundleId[bundleIdentifier].map { AutoLogRun(projectId: $0, start: resumedStart(for: $0, at: at)) }
     }
+
+    /// A run of the same project shortly after a run that was too short to write anything continues that run.
+    private func resumedStart(for projectId: Int64, at: Date) -> Date {
+        guard let pending else { return at }
+        let gap = at.timeIntervalSince(pending.lastSeen)
+        if pending.projectId == projectId, gap >= 0, gap <= TrackingSettings.autoLogMergeGap { return pending.start }
+        if pending.projectId != projectId || gap > TrackingSettings.autoLogMergeGap { self.pending = nil }
+        return at
+    }
+
+    private func saveState() { store.state = AutoLogState(entry: entry, pending: pending) }
 
     func sessionEnded(at: Date) async {
         await finish(at: at)
@@ -101,8 +123,19 @@ final class AutoTimeLogger {
                 entry = nil
                 if !isFinal { run = AutoLogRun(projectId: current.projectId, start: at) }
             }
+            notePending(run: run ?? current, at: at)
         } catch {
             errorMessage = error.localizedDescription
+        }
+    }
+
+    /// Remembers a run that has not written anything yet (stored on every step, so also after a crash);
+    /// forgets it as soon as the run has an entry.
+    private func notePending(run: AutoLogRun, at: Date) {
+        if let entry, entry.projectId == run.projectId, entry.lastEnd > run.start {
+            pending = nil
+        } else {
+            pending = AutoLogPending(projectId: run.projectId, start: run.start, lastSeen: max(at, run.start))
         }
     }
 
