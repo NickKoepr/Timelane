@@ -14,7 +14,9 @@ picker. Repeated in every row it looks cluttered. The owner wants one column hea
   gets a fixed width `TrackedAppRow.projectColumnWidth` (200 pt) and the remove button a fixed width
   `removeColumnWidth`, so every row's picker starts at the same x position.
 - New `TrackedAppsColumnHeader`: "App" on the left and "Project" over the picker column, on one baseline.
-  Next to "Project" an `info.circle` icon whose tooltip (`.help`) explains the picker: hours are logged
+  "Project" is indented by `TrackedAppRow.pickerTextInset` so it lines up with the pickers' titles (the
+  pickers are leading-aligned in their column). Next to it an `InfoHoverIcon` (`info.circle`) whose
+  popover opens immediately on hover (`.help` waits for the system tooltip delay) and explains the picker: hours are logged
   automatically to this project while you use the app; changing it only affects new hours. (A visible
   caption under "Project" was tried first, but it pushed "Project" out of line with "App".) It uses the
   same widths and spacing as the row, so it lines up with the pickers.

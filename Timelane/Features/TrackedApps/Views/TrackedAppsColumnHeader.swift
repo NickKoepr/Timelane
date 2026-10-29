@@ -11,11 +11,9 @@ struct TrackedAppsColumnHeader: View {
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("Project")
                     .lineLimit(1)
-                Image(systemName: "info.circle")
-                    .foregroundStyle(.secondary)
-                    .help("Hours are logged automatically to this project while you use the app. Changing it only affects new hours.")
-                    .accessibilityLabel("Logs hours automatically to this project while you use the app")
+                InfoHoverIcon(text: "Hours are logged automatically to this project while you use the app. Changing it only affects new hours.")
             }
+            .padding(.leading, TrackedAppRow.pickerTextInset)
             .frame(width: TrackedAppRow.projectColumnWidth, alignment: .leading)
             Color.clear.frame(width: TrackedAppRow.removeColumnWidth, height: 1)
         }

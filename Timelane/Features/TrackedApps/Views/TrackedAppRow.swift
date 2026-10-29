@@ -5,6 +5,8 @@ struct TrackedAppRow: View {
     static let projectColumnWidth: CGFloat = 200
     static let removeColumnWidth: CGFloat = 20
     static let spacing: CGFloat = 10
+    /// Distance from the picker's edge to its title, so the column header lines up with the titles.
+    static let pickerTextInset: CGFloat = 8
 
     let app: TrackedApp
     let projects: [Project]
@@ -28,7 +30,7 @@ struct TrackedAppRow: View {
             }
             .labelsHidden()
             .pickerStyle(.menu)
-            .frame(width: Self.projectColumnWidth)
+            .frame(width: Self.projectColumnWidth, alignment: .leading)
             .help("Project that gets hours automatically while you use \(app.name)")
             Button(action: onRemove) { Image(systemName: "minus.circle") }
                 .buttonStyle(.borderless)
