@@ -28,6 +28,7 @@ Guiding principles: **simple, not over-engineered, small files, MVVM, easy to ex
 - R11. Month navigation: previous month, next month, "This month". Default is the current month.
 - R12. Add a project quickly (name + color). Edit name/color. Archive a project (hidden from the project picker, but historical hours remain). Deleting is only allowed when a project has no entries.
 - R13. A total for the month is shown at the bottom.
+- R13a. *Export…* (⇧⌘E) writes all hours of the shown month (entries clipped to the month, archived projects included) to a file in a format the user picks (JSON or Excel .xlsx) via a save panel. Formats implement `MonthExportFormat` and are registered in `ExportFormats.all`; adding one needs no change to the view model or screen (see PLAN-v1.19). The menu bar panel has no export.
 
 **Overview screen** (v1.20, see `plans/PLAN-v1.20.md`)
 - R14. A yearly activity heatmap of registered hours per day (GitHub-style), year navigation, a project filter, statistic tiles, an hours-per-month chart and a per-project breakdown. Hovering a day shows a card with the hours per project (v1.21); clicking a day opens it on the Timeline. Computed from existing rows; no schema change.

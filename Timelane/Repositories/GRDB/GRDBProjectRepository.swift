@@ -8,6 +8,10 @@ struct GRDBProjectRepository: ProjectRepository {
         database.stream { db in try Self.fetchProjects(db, includeArchived: includeArchived) }
     }
 
+    func projects(includeArchived: Bool) async throws -> [Project] {
+        try await database.writer.read { db in try Self.fetchProjects(db, includeArchived: includeArchived) }
+    }
+
     func monthTotals(in range: DateRange) async throws -> [ProjectMonthTotal] {
         try await database.writer.read { db in try Self.fetchTotals(db, in: range) }
     }

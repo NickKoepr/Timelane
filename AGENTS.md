@@ -44,6 +44,9 @@ Timelane/                     app target (folder is a synchronized group: new fi
                               Records/ (GRDB conformances, dates as Unix Double)
   Repositories/               protocols (ProjectRepository, TimeEntryRepository, AppSessionRepository, TrackedAppRepository)
     GRDB/                     the GRDB implementations
+  Services/Export/            MonthExport(+Builder/Service/FileName), Formats/ (MonthExportFormat, ExportFormats registry, JSON, Excel),
+                              Spreadsheet/ (workbook model, XLSXWriter), Zip/ (stored ZipArchiveWriter, CRC32). To add an export format:
+                              implement `MonthExportFormat` and add it to `ExportFormats.all` — nothing else changes.
   Services/                   DayTotals, TimeEntryOverlapResolver (pure), AppCandidates, AppIconProvider, RunningApps
     Activity/                 PURE yearly stats: YearActivity, ActivityLevel, ActivityHeatmapLayout, ActivityStatistics
     Tracking/                 AppActivityTracker (one serial ActivityEvent stream), SystemEventObserver (sleep/wake/lock),
