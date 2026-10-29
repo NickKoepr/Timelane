@@ -44,7 +44,7 @@ struct MonthNavigationBar: View {
 #Preview("480") { barPreview(width: 480) }
 #Preview("250") { barPreview(width: 250) }
 
-private func barPreview(width: CGFloat) -> some View {
+@MainActor private func barPreview(width: CGFloat) -> some View {
     MonthNavigationBar(title: "September 2026", shortTitle: "Sep 2026", isCurrentMonth: false,
                        previous: {}, next: {}, current: {})
         .frame(width: width)

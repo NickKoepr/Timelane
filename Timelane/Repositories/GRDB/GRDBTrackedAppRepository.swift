@@ -31,7 +31,7 @@ struct GRDBTrackedAppRepository: TrackedAppRepository {
 
     func setProject(_ projectId: Int64?, forAppId id: Int64) async throws {
         try await database.writer.write { db in
-            try TrackedApp.filter(key: id).updateAll(db, Column("projectId").set(to: projectId))
+            _ = try TrackedApp.filter(key: id).updateAll(db, Column("projectId").set(to: projectId))
         }
     }
 
