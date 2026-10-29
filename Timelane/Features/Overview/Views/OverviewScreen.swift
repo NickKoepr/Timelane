@@ -53,6 +53,7 @@ struct OverviewScreen: View {
             } else {
                 ContentUnavailableView("No hours in \(viewModel.yearTitle)", systemImage: "square.grid.3x3",
                                        description: Text("Hours you register on the Timeline show up here."))
+                    .frame(maxWidth: .infinity)   // centered, not at the leading edge of the stack
             }
         }
     }
