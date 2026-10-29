@@ -7,7 +7,7 @@ struct AutoLogRun: Equatable, Sendable {
 }
 
 /// The entry the logger wrote (and may keep growing).
-struct AutoLogEntry: Equatable, Sendable {
+struct AutoLogEntry: Equatable, Codable, Sendable {
     var id: Int64
     var projectId: Int64
     var start: Date
@@ -29,7 +29,8 @@ enum AutoLogAction: Equatable, Sendable {
 ///
 /// Invariant: the logger only ever changes the end of its own entry for the current run. It never changes
 /// the project of an existing entry and never touches time recorded before the current run (except
-/// continuing its own entry across a small gap of the same project).
+/// continuing its own entry across a small gap of the same project). The entry may come from before a restart
+/// of the app, and a run may start where earlier short runs of the same project left off.
 enum AutoLogPlanner {
     static func plan(run: AutoLogRun, entry: AutoLogEntry?, entryIsIntact: Bool, now: Date, isFinal: Bool = false) -> AutoLogAction {
         // The session ended in the past (idle): remove the idle time from the entry grown in this run.
