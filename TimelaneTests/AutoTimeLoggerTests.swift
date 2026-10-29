@@ -49,6 +49,28 @@ final class LoggerFixture {
 
 @MainActor
 struct AutoTimeLoggerTests {
+    /// Real clocks have sub-second dates, which often change by an ULP in the database (stored as Unix Double).
+    /// The logger must not lose its own entry because of that.
+    @Test func subSecondDatesDoNotBreakTheRun() async throws {
+        let f = try await LoggerFixture()
+        let base = Date(timeIntervalSinceReferenceDate: 783_000_000.123_456_7)
+        let start = try #require((0..<200).lazy.map { base.addingTimeInterval(Double($0) * 0.0137) }
+            .first { Date(timeIntervalSince1970: $0.timeIntervalSince1970) != $0 }, "need a date that does not round-trip")
+        f.clock = start
+        await f.logger.sessionStarted(bundleIdentifier: "xcode", at: start)
+        for offset in [60.0, 65, 120] {
+            f.clock = start.addingTimeInterval(offset)
+            await f.logger.tick()
+        }
+        var all = try await f.entries.entries(in: DateRange(start: start.addingTimeInterval(-60), end: start.addingTimeInterval(600)))
+        #expect(all.count == 1)
+        #expect(all[0].start.isSameInstant(as: start) && all[0].end.isSameInstant(as: start.addingTimeInterval(120)))
+        f.clock = start.addingTimeInterval(150)
+        await f.logger.sessionEnded(at: f.clock)
+        all = try await f.entries.entries(in: DateRange(start: start.addingTimeInterval(-60), end: start.addingTimeInterval(600)))
+        #expect(all.count == 1 && all[0].end.isSameInstant(as: start.addingTimeInterval(150)))
+    }
+
     @Test func linkedAppActiveFiveMinutesGivesOneGrowingEntry() async throws {
         let f = try await LoggerFixture()
         await f.logger.sessionStarted(bundleIdentifier: "xcode", at: f.clock)

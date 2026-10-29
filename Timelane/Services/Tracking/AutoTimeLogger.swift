@@ -86,13 +86,14 @@ final class AutoTimeLogger {
                 break
             case .create(let range):
                 try await editor.create(projectId: current.projectId, range: range, note: nil)
-                let created = try await repository.entries(in: range).first { $0.projectId == current.projectId && $0.start == range.start }
-                entry = created?.id.map { AutoLogEntry(id: $0, projectId: current.projectId, start: range.start, lastEnd: range.end) }
+                let created = try await repository.entries(in: range).first { $0.projectId == current.projectId && $0.start.isSameInstant(as: range.start) }
+                // Remember the dates as stored: they can differ slightly from `range` after the round trip.
+                entry = created?.id.map { AutoLogEntry(id: $0, projectId: current.projectId, start: created?.start ?? range.start, lastEnd: created?.end ?? range.end) }
             case .setEnd(let end):
                 guard var stored, let own = entry else { break }
                 stored.end = end
                 try await editor.update(stored)
-                entry = AutoLogEntry(id: own.id, projectId: own.projectId, start: own.start, lastEnd: end)
+                entry = AutoLogEntry(id: own.id, projectId: own.projectId, start: own.start, lastEnd: stored.end)
             case .delete:
                 if let stored { try await editor.delete(stored) }
                 entry = nil
@@ -112,7 +113,7 @@ final class AutoTimeLogger {
         let window = DateRange(start: own.lastEnd.addingTimeInterval(-1), end: max(at, own.lastEnd).addingTimeInterval(1))
         let stored = try await repository.entries(in: window)
         guard let mine = stored.first(where: { $0.id == own.id }),
-              mine.projectId == own.projectId, mine.start == own.start, mine.end == own.lastEnd else { return nil }
+              mine.projectId == own.projectId, mine.start.isSameInstant(as: own.start), mine.end.isSameInstant(as: own.lastEnd) else { return nil }
         let blocked = stored.contains { $0.id != own.id && $0.start < at && $0.end > own.lastEnd }
         return blocked ? nil : mine
     }
