@@ -18,11 +18,12 @@ struct ActivityHeatmap: View {
     @State private var hover = HeatmapHoverState()
 
     var body: some View {
-        let fitted = (width - labelWidth) / CGFloat(layout.columnCount) - spacing
-        let cell = min(max(fitted, cellRange.lowerBound), cellRange.upperBound)
+        let sizing = ActivityHeatmapSizing(availableWidth: width, columnCount: layout.columnCount,
+                                           labelWidth: labelWidth, spacing: spacing, cellRange: cellRange)
+        let cell = sizing.cell
         HStack(alignment: .top, spacing: 0) {
             weekdayLabels(cell: cell)
-            if fitted < cellRange.lowerBound {
+            if sizing.scrolls {
                 ScrollView(.horizontal, showsIndicators: false) { grid(cell: cell) }
                     .defaultScrollAnchor(.trailing)
                     .onScrollPhaseChange { _, phase in if phase != .idle { hover.clear() } }
@@ -30,7 +31,8 @@ struct ActivityHeatmap: View {
                 grid(cell: cell)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // minWidth 0: measure the offered width, not the grid's, or the heatmap never switches to scrolling.
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .frame(height: monthRowHeight + 7 * step(cell))
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .coordinateSpace(name: "heatmap")
