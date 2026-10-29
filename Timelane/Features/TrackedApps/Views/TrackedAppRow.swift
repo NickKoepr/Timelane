@@ -24,7 +24,7 @@ struct TrackedAppRow: View {
                     .lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: 8)
-            Picker("Project", selection: Binding(get: { app.projectId }, set: onProjectChange)) {
+            Picker("Project", selection: Binding(get: { app.projectId }, set: { onProjectChange($0) })) {
                 Text("No project").tag(Int64?.none)
                 ForEach(projects) { project in Text(project.name).tag(project.id) }
             }
