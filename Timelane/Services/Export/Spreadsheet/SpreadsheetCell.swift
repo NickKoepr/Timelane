@@ -1,7 +1,8 @@
 import Foundation
 
 enum SpreadsheetCell: Sendable, Hashable {
-    enum NumberStyle: Sendable, Hashable { case general, hours }
+    /// `duration`: a fraction of a day shown as `[h]:mm` (hours may exceed 24).
+    enum NumberStyle: Sendable, Hashable { case general, duration }
 
     case empty
     case text(String)

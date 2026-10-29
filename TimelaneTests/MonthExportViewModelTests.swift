@@ -35,7 +35,7 @@ struct MonthExportViewModelTests {
         let json = try #require(await viewModel.prepareFile(for: MonthExportFixtures.october))
         #expect(json.fileName == "Timelane 2026-10.json")
         let object = try #require(try JSONSerialization.jsonObject(with: json.data) as? [String: Any])
-        #expect(object["totalHours"] as? Double == 2)
+        #expect(object["total"] as? String == "2:00")
     }
 
     @Test func remembersFormatAndFallsBack() async throws {

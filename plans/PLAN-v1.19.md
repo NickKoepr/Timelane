@@ -114,7 +114,9 @@ calendar. Unit-test it.
 Encode through private `Encodable` DTOs (don't make the models `Codable` for this). `JSONEncoder`
 with `[.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]`. Dates as ISO 8601 strings **with
 the local offset** (`ISO8601DateFormatter`, `timeZone = export.timeZone`), e.g.
-`2026-10-03T09:00:00+02:00`. Hours as a number rounded to 2 decimals. Shape:
+`2026-10-03T09:00:00+02:00`. Durations as whole minutes (`DurationFormatter.minutes`) plus the app's `h:mm` notation
+(`DurationFormatter.hoursMinutes`, e.g. `"1:30"`) — no decimal hours (owner feedback: decimals like
+1.33 read badly). Shape:
 
 ```json
 {
@@ -123,14 +125,14 @@ the local offset** (`ISO8601DateFormatter`, `timeZone = export.timeZone`), e.g.
   "month": "2026-10",
   "generatedAt": "2026-10-29T14:03:00+01:00",
   "timeZone": "Europe/Amsterdam",
-  "totalSeconds": 151200,
-  "totalHours": 42,
+  "totalMinutes": 2520,
+  "total": "42:00",
   "projects": [
-    { "name": "Acme", "color": "#4F8EF7", "archived": false, "totalSeconds": 108000, "totalHours": 30 }
+    { "name": "Acme", "color": "#4F8EF7", "archived": false, "totalMinutes": 1800, "total": "30:00" }
   ],
   "entries": [
     { "project": "Acme", "date": "2026-10-03", "start": "2026-10-03T09:00:00+02:00",
-      "end": "2026-10-03T12:30:00+02:00", "durationSeconds": 12600, "durationHours": 3.5,
+      "end": "2026-10-03T12:30:00+02:00", "durationMinutes": 210, "duration": "3:30",
       "title": "Sprint review", "note": null }
   ]
 }
@@ -157,15 +159,16 @@ Split in reusable, testable pieces (all pure):
   `xl/styles.xml`, `xl/worksheets/sheetN.xml`. Strings as inline strings (`t="inlineStr"`, so no
   `sharedStrings.xml`); XML-escape `& < > " '` and strip characters illegal in XML 1.0.
   Dates/times as Excel serial numbers (days since 1899-12-30, computed in the export's time zone)
-  with number formats in `styles.xml`: `yyyy-mm-dd`, `hh:mm`, `0.00` (hours). Bold font for
+  with number formats in `styles.xml`: `yyyy-mm-dd`, `hh:mm`, `[h]:mm` (durations). Bold font for
   headers. Set column widths (`<cols>`) and freeze the header row. Sheet names ≤ 31 chars, no
   `[]:*?/\`. Cell references `A1`, `B1`, … (`AA` after `Z`).
 - `ExcelMonthExportFormat` — maps `MonthExport` → workbook with two sheets:
-  - **Summary**: title row "Timelane — October 2026", blank row, header `Project | Hours | Archived`,
-    one row per project (hours as number with `0.00`), then a bold `Total` row.
-  - **Entries**: header `Date | Start | End | Hours | Project | Title | Note`, one row per entry.
+  - **Summary**: title row "Timelane — October 2026", blank row, header `Project | Time | Minutes | Archived`,
+    one row per project, then a bold `Total` row.
+  - **Entries**: header `Date | Start | End | Duration | Minutes | Project | Title | Note`, one row per entry.
 
-  Hours = seconds / 3600 as a plain number so the user can sum in Excel.
+  Time/Duration = whole minutes / 1440 as an Excel time value with format `[h]:mm` (shows `1:30`,
+  sums correctly past 24 h); Minutes = whole minutes as a plain number.
 
 ### 3. View model — `Timelane/Features/Projects/ViewModels/MonthExportViewModel.swift`
 
@@ -268,7 +271,7 @@ automatically — don't hand-edit the pbxproj for them. Check how existing tests
   title/note → nil; empty month → no projects, no entries, total 0.
 - **File name**: `"Timelane 2026-10.json"`, `.xlsx`.
 - **JSON**: decode the output with `JSONSerialization`; check `schemaVersion`, `month`, totals,
-  hours rounding (e.g. 1 h 20 m → 1.33), ISO date with offset across a DST change (an entry on
+  minutes + `h:mm` (e.g. 80 → `"1:20"`), ISO date with offset across a DST change (an entry on
   2026-10-24 has `+02:00`, on 2026-10-26 `+01:00`), `title: null` present.
 - **CRC32**: known vector; empty data → 0.
 - **ZIP**: read the archive back with the test-only reader (parse end-of-central-directory →
@@ -277,7 +280,7 @@ automatically — don't hand-edit the pbxproj for them. Check how existing tests
 - **XLSX**: unzip with the test reader; required parts exist; `[Content_Types].xml` lists the
   sheets; sheet XML contains the header texts and an escaped string (`A & B <c>` →
   `A &amp; B &lt;c&gt;`); column letters (`Z`, `AA`); Excel serial for 2026-10-03 09:00 local
-  (= 46298.375); the Summary total row equals the export total in hours.
+  (= 46298.375); the Summary total row equals the export total (minutes / 1440 and minutes).
 - **View model**: with an in-memory environment and seeded entries, `prepareFile` returns data
   for the selected format and the expected file name; the selected format is persisted to the
   injected UserDefaults suite and restored; unknown stored id falls back to the first format;

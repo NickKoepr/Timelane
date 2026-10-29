@@ -11,7 +11,7 @@ enum XLSXParts {
     static let generalStyle = 0
     static let dateStyle = 1
     static let timeStyle = 2
-    static let hoursStyle = 3
+    static let durationStyle = 3
     static let boldOffset = 4
 
     static func contentTypes(sheetCount: Int) -> String {
@@ -45,7 +45,7 @@ enum XLSXParts {
         return header + "<Relationships xmlns=\"\(packageRelNamespace)\">\(sheets)\(styles)</Relationships>"
     }
 
-    /// Number formats: 164 = yyyy-mm-dd, 165 = hh:mm, 166 = 0.00. Fonts: 0 regular, 1 bold.
+    /// Number formats: 164 = yyyy-mm-dd, 165 = hh:mm, 166 = [h]:mm (durations). Fonts: 0 regular, 1 bold.
     static let styles: String = {
         let formats = [0, 164, 165, 166]
         let xfs = (0..<2).flatMap { bold in
@@ -56,7 +56,7 @@ enum XLSXParts {
         }.joined()
         return header + "<styleSheet xmlns=\"\(mainNamespace)\">"
             + "<numFmts count=\"3\"><numFmt numFmtId=\"164\" formatCode=\"yyyy\\-mm\\-dd\"/>"
-            + "<numFmt numFmtId=\"165\" formatCode=\"hh:mm\"/><numFmt numFmtId=\"166\" formatCode=\"0.00\"/></numFmts>"
+            + "<numFmt numFmtId=\"165\" formatCode=\"hh:mm\"/><numFmt numFmtId=\"166\" formatCode=\"[h]:mm\"/></numFmts>"
             + "<fonts count=\"2\"><font><sz val=\"12\"/><name val=\"Calibri\"/></font>"
             + "<font><b/><sz val=\"12\"/><name val=\"Calibri\"/></font></fonts>"
             + "<fills count=\"2\"><fill><patternFill patternType=\"none\"/></fill><fill><patternFill patternType=\"gray125\"/></fill></fills>"

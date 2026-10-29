@@ -24,12 +24,15 @@ struct XLSXWriterTests {
         let summary = try #require(ZipTestReader.string(files, "xl/worksheets/sheet1.xml"))
         #expect(summary.contains("Project") && summary.contains("Archived") && summary.contains("Total"))
         #expect(summary.contains("Acme &amp; Co"))
-        // Total row: 21000 s = 5.8333… h, same as the export total.
-        #expect(summary.contains("<v>\(21_000.0 / 3600)</v>"))
+        // Total row: 350 minutes, as a [h]:mm time value (5:50) and as plain minutes.
+        #expect(summary.contains("<v>\(350.0 / 1440)</v>"))
+        #expect(summary.contains("<v>350.0</v>"))
         let entries = try #require(ZipTestReader.string(files, "xl/worksheets/sheet2.xml"))
-        for header in ["Date", "Start", "End", "Hours", "Project", "Title", "Note"] { #expect(entries.contains(">\(header)<")) }
+        for header in ["Date", "Start", "End", "Duration", "Minutes", "Project", "Title", "Note"] { #expect(entries.contains(">\(header)<")) }
         #expect(entries.contains("A &amp; B &lt;c&gt;"))
         #expect(entries.contains("state=\"frozen\""))
+        let styles = try #require(ZipTestReader.string(files, "xl/styles.xml"))
+        #expect(styles.contains("formatCode=\"[h]:mm\""))
     }
 
     @Test func allPartsAreWellFormedXML() throws {

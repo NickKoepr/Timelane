@@ -22,8 +22,8 @@ struct JSONMonthExportFormat: MonthExportFormat {
         let month: String
         let generatedAt: String
         let timeZone: String
-        let totalSeconds: Double
-        let totalHours: Double
+        let totalMinutes: Int
+        let total: String
         let projects: [ProjectDTO]
         let entries: [EntryDTO]
 
@@ -36,28 +36,26 @@ struct JSONMonthExportFormat: MonthExportFormat {
             month = MonthExportFileName.monthKey(export.month, calendar: calendar)
             generatedAt = formatter.string(from: export.generatedAt)
             timeZone = export.timeZone.identifier
-            totalSeconds = export.totalSeconds
-            totalHours = Self.hours(export.totalSeconds)
+            totalMinutes = DurationFormatter.minutes(export.totalSeconds)
+            total = DurationFormatter.hoursMinutes(export.totalSeconds)
             projects = export.projects.map(ProjectDTO.init)
             entries = export.entries.map { EntryDTO($0, formatter: formatter, calendar: calendar) }
         }
-
-        static func hours(_ seconds: TimeInterval) -> Double { (seconds / 3600 * 100).rounded() / 100 }
     }
 
     private struct ProjectDTO: Encodable {
         let name: String
         let color: String
         let archived: Bool
-        let totalSeconds: Double
-        let totalHours: Double
+        let totalMinutes: Int
+        let total: String
 
         init(_ total: MonthExport.ProjectTotal) {
             name = total.name
             color = total.colorHex
             archived = total.isArchived
-            totalSeconds = total.totalSeconds
-            totalHours = Document.hours(total.totalSeconds)
+            totalMinutes = DurationFormatter.minutes(total.totalSeconds)
+            self.total = DurationFormatter.hoursMinutes(total.totalSeconds)
         }
     }
 
@@ -66,8 +64,8 @@ struct JSONMonthExportFormat: MonthExportFormat {
         let date: String
         let start: String
         let end: String
-        let durationSeconds: Double
-        let durationHours: Double
+        let durationMinutes: Int
+        let duration: String
         let title: String?
         let note: String?
 
@@ -77,15 +75,15 @@ struct JSONMonthExportFormat: MonthExportFormat {
             date = String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
             start = formatter.string(from: entry.start)
             end = formatter.string(from: entry.end)
-            durationSeconds = entry.duration
-            durationHours = Document.hours(entry.duration)
+            durationMinutes = DurationFormatter.minutes(entry.duration)
+            duration = DurationFormatter.hoursMinutes(entry.duration)
             title = entry.title
             note = entry.note
         }
 
         // Encode nil explicitly so every entry has the same keys.
         enum CodingKeys: String, CodingKey {
-            case project, date, start, end, durationSeconds, durationHours, title, note
+            case project, date, start, end, durationMinutes, duration, title, note
         }
 
         func encode(to encoder: Encoder) throws {
@@ -94,8 +92,8 @@ struct JSONMonthExportFormat: MonthExportFormat {
             try c.encode(date, forKey: .date)
             try c.encode(start, forKey: .start)
             try c.encode(end, forKey: .end)
-            try c.encode(durationSeconds, forKey: .durationSeconds)
-            try c.encode(durationHours, forKey: .durationHours)
+            try c.encode(durationMinutes, forKey: .durationMinutes)
+            try c.encode(duration, forKey: .duration)
             try c.encode(title, forKey: .title)
             try c.encode(note, forKey: .note)
         }

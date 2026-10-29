@@ -2,9 +2,12 @@ import Foundation
 
 /// Single place for the way durations are shown (could become a preference later).
 enum DurationFormatter {
+    /// Whole minutes, rounded to the nearest minute (the basis of every shown duration).
+    static func minutes(_ seconds: TimeInterval) -> Int { Int((max(seconds, 0) / 60).rounded()) }
+
     /// "3:45" — hours:minutes, rounded to the nearest minute.
     static func hoursMinutes(_ seconds: TimeInterval) -> String {
-        let totalMinutes = Int((max(seconds, 0) / 60).rounded())
+        let totalMinutes = minutes(seconds)
         return String(format: "%d:%02d", totalMinutes / 60, totalMinutes % 60)
     }
 

@@ -95,7 +95,7 @@ enum XLSXWriter {
             let style = base + XLSXParts.generalStyle
             return "<c r=\"\(reference)\" s=\"\(style)\" t=\"inlineStr\"><is><t xml:space=\"preserve\">\(escape(text))</t></is></c>"
         case .number(let value, let numberStyle):
-            let style = base + (numberStyle == .hours ? XLSXParts.hoursStyle : XLSXParts.generalStyle)
+            let style = base + (numberStyle == .duration ? XLSXParts.durationStyle : XLSXParts.generalStyle)
             return "<c r=\"\(reference)\" s=\"\(style)\"><v>\(value)</v></c>"
         case .date(let date):
             let value = serial(for: date, timeZone: timeZone).rounded(.down)
