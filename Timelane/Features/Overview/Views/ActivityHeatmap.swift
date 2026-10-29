@@ -34,6 +34,7 @@ struct ActivityHeatmap: View {
         // minWidth 0: measure the offered width, not the grid's, or the heatmap never switches to scrolling.
         .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
         .frame(height: monthRowHeight + 7 * step(cell))
+        .alignmentGuide(.heatmapTrailing) { _ in sizing.visibleTrailing(in: width) }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .coordinateSpace(name: "heatmap")
         .overlay(alignment: .topLeading) { hoverCard }
@@ -134,7 +135,7 @@ struct ActivityHeatmap: View {
     let totals = Dictionary(uniqueKeysWithValues: (0..<60).compactMap { offset -> (Date, TimeInterval)? in
         calendar.date(byAdding: .day, value: -offset, to: start).map { ($0, Double(offset % 7) * 3600) }
     })
-    return VStack(alignment: .trailing) {
+    return VStack(alignment: .heatmapTrailing) {
         ActivityHeatmap(layout: ActivityHeatmapLayout(year: year, calendar: calendar),
                         dailyTotals: totals, today: start,
                         dayDetail: { OverviewDayDetail(day: $0, secondsByProject: [:], projects: [], highlightedProjectId: nil) },

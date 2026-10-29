@@ -37,7 +37,7 @@ struct OverviewScreen: View {
     private var content: some View {
         VStack(alignment: .leading, spacing: 20) {
             Text(viewModel.heading).font(.title3.weight(.semibold))
-            VStack(alignment: .trailing, spacing: 8) {
+            VStack(alignment: .heatmapTrailing, spacing: 8) {
                 ActivityHeatmap(layout: viewModel.heatmapLayout, dailyTotals: viewModel.dailyTotals,
                                 today: viewModel.now(), dayDetail: viewModel.dayDetail(for:),
                                 onSelectDay: showTimeline)

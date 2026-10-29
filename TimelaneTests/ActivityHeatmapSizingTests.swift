@@ -37,6 +37,18 @@ struct ActivityHeatmapSizingTests {
         expect(sizing(800, columns: 0), cell: 9, scrolls: true)
     }
 
+    @Test func legendEndsUnderLastSquaresWhenWide() {
+        let wide = sizing(2000)
+        #expect(wide.contentWidth == CGFloat(32 + 53 * 18 - 2))
+        #expect(wide.visibleTrailing(in: 2000) == wide.contentWidth)
+    }
+
+    @Test func legendEndsAtEdgeWhileScrolling() {
+        let narrow = sizing(448)
+        #expect(narrow.contentWidth > 448)
+        #expect(narrow.visibleTrailing(in: 448) == 448)
+    }
+
     @Test func resultOnlyDependsOnWidth() {
         let first = sizing(774)
         _ = sizing(448)
