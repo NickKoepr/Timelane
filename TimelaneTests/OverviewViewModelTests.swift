@@ -89,4 +89,27 @@ struct OverviewViewModelTests {
         viewModel.goToCurrentYear()
         #expect(viewModel.isCurrentYear)
     }
+
+    @Test func dayDetailShowsFullBreakdownWithHighlight() async throws {
+        let (viewModel, projects, entries) = try makeViewModel()
+        let (a, b) = try await seed(projects, entries)
+        try await entries.save([
+            TimeEntry(projectId: b.id!, start: TestCalendar.date(2026, 3, 2, 13), end: TestCalendar.date(2026, 3, 2, 15)),
+        ], deleting: [])
+        let task = Task { await viewModel.task() }
+        await waitUntil { viewModel.isLoaded && viewModel.projects.count == 2 && viewModel.totalSeconds == 6 * 3600 }
+        task.cancel()
+
+        let day = TestCalendar.date(2026, 3, 2)
+        var detail = viewModel.dayDetail(for: day)
+        #expect(detail.rows.map(\.name) == ["Alpha", "Beta"])
+        #expect(detail.rows.map(\.seconds) == [3 * 3600, 2 * 3600])
+        #expect(detail.rows.allSatisfy { !$0.isHighlighted })
+
+        viewModel.selectedProjectId = b.id
+        detail = viewModel.dayDetail(for: day)
+        #expect(detail.totalSeconds == 5 * 3600)
+        #expect(detail.rows.map(\.isHighlighted) == [false, true])
+        #expect(a.id != nil)
+    }
 }

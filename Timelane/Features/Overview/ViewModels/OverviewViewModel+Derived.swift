@@ -53,3 +53,11 @@ extension OverviewViewModel {
         return bars
     }
 }
+
+extension OverviewViewModel {
+    /// The hover card of one day: the full breakdown, whatever the project filter is.
+    func dayDetail(for day: Date) -> OverviewDayDetail {
+        OverviewDayDetail(day: day, secondsByProject: activity.secondsByDay[day] ?? [:], projects: projects,
+                          highlightedProjectId: effectiveProjectId)
+    }
+}

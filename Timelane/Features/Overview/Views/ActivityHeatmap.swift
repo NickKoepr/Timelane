@@ -6,6 +6,7 @@ struct ActivityHeatmap: View {
     let layout: ActivityHeatmapLayout
     let dailyTotals: [Date: TimeInterval]
     let today: Date
+    let dayDetail: (Date) -> OverviewDayDetail
     let onSelectDay: (Date) -> Void
 
     private let spacing: CGFloat = 2
@@ -14,6 +15,7 @@ struct ActivityHeatmap: View {
     private let cellRange: ClosedRange<CGFloat> = 9...16
 
     @State private var width: CGFloat = 0
+    @State private var hover = HeatmapHoverState()
 
     var body: some View {
         let fitted = (width - labelWidth) / CGFloat(layout.columnCount) - spacing
@@ -23,6 +25,7 @@ struct ActivityHeatmap: View {
             if fitted < cellRange.lowerBound {
                 ScrollView(.horizontal, showsIndicators: false) { grid(cell: cell) }
                     .defaultScrollAnchor(.trailing)
+                    .onScrollPhaseChange { _, phase in if phase != .idle { hover.clear() } }
             } else {
                 grid(cell: cell)
             }
@@ -30,8 +33,18 @@ struct ActivityHeatmap: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: monthRowHeight + 7 * step(cell))
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+        .coordinateSpace(name: "heatmap")
+        .overlay(alignment: .topLeading) { hoverCard }
+        .onDisappear { hover.clear() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Registered hours per day")
+    }
+
+    /// Drawn on the outer view (outside the horizontal scroll view), so it is never clipped.
+    @ViewBuilder private var hoverCard: some View {
+        if let day = hover.day, let frame = hover.frame {
+            HeatmapDayHoverCard(detail: dayDetail(day), squareFrame: frame, heatmapWidth: width)
+        }
     }
 
     private func step(_ cell: CGFloat) -> CGFloat { cell + spacing }
@@ -89,7 +102,17 @@ struct ActivityHeatmap: View {
             .frame(width: cell, height: cell)
             .contentShape(Rectangle())
             .onTapGesture { onSelectDay(square.day) }
-            .help(description(of: square.day, seconds: seconds))
+            .onHover { inside in
+                if inside { hover.enter(day: square.day) } else { hover.leave(day: square.day) }
+            }
+            .background {
+                // Only the hovered square reads its frame, so the grid doesn't carry 371 geometry observers.
+                if hover.day == square.day {
+                    Color.clear.onGeometryChange(for: CGRect.self) { $0.frame(in: .named("heatmap")) } action: {
+                        hover.update(frame: $0)
+                    }
+                }
+            }
             .accessibilityElement()
             .accessibilityLabel(description(of: square.day, seconds: seconds))
             .accessibilityAddTraits(.isButton)
@@ -111,7 +134,9 @@ struct ActivityHeatmap: View {
     })
     return VStack(alignment: .trailing) {
         ActivityHeatmap(layout: ActivityHeatmapLayout(year: year, calendar: calendar),
-                        dailyTotals: totals, today: start, onSelectDay: { _ in })
+                        dailyTotals: totals, today: start,
+                        dayDetail: { OverviewDayDetail(day: $0, secondsByProject: [:], projects: [], highlightedProjectId: nil) },
+                        onSelectDay: { _ in })
         ActivityLegend()
     }
     .padding()

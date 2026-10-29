@@ -39,9 +39,11 @@ struct OverviewScreen: View {
             Text(viewModel.heading).font(.title3.weight(.semibold))
             VStack(alignment: .trailing, spacing: 8) {
                 ActivityHeatmap(layout: viewModel.heatmapLayout, dailyTotals: viewModel.dailyTotals,
-                                today: viewModel.now(), onSelectDay: showTimeline)
+                                today: viewModel.now(), dayDetail: viewModel.dayDetail(for:),
+                                onSelectDay: showTimeline)
                 ActivityLegend()
             }
+            .zIndex(1)   // the hover card hangs over the sections below
             if viewModel.hasHours {
                 OverviewStatTiles(statistics: viewModel.statistics, showsCurrentStreak: viewModel.isCurrentYear)
                 section("Hours per month") {
