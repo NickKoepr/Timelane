@@ -1,66 +1,97 @@
-# PLAN v1.27 — Fix Swift 6 concurrency and unused-result warnings
-
-Branch `fix/xcode-warnings` (from `main`). No behaviour change; only compiler warnings.
+# PLAN v1.27 — Info popover text is cut off on the Tracked Apps screen
 
 ## Context
 
-Xcode reports four warnings:
+The Tracked Apps screen has a "Project" column header with an info icon
+(`InfoHoverIcon`, `Timelane/Features/TrackedApps/Views/InfoHoverIcon.swift`, used in
+`TrackedAppsColumnHeader.swift`). Hovering the icon opens a `.popover` with the text
+"Hours are logged automatically to this project while you use the app. Changing it only
+affects new hours." (added in v1.26 / PR #11).
 
-| # | Location | Warning |
-|---|----------|---------|
-| 1 | `Features/Overview/Views/ActivityHeatmap.swift:38` | Call to main actor-isolated instance method `heatmapSizing(for:)` in a synchronous nonisolated context |
-| 2 | `Features/Projects/Views/MonthNavigationBar.swift:48` | Call to main actor-isolated initializer `init(title:shortTitle:...)` in a synchronous nonisolated context |
-| 3 | `Features/TrackedApps/Views/TrackedAppRow.swift:27` | Converting non-Sendable function value to `@isolated(any) @Sendable (Int64?) -> Void` may introduce data races |
-| 4 | `Repositories/GRDB/GRDBTrackedAppRepository.swift:33` | Result of call to `write` is unused |
+## Bug
 
-## Causes and fixes
+The text inside the popover is cut off: the last line(s) are not visible, so the
+explanation can't be read in full.
 
-### 1. `ActivityHeatmap` — alignment guide closure
+## Cause
 
-`View` is `@MainActor`, so the private helper `heatmapSizing(for:)` is main-actor isolated. The
-`.alignmentGuide` compute closure is nonisolated (SwiftUI may call it during layout off the main
-actor's static isolation), so calling the helper from it warns.
+The popover content is
 
-Fix: make the helper `nonisolated`. It only reads `let` properties of a value-type view
-(`layout.columnCount`, `labelWidth`, `spacing`, `cellRange`) and builds a pure `ActivityHeatmapSizing`.
-If the compiler then complains about reading `layout` from a nonisolated context (non-Sendable
-`ActivityHeatmapLayout`), instead capture the plain values in `body` before the modifier
-(e.g. `let columnCount = layout.columnCount`) and compute the sizing inside the closure from those
-captured `Sendable` values via a small `nonisolated static func`. Keep the existing comment above
-the modifier — the guide must still be computed from `d.width`, not the `width` state.
+```swift
+Text(text)
+    .font(.callout)
+    .fixedSize(horizontal: false, vertical: true)
+    .frame(width: 240, alignment: .leading)
+    .padding(10)
+```
 
-### 2. `MonthNavigationBar` — preview helper
+The first guess was popover sizing (the popover is sized from the hosting view's ideal
+size). Making the size definite was not enough: on screen the popover still showed one
+line ending in "…". The real cause: `TrackedAppsColumnHeader` is the header of a `List`
+`Section`, and on macOS a section header sets `lineLimit(1)` in the environment. A popover's
+content inherits the environment of the view it is attached to, so the explanation was
+limited to one line and truncated.
 
-`barPreview(width:)` is a file-level free function, so it is nonisolated, and it calls the
-main-actor initializer of the view. Fix: annotate it `@MainActor`.
+Fix: set `.lineLimit(nil)` on the popover text explicitly (in addition to the definite
+sizing below). The unit test hosts the content under `.lineLimit(1)` to reproduce this.
 
-### 3. `TrackedAppRow` — `Binding(get:set:)` with a stored closure
+## Design
 
-`Binding`'s `set` parameter is `@isolated(any) @Sendable`. Passing the stored, non-Sendable
-`onProjectChange` value directly triggers the conversion warning. Fix: pass a closure literal
-instead, `set: { onProjectChange($0) }` (formed in the main-actor `body`, so it is inferred as
-main-actor isolated). If that still warns, mark the property type `@MainActor (Int64?) -> Void`
-and check the call site in `TrackedAppsView` (or wherever the row is built) still compiles.
+Make the popover content report a definite, correct size for the wrapped text:
 
-### 4. `GRDBTrackedAppRepository.setProject` — unused `write` result
+1. Give the text a fixed width and let it take its ideal height at that width, with the
+   size fixed on the *outermost* view that the popover hosts (after the padding), e.g.
 
-The single-expression closure returns `updateAll`'s `Int`, so `write` returns it and the result is
-dropped. Fix like `remove(id:)` in the same file: `_ = try TrackedApp.filter(key: id).updateAll(...)`.
+   ```swift
+   Text(text)
+       .font(.callout)
+       .multilineTextAlignment(.leading)
+       .frame(width: 240, alignment: .leading)
+       .fixedSize(horizontal: false, vertical: true)
+       .padding(10)
+       .fixedSize()
+   ```
 
-## Out of scope
+   or an equivalent arrangement. The essential points: the width is fixed (240pt), the
+   height comes from the wrapped text at that width, and nothing can compress it.
+2. Keep `lineLimit` unlimited (no truncation) — do not shorten the explanation text.
+3. Keep the instant-on-hover behaviour and `arrowEdge: .bottom`; keep the accessibility label.
 
-Other warnings that may appear in a clean build are not part of this plan; list them in the PR
-description if seen, but don't fix them here.
+If (1) still clips, the fallback is to measure the needed height explicitly: compute the
+text height with `NSAttributedString.boundingRect(with:options:)` for
+`NSFont.preferredFont(forTextStyle: .callout)` at width 240 and set
+`.frame(width: 240, height: measured)` — put that measurement in a small pure helper only if
+it is really needed.
+
+## Verification (the agent cannot see the UI)
+
+- Add a focused unit test if it's cheap and meaningful: host the popover content view in an
+  `NSHostingView` (or `NSHostingController` with `sizingOptions = .preferredContentSize`),
+  read `fittingSize` / `preferredContentSize`, and assert the height is at least the height
+  of the text measured with `boundingRect` at width 240 + 20pt padding. To make the content
+  testable, extract it into its own small view (e.g. `InfoPopoverText`, in its own file,
+  with a `#Preview`). If such a test turns out to be flaky or meaningless in the test host,
+  skip it and say so.
+- Run the full test suite.
+
+## Files
+
+- `Timelane/Features/TrackedApps/Views/InfoHoverIcon.swift` — fix the popover sizing.
+- Optionally `Timelane/Features/TrackedApps/Views/InfoPopoverText.swift` (+ a test in `TimelaneTests/`).
+- `plans/PLAN-v1.27.md` — this plan.
+
+No README / PLAN.md change needed (behaviour is unchanged, only a visual bug).
 
 ## Order of work
 
-1. Apply fixes 4, 2, 3, 1 (simplest first).
-2. Build with `xcodebuild ... build 2>&1 | grep -E "warning:"` and confirm none of the four remain
-   (do a clean build or touch the files so they are recompiled).
-3. Run the unit tests.
+1. Copy this plan to `plans/PLAN-v1.27.md` (update the Cause section if needed).
+2. Fix the sizing; optionally extract + test.
+3. Run tests:
+   `xcodebuild -project Timelane.xcodeproj -scheme Timelane -destination 'platform=macOS' -derivedDataPath build/DerivedData test`
+4. Commit, push the branch, open a PR to `main`.
 
 ## Definition of done
 
-- The four warnings are gone; no new warnings or errors.
-- All unit tests pass; behaviour unchanged (heatmap still switches to scrolling on narrow widths,
-  project picker in Tracked Apps still saves the selection).
+- Hovering the info icon shows the full explanation, wrapped at ~240pt, nothing clipped.
+- All tests pass.
+- PR open against `main` with a short description and what to check by hand.

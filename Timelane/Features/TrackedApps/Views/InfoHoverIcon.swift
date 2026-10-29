@@ -11,11 +11,7 @@ struct InfoHoverIcon: View {
             .foregroundStyle(.secondary)
             .onHover { isShowing = $0 }
             .popover(isPresented: $isShowing, arrowEdge: .bottom) {
-                Text(text)
-                    .font(.callout)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(width: 240, alignment: .leading)
-                    .padding(10)
+                InfoPopoverText(text: text)
             }
             .accessibilityLabel(text)
     }
