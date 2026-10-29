@@ -44,6 +44,14 @@ struct ProjectRepositoryTests {
         #expect(await all.next()?.first?.isArchived == true)
     }
 
+    @Test func projectsFetchWithAndWithoutArchived() async throws {
+        _ = try await projects.save(Project(name: "beta", colorHex: "#4F8EF7"))
+        let old = try await projects.save(Project(name: "Alpha", colorHex: "#4F8EF7"))
+        try await projects.archive(id: old.id!, archived: true)
+        #expect(try await projects.projects(includeArchived: false).map(\.name) == ["beta"])
+        #expect(try await projects.projects(includeArchived: true).map(\.name) == ["Alpha", "beta"])
+    }
+
     @Test func monthTotalsClipEntriesToRange() async throws {
         let project = try await projects.save(Project(name: "Alpha", colorHex: "#4F8EF7"))
         let empty = try await projects.save(Project(name: "Beta", colorHex: "#34C759"))

@@ -2,12 +2,16 @@ import SwiftUI
 
 struct ProjectsScreen: View {
     @State private var viewModel: ProjectsViewModel
+    @State private var exportModel: MonthExportViewModel
     @State private var form: ProjectFormTarget?
+    @State private var pendingExport: ExportFile?
     private let environment: AppEnvironment
 
     init(environment: AppEnvironment) {
         self.environment = environment
         _viewModel = State(initialValue: ProjectsViewModel(repository: environment.projects))
+        _exportModel = State(initialValue: MonthExportViewModel(service: MonthExportService(
+            projects: environment.projects, timeEntries: environment.timeEntries)))
     }
 
     var body: some View {
@@ -24,8 +28,16 @@ struct ProjectsScreen: View {
             list
             ProjectsTotalFooter(showArchived: $viewModel.showArchived, total: viewModel.monthTotal)
         }
+        .errorAlert($exportModel.errorMessage)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .toolbar {
+            ToolbarItem {
+                Button { exportModel.beginExport() } label: {
+                    Label("Export…", systemImage: "square.and.arrow.up")
+                }
+                .keyboardShortcut("e", modifiers: [.command, .shift])
+                .help("Export this month")
+            }
             ToolbarItem {
                 Button { form = .new } label: { Label("New project", systemImage: "plus") }
                     .keyboardShortcut("n", modifiers: .command)
@@ -39,8 +51,21 @@ struct ProjectsScreen: View {
                 repository: environment.projects
             ))
         }
+        .sheet(isPresented: $exportModel.isChoosingFormat, onDismiss: savePendingExport) {
+            ExportFormatSheet(viewModel: exportModel, month: viewModel.month, monthTitle: viewModel.monthTitle) {
+                pendingExport = $0
+            }
+        }
         .errorAlert($viewModel.errorMessage)
         .navigationTitle("Projects")
+    }
+
+    /// Runs after the format sheet is gone, so the save panel doesn't compete with it.
+    private func savePendingExport() {
+        guard let file = pendingExport else { return }
+        pendingExport = nil
+        guard let url = ExportSavePanel.chooseURL(fileName: file.fileName, contentType: file.contentType) else { return }
+        exportModel.write(file, to: url)
     }
 
     @ViewBuilder private var list: some View {
