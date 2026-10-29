@@ -42,16 +42,22 @@ struct TrackedAppsScreen: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
-            List(viewModel.apps, selection: $viewModel.selectedId) { app in
-                TrackedAppRow(app: app, projects: viewModel.options(for: app),
-                              onProjectChange: { id in Task { await viewModel.setProject(id, for: app) } },
-                              onRemove: { Task { await viewModel.remove(app) } })
-                    .tag(app.id)
-                    .contextMenu { Button("Remove") { Task { await viewModel.remove(app) } } }
+            List(selection: $viewModel.selectedId) {
+                Section {
+                    ForEach(viewModel.apps) { app in
+                        TrackedAppRow(app: app, projects: viewModel.options(for: app),
+                                      onProjectChange: { id in Task { await viewModel.setProject(id, for: app) } },
+                                      onRemove: { Task { await viewModel.remove(app) } })
+                            .tag(app.id)
+                            .contextMenu { Button("Remove") { Task { await viewModel.remove(app) } } }
+                    }
+                } header: {
+                    TrackedAppsColumnHeader()
+                }
             }
             .onDeleteCommand { Task { await viewModel.removeSelected() } }
             .safeAreaInset(edge: .bottom) {
-                Text("Only these apps are recorded. Pick a project to log hours for it automatically while you use the app. Changing the project only affects new hours.")
+                Text("Only these apps are recorded. Changing the project only affects new hours.")
                     .font(.caption).foregroundStyle(.secondary)
                     .lineLimit(3).fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(12)
