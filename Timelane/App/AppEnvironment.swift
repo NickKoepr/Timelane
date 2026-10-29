@@ -20,6 +20,9 @@ final class AppEnvironment {
     /// Set by the Overview heatmap to open the Timeline on a specific day; `TimelineScreen` consumes it.
     var requestedTimelineDay: Date?
 
+    /// Id of the entry the auto logger is growing; the timelines draw it live.
+    let liveAutoEntry = LiveAutoEntry()
+
     init(database: AppDatabase, recordingTimerStore: any RecordingTimerStore = InMemoryRecordingTimerStore(),
          autoLogStore: any AutoLogStateStore = InMemoryAutoLogStateStore()) {
         self.database = database
@@ -28,6 +31,7 @@ final class AppEnvironment {
         self.timeEntries = GRDBTimeEntryRepository(database: database)
         self.appSessions = GRDBAppSessionRepository(database: database)
         self.trackedApps = GRDBTrackedAppRepository(database: database)
+        let live = liveAutoEntry
         let history = TimeEntryHistory(repository: timeEntries)
         self.timeEntryHistory = history
         self.timeEntryEditor = TimeEntryEditor(repository: timeEntries, onChange: { change in
@@ -35,7 +39,7 @@ final class AppEnvironment {
         })
         self.tracker = AppActivityTracker(
             repository: appSessions, trackedApps: trackedApps,
-            autoLogger: AutoTimeLogger(timeEntries: timeEntries, trackedApps: trackedApps, store: autoLogStore))
+            autoLogger: AutoTimeLogger(timeEntries: timeEntries, trackedApps: trackedApps, store: autoLogStore, live: live))
     }
 
     /// The environment of the running app (shared with the app delegate).

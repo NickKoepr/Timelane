@@ -5,7 +5,8 @@ import Foundation
 final class TimelineViewModel {
     private(set) var day: DateRange
     private(set) var sessionBlocks: [AppSessionBlockModel] = []
-    private(set) var entries: [TimeEntry] = []
+    /// The rows as stored; `entries` (in `+LiveEntry`) is what is drawn.
+    private(set) var storedEntries: [TimeEntry] = []
     private(set) var projects: [Project] = []
     private(set) var now: Date
     private(set) var selection: TimelineSelection?
@@ -25,12 +26,13 @@ final class TimelineViewModel {
     private let lastProject: LastProjectStore
     private let allowsCreatingProjects: Bool
     let recordingTimer: RecordingTimer, calendar: Calendar
-    private let clock: () -> Date
+    let liveAutoEntry: LiveAutoEntry
+    let clock: () -> Date
 
     init(timeEntries: any TimeEntryRepository, appSessions: any AppSessionRepository,
          projects: any ProjectRepository, trackedApps: any TrackedAppRepository, editor: TimeEntryEditor,
          lastProject: LastProjectStore = LastProjectStore(), zoomState: TimelineZoomState = TimelineZoomState(), allowsCreatingProjects: Bool = true,
-         recordingTimer: RecordingTimer = RecordingTimer(),
+         recordingTimer: RecordingTimer = RecordingTimer(), liveAutoEntry: LiveAutoEntry = LiveAutoEntry(),
          calendar: Calendar = .current, clock: @escaping () -> Date = { .now }) {
         self.timeEntries = timeEntries
         self.appSessions = appSessions
@@ -42,6 +44,7 @@ final class TimelineViewModel {
         self.zoomState = zoomState
         self.allowsCreatingProjects = allowsCreatingProjects
         self.recordingTimer = recordingTimer
+        self.liveAutoEntry = liveAutoEntry
         self.calendar = calendar
         self.clock = clock
         self.now = clock()
@@ -135,19 +138,20 @@ final class TimelineViewModel {
 
     /// Click on an entry: select it and open the window in edit mode.
     func select(_ entry: TimeEntry) {
+        let entry = stored(entry)
         selection = nil
         entryEditing.select(entry)
         openForm(.editing(entry))
     }
 
     func deleteSelectedEntry() {
-        guard let id = entryEditing.selectedEntryId, let entry = entries.first(where: { $0.id == id }) else { return }
+        guard let id = entryEditing.selectedEntryId, let entry = storedEntries.first(where: { $0.id == id }) else { return }
         delete(entry)
     }
 
     /// Context menu / Delete key: removes the entry (and clears the selection).
     func delete(_ entry: TimeEntry) {
-        Task { await entryEditing.delete(entry) }
+        Task { await entryEditing.delete(stored(entry)) }
     }
 
     // MARK: Observation
@@ -157,7 +161,7 @@ final class TimelineViewModel {
         let range = day
         now = clock()
         sessions = []
-        entries = []
+        storedEntries = []
         rebuildBlocks()
         async let observedEntries: Void = observeEntries(in: range)
         async let observedSessions: Void = observeSessions(in: range)
@@ -169,7 +173,7 @@ final class TimelineViewModel {
 
     private func observeEntries(in range: DateRange) async {
         for await value in timeEntries.observeEntries(in: range) {
-            entries = value
+            storedEntries = value
             entryEditing.entriesDidChange(value)
         }
     }
@@ -192,14 +196,10 @@ final class TimelineViewModel {
         }
     }
 
-    /// The open session grows while viewing today.
-    private func tick() async {
-        while !Task.isCancelled {
-            try? await Task.sleep(for: .seconds(30))
-            guard !Task.isCancelled else { return }
-            now = clock()
-            rebuildBlocks()
-        }
+    /// Takes a new `now` and redraws the open session with it.
+    func refreshNow() {
+        now = clock()
+        rebuildBlocks()
     }
 
     private func rebuildBlocks() {

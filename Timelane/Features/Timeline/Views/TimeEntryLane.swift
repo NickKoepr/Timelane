@@ -20,18 +20,19 @@ struct TimeEntryLane: View {
 
     private func block(for entry: TimeEntry, geometry: TimelineGeometry) -> some View {
         let editing = viewModel.entryEditing
+        let source = viewModel.stored(entry)
         let range = editing.displayRange(for: entry)
         let frame = geometry.frame(for: range.start, end: range.end)
         return TimeEntryBlock(
             entry: entry, range: range, project: viewModel.project(id: entry.projectId),
             height: max(frame.height - 1, 2),
             isSelected: editing.selectedEntryId == entry.id,
-            canDrag: editing.canDrag(entry, in: geometry),
+            canDrag: editing.canDrag(source, in: geometry),
             onTap: { viewModel.select(entry) },
             onEdit: { viewModel.select(entry) },
             onDelete: { viewModel.delete(entry) },
-            onDrag: { mode, dy in editing.dragChanged(entry, mode: mode, translationY: dy, geometry: geometry) },
-            onDragEnd: { Task { await editing.dragEnded(entry) } })
+            onDrag: { mode, dy in editing.dragChanged(source, mode: mode, translationY: dy, geometry: geometry) },
+            onDragEnd: { Task { await editing.dragEnded(source) } })
         .reportsHover(.entry(entry, project: viewModel.project(id: entry.projectId), range: range), to: hover,
                       y: frame.y, height: max(frame.height - 1, 2))
         .offset(y: frame.y)
