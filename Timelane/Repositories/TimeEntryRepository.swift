@@ -6,7 +6,7 @@ protocol TimeEntryRepository: Sendable {
     /// The entries with these ids (missing ids are skipped).
     func entries(ids: [Int64]) async throws -> [TimeEntry]
     /// Deletes and saves in one transaction. Entries with `id == nil` are inserted; an entry with an id
-    /// is updated, or re-inserted with that id when its row no longer exists. Returns the saved rows with ids.
+    /// is updated, or re-inserted with that id when its row no longer exists. Returns the saved rows with ids, as stored.
     @discardableResult
     func save(_ entries: [TimeEntry], deleting ids: [Int64]) async throws -> [TimeEntry]
 }

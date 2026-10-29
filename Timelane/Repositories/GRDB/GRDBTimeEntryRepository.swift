@@ -21,13 +21,16 @@ struct GRDBTimeEntryRepository: TimeEntryRepository {
         guard entries.allSatisfy({ $0.end > $0.start }) else { throw RepositoryError.invalidRange }
         return try await database.writer.write { db in
             _ = try TimeEntry.deleteAll(db, ids: ids)
-            var saved: [TimeEntry] = []
+            var savedIds: [Int64] = []
             for entry in entries {
                 var copy = entry
                 try copy.save(db)
-                saved.append(copy)
+                guard let id = copy.id else { throw RepositoryError.invalidRange }
+                savedIds.append(id)
             }
-            return saved
+            // Re-read so callers get exactly what is stored (Dates lose bits in the Double round trip).
+            let byId = Dictionary(uniqueKeysWithValues: try TimeEntry.fetchAll(db, ids: savedIds).map { ($0.id!, $0) })
+            return savedIds.compactMap { byId[$0] }
         }
     }
 

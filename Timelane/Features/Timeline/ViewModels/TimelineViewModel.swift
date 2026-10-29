@@ -168,7 +168,10 @@ final class TimelineViewModel {
     }
 
     private func observeEntries(in range: DateRange) async {
-        for await value in timeEntries.observeEntries(in: range) { entries = value }
+        for await value in timeEntries.observeEntries(in: range) {
+            entries = value
+            entryEditing.entriesDidChange(value)
+        }
     }
 
     private func observeSessions(in range: DateRange) async {
