@@ -1,13 +1,18 @@
 import SwiftUI
 
 struct TrackedAppRow: View {
+    /// Shared with `TrackedAppsColumnHeader` so the header lines up with the pickers.
+    static let projectColumnWidth: CGFloat = 200
+    static let removeColumnWidth: CGFloat = 20
+    static let spacing: CGFloat = 10
+
     let app: TrackedApp
     let projects: [Project]
     let onProjectChange: (Int64?) -> Void
     let onRemove: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Self.spacing) {
             AppIconView(bundleIdentifier: app.bundleIdentifier, size: 28)
                 .fixedSize()
             VStack(alignment: .leading, spacing: 0) {
@@ -17,22 +22,17 @@ struct TrackedAppRow: View {
                     .lineLimit(1).truncationMode(.middle)
             }
             Spacer(minLength: 8)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Log hours automatically to")
-                    .font(.caption).foregroundStyle(.secondary)
-                    .lineLimit(1)
-                Picker("Log hours automatically to", selection: Binding(get: { app.projectId }, set: onProjectChange)) {
-                    Text("No project").tag(Int64?.none)
-                    ForEach(projects) { project in Text(project.name).tag(project.id) }
-                }
-                .labelsHidden()
-                .pickerStyle(.menu)
+            Picker("Project", selection: Binding(get: { app.projectId }, set: onProjectChange)) {
+                Text("No project").tag(Int64?.none)
+                ForEach(projects) { project in Text(project.name).tag(project.id) }
             }
-            .fixedSize()
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .frame(width: Self.projectColumnWidth)
             .help("Project that gets hours automatically while you use \(app.name)")
             Button(action: onRemove) { Image(systemName: "minus.circle") }
                 .buttonStyle(.borderless)
-                .fixedSize()
+                .frame(width: Self.removeColumnWidth)
                 .help("Stop tracking \(app.name)")
         }
         .padding(.vertical, 3)
