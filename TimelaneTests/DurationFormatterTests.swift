@@ -11,6 +11,13 @@ struct DurationFormatterTests {
         #expect(DurationFormatter.hoursMinutes(59.6 * 60) == "1:00")
     }
 
+    @Test func minutes() {
+        #expect(DurationFormatter.minutes(90 * 60) == 90)
+        #expect(DurationFormatter.minutes(29) == 0)
+        #expect(DurationFormatter.minutes(30) == 1)
+        #expect(DurationFormatter.minutes(-5) == 0)
+    }
+
     @Test func short() {
         #expect(DurationFormatter.short(45 * 60) == "45m")
         #expect(DurationFormatter.short(3 * 3600) == "3h")

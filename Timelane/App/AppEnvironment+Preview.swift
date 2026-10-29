@@ -17,6 +17,15 @@ extension AppEnvironment {
                     TimeEntry(projectId: alpha.id!, start: at(9), end: at(12)),
                     TimeEntry(projectId: beta.id!, start: at(13), end: at(14.5), note: "Standup"),
                 ]
+                // Earlier weekdays, so the Overview heatmap has something to show.
+                for offset in 1...120 {
+                    guard let day = Calendar.current.date(byAdding: .day, value: -offset, to: today),
+                          !Calendar.current.isDateInWeekend(day) else { continue }
+                    let hours = Double(2 + (offset * 7) % 6)
+                    let project = offset % 3 == 0 ? beta : alpha
+                    entries.append(TimeEntry(projectId: project.id!, start: day.addingTimeInterval(9 * 3600),
+                                             end: day.addingTimeInterval((9 + hours) * 3600)))
+                }
                 for index in entries.indices { try entries[index].insert(db) }
                 var session = AppSession(bundleIdentifier: "com.apple.dt.Xcode", appName: "Xcode", start: at(9), end: at(11))
                 try session.insert(db)

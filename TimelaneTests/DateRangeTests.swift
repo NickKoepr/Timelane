@@ -51,4 +51,19 @@ struct DateRangeTests {
         #expect(a.intersection(with: c) == nil)
         #expect(!a.overlaps(c))
     }
+
+    @Test func yearBoundariesAndLeapYear() {
+        let range = DateRange.year(of: d(2026, 6, 15), calendar: cal)
+        #expect(range.start == d(2026, 1, 1))
+        #expect(range.end == d(2027, 1, 1))
+        let leap = DateRange.year(of: d(2028, 2, 29), calendar: cal)
+        #expect(leap.duration > range.duration)
+        #expect(cal.dateComponents([.day], from: leap.start, to: leap.end).day == 366)
+    }
+
+    @Test func shiftedYears() {
+        let range = DateRange.year(of: d(2026, 6, 15), calendar: cal)
+        #expect(range.shiftedYears(1, calendar: cal) == .year(of: d(2027, 3, 1), calendar: cal))
+        #expect(range.shiftedYears(-2, calendar: cal).start == d(2024, 1, 1))
+    }
 }

@@ -2,7 +2,7 @@ import Testing
 @testable import Timelane
 
 struct SmokeTests {
-    @Test func sidebarHasThreeItems() {
-        #expect(SidebarItem.allCases.count == 3)
+    @Test func sidebarHasFourItems() {
+        #expect(SidebarItem.allCases.count == 4)
     }
 }

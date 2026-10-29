@@ -13,10 +13,13 @@ struct TimelaneApp: App {
         .defaultSize(width: 900, height: 750)
         .windowResizability(.contentMinSize)
 
-        // Same clock as the app icon (template image from Tools/generate-app-icon.swift).
-        MenuBarExtra("Timelane", image: "MenuBarIcon") {
+        // Same clock as the app icon (template image from Tools/generate-app-icon.swift);
+        // a red dot is added while the Record timer runs.
+        MenuBarExtra {
             MenuBarContentView(environment: environment)
                 .environment(environment)
+        } label: {
+            MenuBarLabel(timer: environment.recordingTimer)
         }
         .menuBarExtraStyle(.window)
     }

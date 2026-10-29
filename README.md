@@ -6,14 +6,16 @@ A native macOS app (SwiftUI) for developers to register working hours per projec
 
 ## Features
 
-- **Day timeline** with two lanes, "Tracked apps" (recorded automatically) and "Logged hours" (registered by you), each with a sticky header and separated by a divider. Drag over either lane to select a period, or click an app session to assign the whole session. Entries can be edited, moved and resized; right-click an entry for Edit or Delete. Zoom from the hour overview down to 10-minute detail (pinch or zoom controls); hover cards show details.
+- **Day timeline** with two lanes, "Tracked apps" (recorded automatically) and "Logged hours" (registered by you), each with a sticky header and separated by a divider. Drag over either lane to select a period, or click an app session to assign the whole session. Entries can be edited, moved and resized; right-click an entry for Edit or Delete. ⌘Z / ⇧⌘Z undo and redo changes to logged hours (create, edit, move, resize, delete), in the main window and the menu bar panel. Zoom from the hour overview down to 10-minute detail (pinch or zoom controls); hover cards show details.
 - **Record / Stop timer** (Cmd-R in the main window, also in the menu bar panel): Record starts one shared timer that survives closing the window and relaunching the app; Stop opens the new-entry form with the period rounded to whole minutes. A recording past midnight is cut at the end of its start day. A red block in "Logged hours" shows the running recording.
 - **Projects** with a colour, monthly totals and month navigation (Cmd-Left / Cmd-Right, Cmd-T for the current month).
+- **Month export**: *Export…* (⇧⌘E) on the Projects screen writes all hours of the shown month to a JSON or Excel (.xlsx) file; you choose the format and the location.
+- **Overview** (Cmd-4): a GitHub-style heatmap of the hours you registered per day in a calendar year (brighter square = more hours; hover for a card with the date and hours per project, click to open that day on the Timeline), with year navigation (Cmd-Left / Cmd-Right, Cmd-T), a project filter, statistic tiles (total, active days, average, longest streak, busiest day), a stacked hours-per-month chart and a per-project breakdown.
 - **Tracked apps**: only the apps you add are recorded. Tracking pauses on idle (after 5 minutes without input), sleep and screen lock. Optionally link an app to a project: while you use it, a time entry for that project appears after 1 minute and grows every 5 seconds in "Logged hours" (small gaps of up to 2 minutes merge into one entry; changing the link only affects new hours, idle time at the end of a run is removed, you can edit or delete it like any other entry and it is never overwritten afterwards).
-- **Menu bar panel** with live tracking status (red dot while recording, grey "not tracking" icon for apps not on the list, grey pause icon when paused), the same timeline and a popup form to register time without opening the main window. Tracking and the menu bar item keep running when the window is closed.
+- **Menu bar panel** with live tracking status (red dot while recording, grey "not tracking" icon for apps not on the list, grey pause icon when paused), the same timeline and a popup form to register time without opening the main window. The menu bar icon gets a small red dot while a recording runs. Tracking and the menu bar item keep running when the window is closed.
 - **Local storage** in a SQLite database.
 
-Keyboard: Cmd-1/2/3 switch between Timeline, Projects and Tracked Apps; in the project list of the entry form, Up/Down move the highlight and Enter chooses (or creates) the project.
+Keyboard: Cmd-1/2/3/4 switch between Timeline, Projects, Tracked Apps and Overview; in the project list of the entry form, Up/Down move the highlight and Enter chooses (or creates) the project.
 
 ## Requirements
 
@@ -60,6 +62,7 @@ Timelane/
   Database/             AppDatabase (live/in-memory), Migrations.swift, Records/ (GRDB conformances)
   Repositories/         Repository protocols; GRDB/ holds the implementations
   Services/             Day totals, overlap resolving, running apps, app icons
+    Activity/           Pure yearly statistics: day bucketing, heatmap layout, levels, streaks
     Tracking/           AppActivityTracker, AutoTimeLogger (linked app → growing entry), idle detection, system event observer, heartbeat
   Utilities/            DateRange, calendar helpers, duration formatting, colours
   Features/
@@ -69,6 +72,7 @@ Timelane/
       ViewModels/       TimelineViewModel, TimeEntryFormViewModel, ProjectSearch, ...
       Views/            Lanes, blocks, hover cards, form sheet
     Projects/           ViewModels/ and Views/ for projects and monthly totals
+    Overview/           Yearly heatmap, statistics and charts
     TrackedApps/        ViewModels/ and Views/ for the tracked-apps list
   MenuBar/              Menu bar panel: view model, content, form popup
   Assets.xcassets/      Accent colour and AppIcon
@@ -84,7 +88,7 @@ The database is a single SQLite file inside the app's sandbox container:
 
 `~/Library/Containers/nl.nickkoepr.timelane/Data/Library/Application Support/Timelane/db.sqlite`
 
-It stores projects, your time entries (start, end, optional title and note), the list of tracked apps, and app sessions: app name, bundle identifier, start and end. No window titles, keystrokes or screenshots are recorded. Nothing leaves your machine; the app makes no network requests.
+It stores projects, your time entries (start, end, optional title and note), the list of tracked apps, and app sessions: app name, bundle identifier, start and end. No window titles, keystrokes or screenshots are recorded. Nothing leaves your machine; the app makes no network requests. Exported files are written only where you choose in the save panel.
 
 ## Development
 

@@ -16,6 +16,8 @@ struct RootView: View {
         }
         .frame(minWidth: WindowMetrics.minimumSize.width, minHeight: WindowMetrics.minimumSize.height)
         .background { sidebarShortcuts }
+        .background { TimeEntryUndoShortcuts(history: environment.timeEntryHistory) }
+        .errorAlert(Bindable(environment.timeEntryHistory).errorMessage)
         .onChange(of: environment.requestedSidebarItem, initial: true) {
             guard let item = environment.requestedSidebarItem else { return }
             selection = item
@@ -28,15 +30,17 @@ struct RootView: View {
         case .timeline: TimelineScreen(environment: environment, onShowTrackedApps: { selection = .trackedApps })
         case .projects: ProjectsScreen(environment: environment)
         case .trackedApps: TrackedAppsScreen(environment: environment)
+        case .overview: OverviewScreen(environment: environment)
         }
     }
 
-    /// ⌘1 / ⌘2 / ⌘3 switch screens.
+    /// ⌘1 – ⌘4 switch screens.
     private var sidebarShortcuts: some View {
         HStack {
             Button("Timeline") { selection = .timeline }.keyboardShortcut("1", modifiers: .command)
             Button("Projects") { selection = .projects }.keyboardShortcut("2", modifiers: .command)
             Button("Tracked Apps") { selection = .trackedApps }.keyboardShortcut("3", modifiers: .command)
+            Button("Overview") { selection = .overview }.keyboardShortcut("4", modifiers: .command)
         }
         .opacity(0)
         .allowsHitTesting(false)

@@ -8,12 +8,17 @@ final class AppEnvironment {
     let timeEntries: any TimeEntryRepository
     let appSessions: any AppSessionRepository
     let trackedApps: any TrackedAppRepository
+    /// The shared editor of the main window and the menu bar: the only one that records undo history.
+    /// Other writers (e.g. automatic logging) must use their own `TimeEntryEditor(repository:)` without `onChange`.
     let timeEntryEditor: TimeEntryEditor
+    let timeEntryHistory: TimeEntryHistory
     let tracker: AppActivityTracker
     /// The one Record/Stop timer, shared by the main window and the menu bar panel.
     let recordingTimer: RecordingTimer
     /// Set by the menu bar to open the main window on a specific screen; `RootView` consumes it.
     var requestedSidebarItem: SidebarItem?
+    /// Set by the Overview heatmap to open the Timeline on a specific day; `TimelineScreen` consumes it.
+    var requestedTimelineDay: Date?
 
     init(database: AppDatabase, recordingTimerStore: any RecordingTimerStore = InMemoryRecordingTimerStore()) {
         self.database = database
@@ -22,7 +27,11 @@ final class AppEnvironment {
         self.timeEntries = GRDBTimeEntryRepository(database: database)
         self.appSessions = GRDBAppSessionRepository(database: database)
         self.trackedApps = GRDBTrackedAppRepository(database: database)
-        self.timeEntryEditor = TimeEntryEditor(repository: timeEntries)
+        let history = TimeEntryHistory(repository: timeEntries)
+        self.timeEntryHistory = history
+        self.timeEntryEditor = TimeEntryEditor(repository: timeEntries, onChange: { change in
+            await history.record(change)
+        })
         self.tracker = AppActivityTracker(
             repository: appSessions, trackedApps: trackedApps,
             autoLogger: AutoTimeLogger(timeEntries: timeEntries, trackedApps: trackedApps))
