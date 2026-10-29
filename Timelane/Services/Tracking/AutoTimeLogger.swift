@@ -10,7 +10,7 @@ import Foundation
 ///
 /// Its state (own entry, and a run too short to write anything yet) lives in an `AutoLogStateStore`, so it
 /// survives a restart of Timelane: the entry is continued, and short runs of the same project within
-/// `TrackingSettings.autoLogMergeGap` of each other add up to one run.
+/// `TrackingSettings.mergeGap` of each other add up to one run.
 @MainActor
 final class AutoTimeLogger {
     private(set) var errorMessage: String?
@@ -69,14 +69,15 @@ final class AutoTimeLogger {
         await finish(at: at)
         activeBundleId = bundleIdentifier
         run = projectByBundleId[bundleIdentifier].map { AutoLogRun(projectId: $0, start: resumedStart(for: $0, at: at)) }
+        publishLive()                                      // a continued entry is drawn from the first moment
     }
 
     /// A run of the same project shortly after a run that was too short to write anything continues that run.
     private func resumedStart(for projectId: Int64, at: Date) -> Date {
         guard let pending else { return at }
         let gap = at.timeIntervalSince(pending.lastSeen)
-        if pending.projectId == projectId, gap >= 0, gap <= TrackingSettings.autoLogMergeGap { return pending.start }
-        if pending.projectId != projectId || gap > TrackingSettings.autoLogMergeGap { self.pending = nil }
+        if pending.projectId == projectId, gap >= 0, gap <= TrackingSettings.mergeGap { return pending.start }
+        if pending.projectId != projectId || gap > TrackingSettings.mergeGap { self.pending = nil }
         return at
     }
 
@@ -133,9 +134,15 @@ final class AutoTimeLogger {
         }
     }
 
-    /// Publishes the entry created or continued by the current run (same condition as `notePending`), else nil.
+    /// Whether the run owns the entry: same project and the entry ends no more than `mergeGap` before the run
+    /// (a negative gap, an entry grown during this run, counts too).
+    private func continues(_ entry: AutoLogEntry, _ run: AutoLogRun) -> Bool {
+        entry.projectId == run.projectId && run.start.timeIntervalSince(entry.lastEnd) <= TrackingSettings.mergeGap
+    }
+
+    /// Publishes the entry created or continued by the current run, else nil.
     private func publishLive() {
-        if let run, let entry, entry.projectId == run.projectId, entry.lastEnd > run.start {
+        if let run, let entry, continues(entry, run) {
             live.set(entry.id)
         } else {
             live.set(nil)

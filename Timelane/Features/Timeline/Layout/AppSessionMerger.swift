@@ -2,8 +2,8 @@ import Foundation
 
 /// Cleans up fragmented raw sessions for display. The stored data is never changed.
 enum AppSessionMerger {
-    static let mergeGap: TimeInterval = 60
-    static let minimumDuration: TimeInterval = 60
+    static let mergeGap = TrackingSettings.mergeGap
+    static let minimumDuration = TrackingSettings.minimumBlockDuration
 
     static func blocks(from sessions: [AppSession], in range: DateRange, now: Date) -> [AppSessionBlockModel] {
         let clipped = sessions.compactMap { session -> AppSessionBlockModel? in

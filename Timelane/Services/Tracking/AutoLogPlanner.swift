@@ -39,16 +39,18 @@ enum AutoLogPlanner {
            entry.lastEnd > run.start, now < entry.lastEnd {
             return now.timeIntervalSince(entry.start) >= TimeEntryEditor.minimumDuration ? .setEnd(now) : .delete
         }
+        // Continuing an entry that began before this run (across a small gap) is not a short visit: keep
+        // extending it right away, also during the first minute of the run.
+        if let entry, entry.projectId == run.projectId, entry.start < run.start, entryIsIntact,
+           run.start.timeIntervalSince(entry.lastEnd) <= TrackingSettings.mergeGap, now > entry.lastEnd {
+            return extend(entry, to: now)
+        }
         // Short visits (quick ⌘-Tab) never create an entry.
         guard now.timeIntervalSince(run.start) >= TimeEntryEditor.minimumDuration else { return .nothing }
         if let entry, entry.projectId == run.projectId {
             if entry.lastEnd > run.start {
                 // Grown during this run: keep growing it unless the user touched it.
                 return entryIsIntact ? extend(entry, to: now) : .restart
-            }
-            // Written by an earlier run: continue it when the gap is small.
-            if entryIsIntact, run.start.timeIntervalSince(entry.lastEnd) <= TrackingSettings.autoLogMergeGap {
-                return extend(entry, to: now)
             }
         }
         return .create(DateRange(start: run.start, end: now))

@@ -293,7 +293,7 @@ struct AutoTimeLoggerLiveEntryTests {
         await f.logger.sessionEnded(at: f.clock)
         f.advance(seconds: 60)
         await f.logger.sessionStarted(bundleIdentifier: "sim", at: f.clock)
-        #expect(f.live.entryId == nil)
+        #expect(f.live.entryId == id)                        // published at once, not after a minute
         await f.run(minutes: 1)
         #expect(f.live.entryId == id)
     }
