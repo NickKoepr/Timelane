@@ -19,6 +19,12 @@ struct DateRange: Hashable, Sendable {
         return DateRange(start: start, end: end)
     }
 
+    static func year(of date: Date, calendar: Calendar = .current) -> DateRange {
+        let start = calendar.startOfYear(for: date)
+        let end = calendar.date(byAdding: .year, value: 1, to: start) ?? start.addingTimeInterval(365 * 86_400)
+        return DateRange(start: start, end: end)
+    }
+
     func contains(_ date: Date) -> Bool { date >= start && date < end }
 
     func overlaps(_ other: DateRange) -> Bool { start < other.end && other.start < end }
@@ -39,5 +45,11 @@ struct DateRange: Hashable, Sendable {
     func shiftedMonths(_ months: Int, calendar: Calendar = .current) -> DateRange {
         let moved = calendar.date(byAdding: .month, value: months, to: start) ?? start
         return .month(of: moved, calendar: calendar)
+    }
+
+    /// The year range moved by `years` years (this range must be a year).
+    func shiftedYears(_ years: Int, calendar: Calendar = .current) -> DateRange {
+        let moved = calendar.date(byAdding: .year, value: years, to: start) ?? start
+        return .year(of: moved, calendar: calendar)
     }
 }
