@@ -32,6 +32,18 @@ struct TrackedAppRepositoryTests {
         #expect(apps.allSatisfy { $0.id != nil })
     }
 
+    @Test func setProjectLinksAndUnlinks() async throws {
+        let db = try AppDatabase.inMemory()
+        let repo = GRDBTrackedAppRepository(database: db)
+        let project = try await GRDBProjectRepository(database: db).save(Project(name: "P", colorHex: "#FFFFFF"))
+        try await repo.add([TrackedApp(bundleIdentifier: "a", name: "A")])
+        let id = try #require(try await repo.trackedApps().first?.id)
+        try await repo.setProject(project.id, forAppId: id)
+        #expect(try await repo.trackedApps().first?.projectId == project.id)
+        try await repo.setProject(nil, forAppId: id)
+        #expect(try await repo.trackedApps().first?.projectId == nil)
+    }
+
     @Test func removeAndObserve() async throws {
         let (repo, _) = try make()
         try await repo.add([TrackedApp(bundleIdentifier: "a", name: "A"), TrackedApp(bundleIdentifier: "b", name: "B")])
@@ -151,5 +163,31 @@ struct AddTrackedAppViewModelTests {
         await vm.add()
         #expect(finished)
         #expect(try await tracked.trackedApps().map(\.bundleIdentifier).sorted() == ["disk", "done", "seen"])
+    }
+}
+
+@MainActor
+struct TrackedAppsViewModelTests {
+    @Test func setProjectUpdatesRepositoryAndOptionsKeepLinkedArchivedProject() async throws {
+        let db = try AppDatabase.inMemory()
+        let tracked = GRDBTrackedAppRepository(database: db)
+        let projects = GRDBProjectRepository(database: db)
+        let active = try await projects.save(Project(name: "Active", colorHex: "#FFFFFF"))
+        let archived = try await projects.save(Project(name: "Old", colorHex: "#FFFFFF"))
+        try await projects.archive(id: archived.id!, archived: true)
+        try await tracked.add([TrackedApp(bundleIdentifier: "a", name: "A")])
+
+        let vm = TrackedAppsViewModel(repository: tracked, projects: projects)
+        let task = Task { await vm.task() }
+        for _ in 0..<300 where !(vm.isLoaded && vm.projects.count == 2) { try await Task.sleep(for: .milliseconds(10)) }
+        let app = try #require(vm.apps.first)
+        #expect(vm.options(for: app).map(\.name) == ["Active"])
+
+        await vm.setProject(archived.id, for: app)
+        for _ in 0..<300 where vm.apps.first?.projectId == nil { try await Task.sleep(for: .milliseconds(10)) }
+        #expect(vm.apps.first?.projectId == archived.id)
+        #expect(Set(vm.options(for: vm.apps[0]).map(\.name)) == ["Active", "Old"])
+        #expect(active.id != nil)
+        task.cancel()
     }
 }

@@ -32,7 +32,9 @@ final class AppEnvironment {
         self.timeEntryEditor = TimeEntryEditor(repository: timeEntries, onChange: { change in
             await history.record(change)
         })
-        self.tracker = AppActivityTracker(repository: appSessions, trackedApps: trackedApps)
+        self.tracker = AppActivityTracker(
+            repository: appSessions, trackedApps: trackedApps,
+            autoLogger: AutoTimeLogger(timeEntries: timeEntries, trackedApps: trackedApps))
     }
 
     /// The environment of the running app (shared with the app delegate).

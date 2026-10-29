@@ -48,6 +48,13 @@ enum Migrations {
             }
         }
 
+        migrator.registerMigration("v3") { db in
+            // A tracked app can be linked to a project (automatic logged hours).
+            try db.alter(table: "trackedApp") { t in
+                t.add(column: "projectId", .integer).references("project", onDelete: .setNull)
+            }
+        }
+
         return migrator
     }
 }

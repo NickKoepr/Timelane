@@ -11,7 +11,7 @@ struct LoadingStateTests {
 
     @Test func trackedAppsIsLoadedAfterFirstList() async throws {
         let repository = GRDBTrackedAppRepository(database: try AppDatabase.inMemory())
-        let viewModel = TrackedAppsViewModel(repository: repository)
+        let viewModel = TrackedAppsViewModel(repository: repository, projects: GRDBProjectRepository(database: try AppDatabase.inMemory()))
         #expect(!viewModel.isLoaded)
 
         let task = Task { await viewModel.task() }

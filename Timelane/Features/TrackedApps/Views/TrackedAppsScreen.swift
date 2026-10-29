@@ -7,7 +7,7 @@ struct TrackedAppsScreen: View {
 
     init(environment: AppEnvironment) {
         self.environment = environment
-        _viewModel = State(initialValue: TrackedAppsViewModel(repository: environment.trackedApps))
+        _viewModel = State(initialValue: TrackedAppsViewModel(repository: environment.trackedApps, projects: environment.projects))
     }
 
     var body: some View {
@@ -43,13 +43,15 @@ struct TrackedAppsScreen: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             List(viewModel.apps, selection: $viewModel.selectedId) { app in
-                TrackedAppRow(app: app) { Task { await viewModel.remove(app) } }
+                TrackedAppRow(app: app, projects: viewModel.options(for: app),
+                              onProjectChange: { id in Task { await viewModel.setProject(id, for: app) } },
+                              onRemove: { Task { await viewModel.remove(app) } })
                     .tag(app.id)
                     .contextMenu { Button("Remove") { Task { await viewModel.remove(app) } } }
             }
             .onDeleteCommand { Task { await viewModel.removeSelected() } }
             .safeAreaInset(edge: .bottom) {
-                Text("Only these apps are recorded. Removing an app stops recording it; time already recorded stays on the timeline.")
+                Text("Only these apps are recorded. Pick a project to log hours for it automatically while you use the app. Changing the project only affects new hours.")
                     .font(.caption).foregroundStyle(.secondary)
                     .lineLimit(3).fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .leading).padding(12)
