@@ -102,6 +102,13 @@ h1 { font-size: clamp(38px, 7vw, 60px); line-height: 1.1; margin: 0 0 8px; lette
 .points h3 { margin: 0 0 6px; font-size: 20px; }
 .points p { margin: 0; color: var(--muted); }
 
+/* Contact */
+.contact { text-align: center; padding: 64px 0 16px; }
+.contact h2 { font-size: 32px; margin: 0 0 8px; letter-spacing: -0.01em; }
+.contact p { margin: 0 0 12px; color: var(--muted); }
+.contact .mail { font-size: 20px; font-weight: 600; color: var(--accent-text); text-decoration: none; }
+.contact .mail:hover { text-decoration: underline; }
+
 /* Footer */
 .site-footer { text-align: center; padding: 48px 0 40px; color: var(--muted); font-size: 14px; }
 .site-footer .cta { margin-bottom: 24px; }

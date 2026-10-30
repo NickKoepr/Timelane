@@ -51,13 +51,13 @@ Page sections, top to bottom:
    - "Only the apps you choose" — nothing else is recorded.
    - "Stays on your Mac" — all data is stored locally; no account.
    - "No tracking" — no analytics, no ads. (Use the phrase about the app; the site itself also has none.)
-5. **Footer**: CTA again, "© 2026 Nick Koepr", link to `privacy.html`.
+5. **Contact**: heading "Contact", one line, a `mailto:` link to nick@koepr.com. Header gets a "Contact" anchor link.
+6. **Footer**: CTA again, "© 2026 Nick Kuiper", link to `privacy.html`.
 
 Also add **`privacy.html`**: a short privacy policy (App Store Connect needs a privacy policy URL). Same header
 and footer, one text column: Timelane collects no data; everything is stored locally on the Mac; the optional
 iCloud backup is stored in the user's own private iCloud database and Timelane's developer cannot read it; the
-website uses no cookies or analytics; contact via the GitHub repository issues page
-(`https://github.com/NickKoepr/Timelane/issues`). Keep it under ~200 words.
+website uses no cookies or analytics; contact via email (nick@koepr.com). Keep it under ~200 words.
 
 ### CTA
 
