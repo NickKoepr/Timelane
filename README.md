@@ -63,6 +63,7 @@ Timelane/
   Repositories/         Repository protocols; GRDB/ holds the implementations
   Services/             Day totals, overlap resolving, running apps, app icons
     Activity/           Pure yearly statistics: day bucketing, heatmap layout, levels, streaks
+    Backup/             Opt-in iCloud backup: CloudBackupService, CloudKit store, schedule and safety rules
     Tracking/           AppActivityTracker, AutoTimeLogger (linked app → growing entry), idle detection, system event observer, heartbeat
   Utilities/            DateRange, calendar helpers, duration formatting, colours
   Features/
@@ -74,6 +75,7 @@ Timelane/
     Projects/           ViewModels/ and Views/ for projects and monthly totals
     Overview/           Yearly heatmap, statistics and charts
     TrackedApps/        ViewModels/ and Views/ for the tracked-apps list
+    Settings/           Settings window (Timelane ▸ Settings…, ⌘,) with the iCloud backup tab
   MenuBar/              Menu bar panel: view model, content, form popup
   Assets.xcassets/      Accent colour and AppIcon
 TimelaneTests/          Swift Testing unit tests
@@ -88,7 +90,19 @@ The database is a single SQLite file inside the app's sandbox container:
 
 `~/Library/Containers/nl.nickkoepr.timelane/Data/Library/Application Support/Timelane/db.sqlite`
 
-It stores projects, your time entries (start, end, optional title and note), the list of tracked apps, and app sessions: app name, bundle identifier, start and end. No window titles, keystrokes or screenshots are recorded. Nothing leaves your machine; the app makes no network requests. Exported files are written only where you choose in the save panel.
+It stores projects, your time entries (start, end, optional title and note), the list of tracked apps, and app sessions: app name, bundle identifier, start and end. No window titles, keystrokes or screenshots are recorded. Nothing leaves your machine unless you turn on iCloud backup (see below); then the database goes only to your own private iCloud. Exported files are written only where you choose in the save panel.
+
+## iCloud backup
+
+Optional and off by default. Turn it on in *Timelane ▸ Settings…* (⌘,) on the *Backup* tab.
+
+- **What is stored:** a consistent copy of the whole database (projects, logged hours, tracked apps, app sessions) as one file in your *private* CloudKit database (`iCloud.nl.nickkoepr.timelane`), plus a few counters (device name, app version, number of projects and entries). Nothing is shared with anyone.
+- **When:** right after you turn it on, and then automatically, at most every 15 minutes while data changes. *Back Up Now* forces a backup.
+- **Safety:** an automatic backup never replaces an iCloud backup that holds data with an empty database (e.g. after a reinstall). If a backup already exists when you turn the setting on, you choose between restoring it and replacing it.
+- **Restore:** *Restore from iCloud…* downloads and checks the backup, then restarts Timelane, which swaps it in before opening the database. The previous database stays on this Mac as `db-before-restore.sqlite` next to `db.sqlite`.
+- **Turning it off** stops uploads; the copy in iCloud is kept.
+
+This is a snapshot backup, not a live sync between Macs. It needs the iCloud capability (CloudKit) for the app; CI builds strip it (`CODE_SIGN_ENTITLEMENTS=`).
 
 ## Development
 

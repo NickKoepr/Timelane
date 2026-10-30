@@ -15,6 +15,8 @@ final class AppEnvironment {
     let tracker: AppActivityTracker
     /// The one Record/Stop timer, shared by the main window and the menu bar panel.
     let recordingTimer: RecordingTimer
+    /// Opt-in iCloud backup (off by default); also drives the Settings window.
+    let backup: CloudBackupService
     /// Set by the menu bar to open the main window on a specific screen; `RootView` consumes it.
     var requestedSidebarItem: SidebarItem?
     /// Set by the Overview heatmap to open the Timeline on a specific day; `TimelineScreen` consumes it.
@@ -24,8 +26,13 @@ final class AppEnvironment {
     let liveAutoEntry = LiveAutoEntry()
 
     init(database: AppDatabase, recordingTimerStore: any RecordingTimerStore = InMemoryRecordingTimerStore(),
-         autoLogStore: any AutoLogStateStore = InMemoryAutoLogStateStore()) {
+         autoLogStore: any AutoLogStateStore = InMemoryAutoLogStateStore(),
+         backupStore: any CloudBackupStore = InMemoryCloudBackupStore(),
+         backupSettings: any BackupSettingsStore = InMemoryBackupSettingsStore(),
+         pendingRestore: PendingRestore = .temporary()) {
         self.database = database
+        self.backup = Self.makeBackup(database: database, store: backupStore, settings: backupSettings,
+                                      pendingRestore: pendingRestore)
         self.recordingTimer = RecordingTimer(store: recordingTimerStore)
         self.projects = GRDBProjectRepository(database: database)
         self.timeEntries = GRDBTimeEntryRepository(database: database)
@@ -52,8 +59,19 @@ final class AppEnvironment {
 
     static func live() -> AppEnvironment {
         do {
+            let directory = try AppDatabase.liveDirectory()
+            let pendingRestore = PendingRestore(directory: directory)
+            // After a restore the previous instance may still be closing the database file.
+            let autoLogStore = UserDefaultsAutoLogStateStore()
+            if pendingRestore.hasPendingRestore {
+                AppRelauncher.waitForOtherInstances()
+                // The saved auto-log entry id refers to the old database; in the restored one it may be another entry.
+                autoLogStore.state = AutoLogState()
+            }
             return AppEnvironment(database: try AppDatabase.live(), recordingTimerStore: UserDefaultsRecordingTimerStore(),
-                                  autoLogStore: UserDefaultsAutoLogStateStore())
+                                  autoLogStore: autoLogStore,
+                                  backupStore: CloudKitBackupStore(), backupSettings: UserDefaultsBackupSettingsStore(),
+                                  pendingRestore: pendingRestore)
         } catch {
             fatalError("Could not open the Timelane database: \(error)")
         }

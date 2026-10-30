@@ -60,6 +60,8 @@ jobs:
 
       # Ad-hoc signing: the owner's team does not exist on the runner, but the
       # hosted tests still need a signed (sandboxed) Timelane.app.
+      # CODE_SIGN_ENTITLEMENTS= (empty) strips the iCloud entitlements: an ad-hoc app
+      # that claims them is killed at launch. Tests never create a CKContainer.
       - name: Build and test
         run: |
           xcodebuild test \
@@ -75,7 +77,8 @@ jobs:
             DEVELOPMENT_TEAM= \
             PROVISIONING_PROFILE_SPECIFIER= \
             CODE_SIGNING_REQUIRED=YES \
-            CODE_SIGNING_ALLOWED=YES
+            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGN_ENTITLEMENTS=
 
       - name: Upload test results
         if: failure()

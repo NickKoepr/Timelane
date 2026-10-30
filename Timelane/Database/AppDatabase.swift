@@ -13,12 +13,18 @@ final class AppDatabase: Sendable {
         try Migrations.makeMigrator().migrate(writer)
     }
 
-    /// `Application Support/Timelane/db.sqlite` (inside the sandbox container).
-    static func live() throws -> AppDatabase {
+    /// `Application Support/Timelane` (inside the sandbox container): holds `db.sqlite` and restore files.
+    static func liveDirectory() throws -> URL {
         let directory = try FileManager.default
             .url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
             .appendingPathComponent("Timelane", isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        return directory
+    }
+
+    /// `Application Support/Timelane/db.sqlite` (inside the sandbox container).
+    static func live() throws -> AppDatabase {
+        let directory = try liveDirectory()
         let path = directory.appendingPathComponent("db.sqlite").path
         #if DEBUG
         if UserDefaults.standard.bool(forKey: "resetDatabase") {
@@ -32,6 +38,10 @@ final class AppDatabase: Sendable {
             }
         }
         #endif
+        // A restore staged by the previous run replaces the database before it is opened.
+        if try PendingRestore(directory: directory).applyIfPending(databaseFile: URL(fileURLWithPath: path)) {
+            logger.notice("Applied pending restore; the previous database is kept as db-before-restore.sqlite")
+        }
         let queue = try DatabaseQueue(path: path)
         return try AppDatabase(writer: queue)
     }

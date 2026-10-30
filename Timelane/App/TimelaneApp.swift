@@ -22,5 +22,11 @@ struct TimelaneApp: App {
             MenuBarLabel(timer: environment.recordingTimer)
         }
         .menuBarExtraStyle(.window)
+
+        // Timelane ▸ Settings… (⌘,): the out-of-the-way home of opt-in features such as iCloud backup.
+        Settings {
+            SettingsView()
+                .environment(environment)
+        }
     }
 }
