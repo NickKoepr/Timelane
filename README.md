@@ -82,6 +82,7 @@ Timelane/
 TimelaneTests/          Swift Testing unit tests
 Tools/                  generate-app-icon.swift (app icon + menu bar icon), make-app-store-screenshots.sh + compose-app-store-screenshots.swift, generate-readme-header.swift
 docs/                   Images used by this README
+website/                Static product website (GitHub Pages)
 ```
 
 ## Data & privacy
@@ -104,6 +105,10 @@ Optional and off by default. Turn it on in *Timelane ▸ Settings…* (⌘,) on 
 
 This is a snapshot backup, not a live sync between Macs. It needs the iCloud capability (CloudKit) for the app; CI builds strip it (`CODE_SIGN_ENTITLEMENTS=`).
 
+## Website
+
+The product website lives in `website/` (static HTML + CSS, no build step) and is deployed to GitHub Pages by `.github/workflows/pages.yml` on pushes to `main` that touch it. See `website/README.md`.
+
 ## Development
 
 - [`AGENTS.md`](AGENTS.md) explains the architecture, conventions, workflow and known pitfalls for anyone (or any AI agent) continuing work on the project; `CLAUDE.md` points to it.
@@ -119,4 +124,4 @@ This is a snapshot backup, not a live sync between Macs. It needs the iCloud cap
 
 ![Tests](https://github.com/NickKoepr/Timelane/actions/workflows/tests.yml/badge.svg)
 
-Every pull request to `main` runs the unit tests on GitHub Actions (`.github/workflows/tests.yml`, macOS runner with Xcode 27, ad-hoc code signing); new commits on the PR re-run them and cancel the outdated run. Docs-only changes (`*.md`, `docs/`) are skipped, so a required status check would stay pending on such PRs (no branch protection is configured). To run it manually: Actions tab, Tests, Run workflow.
+Every pull request to `main` runs the unit tests on GitHub Actions (`.github/workflows/tests.yml`, macOS runner with Xcode 27, ad-hoc code signing); new commits on the PR re-run them and cancel the outdated run. Docs-only changes (`*.md`, `docs/`, `website/`) are skipped, so a required status check would stay pending on such PRs (no branch protection is configured). To run it manually: Actions tab, Tests, Run workflow.

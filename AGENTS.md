@@ -80,6 +80,7 @@ Tools/make-app-store-screenshots.sh   captures every scene + composes App Store 
 Tools/generate-readme-header.swift    draws docs/header.png from the raw timeline + menuBar captures and the app icon
 plans/                        LOCAL ONLY (git-ignored, never committed): PLAN.md (base spec) + PLAN-v1.x.md (one per iteration)
 docs/header.png, docs/icon.png README header image, app icon
+website/                      Static product site (HTML + CSS) for GitHub Pages, deployed by .github/workflows/pages.yml
 ```
 
 ## Architecture rules (MVVM)
