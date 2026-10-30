@@ -29,6 +29,7 @@ Guiding principles: **simple, not over-engineered, small files, MVVM, easy to ex
 - R12. Add a project quickly (name + color). Edit name/color. Archive a project (hidden from the project picker, but historical hours remain). Deleting is only allowed when a project has no entries.
 - R13. A total for the month is shown at the bottom.
 - R13a. (v1.30) Opt-in iCloud backup of the whole database (CloudKit snapshot, restore on relaunch), set in the Settings window. See PLAN-v1.30.md.
+- R13b. (v1.33) A static product website in `website/`, deployed to GitHub Pages by `pages.yml`. See PLAN-v1.33.md.
 - R13a. *Export…* (⇧⌘E) writes all hours of the shown month (entries clipped to the month, archived projects included) to a file in a format the user picks (JSON or Excel .xlsx) via a save panel. Formats implement `MonthExportFormat` and are registered in `ExportFormats.all`; adding one needs no change to the view model or screen (see PLAN-v1.19). The menu bar panel has no export.
 
 **Overview screen** (v1.20, see `plans/PLAN-v1.20.md`)

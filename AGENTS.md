@@ -79,6 +79,7 @@ Tools/generate-app-icon.swift regenerates AppIcon + MenuBarIcon (same clock draw
 Tools/make-app-store-screenshots.sh   captures every scene + composes App Store images (build/AppStoreScreenshots/)
 plans/                        PLAN.md (base spec, §11 = conventions) + PLAN-v1.x.md (one file per iteration)
 docs/icon.png                 README image
+website/                      Static product site (HTML + CSS) for GitHub Pages, deployed by .github/workflows/pages.yml
 ```
 
 ## Architecture rules (MVVM)

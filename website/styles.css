@@ -1,0 +1,113 @@
+:root {
+  --accent: #2F6BEA;
+  --accent-strong: #1F54C7;
+  --accent-text: #2459D0;
+  --bg: #ffffff;
+  --surface: #F4F6FB;
+  --fg: #1B1F2A;
+  --muted: #566074;
+  --line: #E1E5EE;
+  --hero-from: #DCE7FD;
+  --hero-to: #ffffff;
+  --shadow: rgba(20, 40, 90, 0.28);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --accent-text: #7FA6F5;
+    --bg: #11141B;
+    --surface: #1A1F2B;
+    --fg: #EEF1F7;
+    --muted: #A3ACBF;
+    --line: #2A3142;
+    --hero-from: #1A2A52;
+    --hero-to: #11141B;
+    --shadow: rgba(0, 0, 0, 0.6);
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: auto; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 17px/1.55 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent-text); }
+a:focus-visible, .cta:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+img { max-width: 100%; height: auto; display: block; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+
+/* Header */
+.site-header { border-bottom: 1px solid var(--line); }
+.site-header .wrap { display: flex; align-items: center; justify-content: space-between; gap: 12px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 18px; color: var(--fg); text-decoration: none; }
+.brand img { width: 30px; height: 30px; }
+.site-header nav { display: flex; align-items: center; gap: 18px; }
+.site-header nav a:not(.cta) { color: var(--fg); text-decoration: none; font-size: 15px; }
+.site-header nav a:not(.cta):hover { color: var(--accent-text); }
+
+/* CTA */
+.cta {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 17px;
+  padding: 12px 24px;
+  border-radius: 999px;
+  text-decoration: none;
+}
+a.cta:hover { background: var(--accent-strong); }
+span.cta[aria-disabled="true"] { cursor: default; }
+.cta.small { font-size: 14px; padding: 7px 14px; white-space: nowrap; }
+/* Phones: the hero already shows the CTA, so the header keeps only brand + Features. */
+@media (max-width: 600px) { .site-header .cta.small { display: none; } }
+
+/* Hero */
+.hero { background: linear-gradient(180deg, var(--hero-from), var(--hero-to)); text-align: center; padding: 56px 0 0; }
+.hero .icon { width: 128px; height: 128px; margin: 0 auto 16px; }
+h1 { font-size: clamp(38px, 7vw, 60px); line-height: 1.1; margin: 0 0 8px; letter-spacing: -0.02em; }
+.subtitle { font-size: clamp(20px, 3.5vw, 26px); font-weight: 600; margin: 0 0 16px; }
+.lead { max-width: 620px; margin: 0 auto 28px; color: var(--muted); font-size: 18px; }
+.note { margin: 12px 0 36px; color: var(--muted); font-size: 14px; }
+.hero-shot { max-width: 940px; margin: 0 auto; padding-bottom: 48px; }
+.hero-shot img { margin: 0 auto; filter: drop-shadow(0 18px 40px var(--shadow)); }
+
+/* Features */
+.features { padding: 24px 0 40px; }
+.features h2.section { text-align: center; font-size: 32px; margin: 32px 0 8px; letter-spacing: -0.01em; }
+.row { display: grid; grid-template-columns: 1fr; gap: 24px; align-items: center; padding: 40px 0; }
+.row h3 { font-size: 28px; line-height: 1.2; margin: 0 0 10px; letter-spacing: -0.01em; }
+.row p { margin: 0; color: var(--muted); }
+.row img { margin: 0 auto; filter: drop-shadow(0 12px 28px var(--shadow)); }
+.row.narrow img { max-width: 280px; }
+@media (min-width: 800px) {
+  .row { grid-template-columns: 1.5fr 1fr; gap: 56px; }
+  .row.flip { grid-template-columns: 1fr 1.5fr; }
+  .row.flip .shot { order: 2; }
+  .row.narrow { grid-template-columns: 1fr 1fr; }
+  .row.narrow.flip { grid-template-columns: 1fr 1fr; }
+}
+
+/* Private band */
+.private { background: var(--surface); padding: 56px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.private h2 { text-align: center; font-size: 32px; margin: 0 0 32px; letter-spacing: -0.01em; }
+.points { display: grid; grid-template-columns: 1fr; gap: 24px; }
+@media (min-width: 700px) { .points { grid-template-columns: repeat(3, 1fr); } }
+.points h3 { margin: 0 0 6px; font-size: 20px; }
+.points p { margin: 0; color: var(--muted); }
+
+/* Footer */
+.site-footer { text-align: center; padding: 48px 0 40px; color: var(--muted); font-size: 14px; }
+.site-footer .cta { margin-bottom: 24px; }
+.site-footer p { margin: 4px 0; }
+
+/* Text pages */
+.doc { max-width: 680px; margin: 0 auto; padding: 48px 16px 64px; }
+.doc h1 { font-size: 40px; }
+.doc p { margin: 0 0 16px; }

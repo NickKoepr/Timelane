@@ -8,6 +8,7 @@ on:
       - '**/*.md'
       - 'plans/**'
       - 'docs/**'
+      - 'website/**'
   workflow_dispatch:
 
 concurrency:
