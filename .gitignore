@@ -3,3 +3,6 @@ build/
 DerivedData/
 .DS_Store
 xcuserdata/
+
+# Design plans stay local
+plans/
