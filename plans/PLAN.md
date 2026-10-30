@@ -28,6 +28,7 @@ Guiding principles: **simple, not over-engineered, small files, MVVM, easy to ex
 - R11. Month navigation: previous month, next month, "This month". Default is the current month.
 - R12. Add a project quickly (name + color). Edit name/color. Archive a project (hidden from the project picker, but historical hours remain). Deleting is only allowed when a project has no entries.
 - R13. A total for the month is shown at the bottom.
+- R13a. (v1.30) Opt-in iCloud backup of the whole database (CloudKit snapshot, restore on relaunch), set in the Settings window. See PLAN-v1.30.md.
 - R13a. *Export…* (⇧⌘E) writes all hours of the shown month (entries clipped to the month, archived projects included) to a file in a format the user picks (JSON or Excel .xlsx) via a save panel. Formats implement `MonthExportFormat` and are registered in `ExportFormats.all`; adding one needs no change to the view model or screen (see PLAN-v1.19). The menu bar panel has no export.
 
 **Overview screen** (v1.20, see `plans/PLAN-v1.20.md`)
@@ -493,6 +494,7 @@ Sort rows: by total descending, then by name. Archived projects are only shown w
   }
   ```
   Use `Window` (single window) rather than `WindowGroup`; the app doesn't need multiple windows.
+- **Settings (v1.30):** `TimelaneApp` also has a `Settings { SettingsView() }` scene (Timelane ▸ Settings…, ⌘,) with a *Backup* tab for the opt-in iCloud backup (`CloudBackupService`, see PLAN-v1.30.md). Nothing is added to the sidebar, timeline or menu bar panel.
 - `AppEnvironment` holds: `AppDatabase`, the three repositories, `AppActivityTracker`, `TimeEntryEditor`. Provides `static func live()` and `static func preview()` (in-memory DB with sample data) for SwiftUI previews.
 - `AppDelegate` gets the environment injected (or the tracker is started from `TimelaneApp`'s `init`), and starts tracking on launch.
 - `RootView`: `NavigationSplitView` with a sidebar (`SidebarItem.timeline` "Timeline" ⌘1, `SidebarItem.projects` "Projects" ⌘2, `SidebarItem.trackedApps` "Tracked Apps" ⌘3, `SidebarItem.overview` "Overview" ⌘4) and the detail area showing the screen. Each screen creates its own ViewModel (`@State private var viewModel: TimelineViewModel`) from the environment.
