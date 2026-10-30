@@ -34,7 +34,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 a { color: var(--accent-text); }
-a:focus-visible, .store:focus-visible {
+a:focus-visible, .cta:focus-visible {
   outline: 3px solid var(--accent);
   outline-offset: 3px;
   border-radius: 6px;
@@ -48,16 +48,25 @@ img { max-width: 100%; height: auto; display: block; }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: 18px; color: var(--fg); text-decoration: none; }
 .brand img { width: 30px; height: 30px; }
 .site-header nav { display: flex; align-items: center; gap: 18px; }
-.site-header nav a:not(.store) { color: var(--fg); text-decoration: none; font-size: 15px; }
-.site-header nav a:not(.store):hover { color: var(--accent-text); }
+.site-header nav a:not(.cta) { color: var(--fg); text-decoration: none; font-size: 15px; }
+.site-header nav a:not(.cta):hover { color: var(--accent-text); }
 
 /* CTA */
-/* App Store badge (Apple artwork, shown unaltered) */
-.store { display: inline-block; line-height: 0; }
-.store img { display: block; height: 48px; width: auto; }
-.store.small img { height: 32px; }
-/* Phones: the hero already shows the badge, so the header keeps only brand + links. */
-@media (max-width: 600px) { .site-header .store.small { display: none; } }
+.cta {
+  display: inline-block;
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+  font-size: 17px;
+  padding: 12px 24px;
+  border-radius: 999px;
+  text-decoration: none;
+}
+a.cta:hover { background: var(--accent-strong); }
+span.cta[aria-disabled="true"] { cursor: default; }
+.cta.small { font-size: 14px; padding: 7px 14px; white-space: nowrap; }
+/* Phones: the hero already shows the CTA, so the header keeps only brand + Features. */
+@media (max-width: 600px) { .site-header .cta.small { display: none; } }
 
 /* Hero */
 .hero { background: linear-gradient(180deg, var(--hero-from), var(--hero-to)); text-align: center; padding: 56px 0 0; }
@@ -102,7 +111,7 @@ h1 { font-size: clamp(38px, 7vw, 60px); line-height: 1.1; margin: 0 0 8px; lette
 
 /* Footer */
 .site-footer { text-align: center; padding: 48px 0 40px; color: var(--muted); font-size: 14px; }
-.site-footer .store { margin-bottom: 24px; }
+.site-footer .cta { margin-bottom: 24px; }
 .site-footer p { margin: 4px 0; }
 
 /* Text pages */
