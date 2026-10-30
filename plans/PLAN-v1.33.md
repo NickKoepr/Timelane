@@ -63,9 +63,9 @@ website uses no cookies or analytics; contact via email (nick@koepr.com). Keep i
 
 Use Apple's official **"Download on the Mac App Store" badge** (SVG from Apple's marketing resources, black on
 light, white in dark mode via `<picture>`), unaltered, 48 px high (32 px in the header, hidden there on phones).
-The app is not in the App Store yet, so the badge is a `<span>`, not a link, with a small "Coming soon" note.
+The app is not in the App Store yet, so the badge is a `<span>`, not a link (the owner supplies the App Store URL later).
 Put an HTML comment next to each badge saying how to turn it into
-`<a href="https://apps.apple.com/app/idXXXXXXXXXX">` and drop the note once the app is live. Apple's rules: only
+`<a href="https://apps.apple.com/app/idXXXXXXXXXX">` once the app is live. Apple's rules: only
 official artwork, no changes to colour or shape, link it to the app's App Store page.
 
 ## Design details
@@ -185,7 +185,7 @@ Add `'website/**'` to `paths-ignore` so website-only PRs don't start the (slow, 
 - `website/` opens directly in a browser and via a local static server with no console errors or 404s.
 - Page reads well at 375 px (no horizontal scroll), 768 px and 1280 px, in light and dark mode.
 - Accent colour is `#2F6BEA`; no external requests (fonts, scripts, analytics) at all.
-- No mention of iCloud "sync"; App Store badge with a "Coming soon" note and the comment on how to link it.
+- No mention of iCloud "sync"; App Store badge with the comment on how to link it.
 - `website/images/` under ~2.5 MB.
 - `pages.yml` triggers only on pushes to `main` touching `website/**` (or the workflow itself) plus manual
   dispatch; `tests.yml` ignores `website/**`.

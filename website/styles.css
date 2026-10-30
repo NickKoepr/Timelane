@@ -102,7 +102,7 @@ h1 { font-size: clamp(38px, 7vw, 60px); line-height: 1.1; margin: 0 0 8px; lette
 
 /* Footer */
 .site-footer { text-align: center; padding: 48px 0 40px; color: var(--muted); font-size: 14px; }
-.site-footer .store + .note { margin: 8px 0 20px; }
+.site-footer .store { margin-bottom: 24px; }
 .site-footer p { margin: 4px 0; }
 
 /* Text pages */
