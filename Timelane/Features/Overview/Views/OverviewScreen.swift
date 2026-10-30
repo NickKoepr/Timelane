@@ -45,7 +45,7 @@ struct OverviewScreen: View {
             }
             .zIndex(1)   // the hover card hangs over the sections below
             if viewModel.hasHours {
-                OverviewStatTiles(statistics: viewModel.statistics, showsCurrentStreak: viewModel.isCurrentYear)
+                OverviewStatTiles(statistics: viewModel.statistics)
                 section("Hours per month") {
                     OverviewMonthlyChart(year: viewModel.year, bars: viewModel.monthlyBars)
                 }

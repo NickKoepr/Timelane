@@ -6,9 +6,7 @@ extension OverviewViewModel {
     /// Day → seconds for the current filter.
     var dailyTotals: [Date: TimeInterval] { activity.dailyTotals(projectId: effectiveProjectId) }
 
-    var statistics: ActivityStatistics {
-        ActivityStatistics(dailyTotals: dailyTotals, year: year, today: now(), calendar: calendar)
-    }
+    var statistics: ActivityStatistics { ActivityStatistics(dailyTotals: dailyTotals) }
 
     var totalSeconds: TimeInterval { dailyTotals.values.reduce(0, +) }
     var hasHours: Bool { totalSeconds > 0 }
