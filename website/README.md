@@ -16,4 +16,4 @@ Static site (HTML + CSS, no build step, no dependencies, no external requests) f
   ```
   Then update the `width`/`height` attributes in `index.html` if the pixel sizes changed (`sips -g pixelWidth -g pixelHeight <file>`).
 - **Deploy:** `.github/workflows/pages.yml` publishes `website/` on pushes to `main` that touch it. It needs a public repo (or a paid plan) and Settings > Pages > Source: GitHub Actions.
-- **App Store link:** the CTA is a "Coming soon" `<span>`. Each CTA has an HTML comment with the `<a href="https://apps.apple.com/app/idXXXXXXXXXX">` to replace it with (header, hero and footer in `index.html`; header and footer in `privacy.html`).
+- **App Store badge:** Apple's official "Download on the Mac App Store" badge (`images/mac-app-store-black.svg`, `-white.svg` for dark mode; US-UK artwork from Apple's marketing resources). Use it unaltered. Until the app is live it is a `<span>` with a "Coming soon" note; each one has an HTML comment saying how to turn it into an `<a href="https://apps.apple.com/app/idXXXXXXXXXX">` (header, hero and footer in `index.html`; header and footer in `privacy.html`).
