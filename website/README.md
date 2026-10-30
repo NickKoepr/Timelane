@@ -12,7 +12,7 @@ Static site (HTML + CSS, no build step, no dependencies, no external requests) f
     sips --resampleWidth 1600 "build/AppStoreScreenshots/raw/$f.png" --out "website/images/$out.png"
   done
   sips --resampleWidth 560 build/AppStoreScreenshots/raw/menuBar.png --out website/images/menu-bar.png
-  cp Timelane/Assets.xcassets/AppIcon.appiconset/icon_256.png website/images/icon.png
+  sips -Z 256 Timelane/Assets.xcassets/AppIcon.appiconset/icon_1024.png --out website/images/icon.png
   ```
   Then update the `width`/`height` attributes in `index.html` if the pixel sizes changed (`sips -g pixelWidth -g pixelHeight <file>`).
 - **Deploy:** `.github/workflows/pages.yml` publishes `website/` on pushes to `main` that touch it. It needs a public repo (or a paid plan) and Settings > Pages > Source: GitHub Actions.
