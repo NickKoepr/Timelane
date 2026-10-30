@@ -17,13 +17,14 @@ let backgroundHex: UInt32 = 0x2F6BEA
 let clockHex: UInt32 = 0xFFFFFF
 
 /// Draws the icon on a 1024 x 1024 canvas (origin bottom-left): flat colour body, white clock.
-func draw(in ctx: CGContext) {
+/// `scale` is the CTM scale to the output size: shadow offset and blur are in device space and ignore the CTM.
+func draw(in ctx: CGContext, scale: CGFloat = 1) {
     let body = CGRect(x: 100, y: 100, width: 824, height: 824)
     let bodyPath = CGPath(roundedRect: body, cornerWidth: 185, cornerHeight: 185, transform: nil)
 
     // Flat body with a soft drop shadow (no gradient, no sheen).
     ctx.saveGState()
-    ctx.setShadow(offset: CGSize(width: 0, height: -12), blur: 28, color: color(0x000000, 0.35))
+    ctx.setShadow(offset: CGSize(width: 0, height: -12 * scale), blur: 28 * scale, color: color(0x000000, 0.35))
     ctx.setFillColor(color(backgroundHex))
     ctx.addPath(bodyPath)
     ctx.fillPath()
@@ -70,8 +71,9 @@ func render(pixels: Int, drawing: (CGContext) -> Void) -> Data {
 /// App icon at `pixels` x `pixels`.
 func appIcon(pixels: Int) -> Data {
     render(pixels: pixels) { ctx in
-        ctx.scaleBy(x: CGFloat(pixels) / canvas, y: CGFloat(pixels) / canvas)
-        draw(in: ctx)
+        let scale = CGFloat(pixels) / canvas
+        ctx.scaleBy(x: scale, y: scale)
+        draw(in: ctx, scale: scale)
     }
 }
 
