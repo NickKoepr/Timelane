@@ -11,8 +11,9 @@ struct MenuBarContentView: View {
     @State private var viewModel: MenuBarViewModel
     @State private var anchor = ZoomScrollAnchor()
 
-    init(environment: AppEnvironment) {
-        _viewModel = State(initialValue: MenuBarViewModel.make(environment: environment))
+    /// `viewModel` lets the DEBUG screenshot mode drive the panel; the app passes none.
+    init(environment: AppEnvironment, viewModel: MenuBarViewModel? = nil) {
+        _viewModel = State(initialValue: viewModel ?? MenuBarViewModel.make(environment: environment))
     }
 
     private var timeline: TimelineViewModel { viewModel.timeline }

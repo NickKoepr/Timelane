@@ -8,6 +8,9 @@ struct TimelaneApp: App {
     var body: some Scene {
         Window("Timelane", id: "main") {
             RootView()
+                #if DEBUG
+                .background { if ScreenshotMode.isActive { ScreenshotDirectorView() } }
+                #endif
                 .environment(environment)
         }
         .defaultSize(width: 900, height: 750)
@@ -15,7 +18,7 @@ struct TimelaneApp: App {
 
         // Same clock as the app icon (template image from Tools/generate-app-icon.swift);
         // a red dot is added while the Record timer runs.
-        MenuBarExtra {
+        MenuBarExtra(isInserted: .constant(!AppEnvironment.isIsolatedRun)) {
             MenuBarContentView(environment: environment)
                 .environment(environment)
         } label: {

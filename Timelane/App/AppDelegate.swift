@@ -2,7 +2,7 @@ import AppKit
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        guard !AppEnvironment.isRunningTests else { return }
+        guard !AppEnvironment.isIsolatedRun else { return }
         Task { await AppEnvironment.shared.tracker.start() }
         Task { await AppEnvironment.shared.backup.run() }
     }
@@ -11,7 +11,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
-        guard !AppEnvironment.isRunningTests else { return .terminateNow }
+        guard !AppEnvironment.isIsolatedRun else { return .terminateNow }
         Task {
             await AppEnvironment.shared.tracker.stop()
             NSApp.reply(toApplicationShouldTerminate: true)

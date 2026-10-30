@@ -39,6 +39,15 @@ struct TimelineScreen: View {
             viewModel.go(to: day)
             environment.requestedTimelineDay = nil
         }
+        #if DEBUG
+        .onChange(of: ScreenshotFormRequest.shared.request) {
+            guard let request = ScreenshotFormRequest.shared.request else { return }
+            viewModel.openNewForm(for: request.range)
+            viewModel.form?.form.title = request.title
+            if let project = viewModel.project(id: request.projectId) { viewModel.form?.choose(project) }
+            ScreenshotFormRequest.shared.request = nil
+        }
+        #endif
     }
 
     private func changeZoom(_ change: ZoomChange) {

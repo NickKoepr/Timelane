@@ -51,7 +51,22 @@ final class AppEnvironment {
 
     /// The environment of the running app (shared with the app delegate).
     /// Unit tests that host the app get an empty in-memory database and no tracking.
-    static let shared: AppEnvironment = isRunningTests ? inMemory() : live()
+    static let shared: AppEnvironment = {
+        if isRunningTests { return inMemory() }
+        #if DEBUG
+        if ScreenshotMode.isMisconfigured { fatalError("Invalid -screenshotScene / -screenshotOutput arguments") }
+        if ScreenshotMode.isActive { return screenshot() }
+        #endif
+        return live()
+    }()
+
+    /// Tests and the DEBUG screenshot mode run without tracking, backups or the real database.
+    nonisolated static var isIsolatedRun: Bool {
+        #if DEBUG
+        if ScreenshotMode.isActive { return true }
+        #endif
+        return isRunningTests
+    }
 
     nonisolated static var isRunningTests: Bool {
         ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
