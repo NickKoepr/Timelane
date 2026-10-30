@@ -62,9 +62,14 @@ final class AppEnvironment {
             let directory = try AppDatabase.liveDirectory()
             let pendingRestore = PendingRestore(directory: directory)
             // After a restore the previous instance may still be closing the database file.
-            if pendingRestore.hasPendingRestore { AppRelauncher.waitForOtherInstances() }
+            let autoLogStore = UserDefaultsAutoLogStateStore()
+            if pendingRestore.hasPendingRestore {
+                AppRelauncher.waitForOtherInstances()
+                // The saved auto-log entry id refers to the old database; in the restored one it may be another entry.
+                autoLogStore.state = AutoLogState()
+            }
             return AppEnvironment(database: try AppDatabase.live(), recordingTimerStore: UserDefaultsRecordingTimerStore(),
-                                  autoLogStore: UserDefaultsAutoLogStateStore(),
+                                  autoLogStore: autoLogStore,
                                   backupStore: CloudKitBackupStore(), backupSettings: UserDefaultsBackupSettingsStore(),
                                   pendingRestore: pendingRestore)
         } catch {
