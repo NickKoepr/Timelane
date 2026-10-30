@@ -52,7 +52,8 @@ Page sections, top to bottom:
    - "Stays on your Mac" — all data is stored locally; no account.
    - "No tracking" — no analytics, no ads. (Use the phrase about the app; the site itself also has none.)
 5. **Contact**: heading "Contact", one line, a `mailto:` link to nick@koepr.com. Header gets a "Contact" anchor link.
-6. **Footer**: CTA again, "© 2026 Nick Kuiper", link to `privacy.html`.
+6. **Footer**: CTA again, "© 2026 Nick Kuiper", a modest "Open source on GitHub" link
+   (`https://github.com/NickKoepr/Timelane`), link to `privacy.html`. The contact line also points to GitHub issues.
 
 Also add **`privacy.html`**: a short privacy policy (App Store Connect needs a privacy policy URL). Same header
 and footer, one text column: Timelane collects no data; everything is stored locally on the Mac; the optional
@@ -183,7 +184,7 @@ Add `'website/**'` to `paths-ignore` so website-only PRs don't start the (slow, 
 
 - `website/` opens directly in a browser and via a local static server with no console errors or 404s.
 - Page reads well at 375 px (no horizontal scroll), 768 px and 1280 px, in light and dark mode.
-- Accent colour is `#2F6BEA`; no external requests (fonts, scripts, analytics) at all.
+- Accent colour is `#2F6BEA`; no external requests (fonts, scripts, analytics) at all; the only outbound links are GitHub and email.
 - No mention of iCloud "sync"; App Store badge with the comment on how to link it.
 - `website/images/` under ~2.5 MB.
 - `pages.yml` triggers only on pushes to `main` touching `website/**` (or the workflow itself) plus manual
