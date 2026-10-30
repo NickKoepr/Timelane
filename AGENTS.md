@@ -1,6 +1,6 @@
 # AGENTS.md — working on Timelane
 
-Guide for AI coding agents (and humans) picking up this project in a new session. Read this first; it tells you how the app is built, how to work on it, and which traps were already found the hard way. `README.md` describes the app for users/developers; `plans/` holds the design history.
+Guide for AI coding agents (and humans) picking up this project in a new session. Read this first; it tells you how the app is built, how to work on it, and which traps were already found the hard way. `README.md` describes the app for users/developers; `plans/` (local only, git-ignored) holds the design history.
 
 ## What the app is
 
@@ -78,7 +78,7 @@ TimelaneTests/                Swift Testing (`import Testing`, `@testable import
 Tools/generate-app-icon.swift regenerates AppIcon + MenuBarIcon (same clock drawing)
 Tools/make-app-store-screenshots.sh   captures every scene + composes App Store images (build/AppStoreScreenshots/)
 Tools/generate-readme-header.swift    draws docs/header.png from the raw timeline + menuBar captures and the app icon
-plans/                        PLAN.md (base spec, §11 = conventions) + PLAN-v1.x.md (one file per iteration)
+plans/                        LOCAL ONLY (git-ignored, never committed): PLAN.md (base spec) + PLAN-v1.x.md (one per iteration)
 docs/header.png, docs/icon.png README header image, app icon
 ```
 
@@ -106,7 +106,7 @@ docs/header.png, docs/icon.png README header image, app icon
 ## Workflow the owner uses
 
 - The owner writes requests in Dutch; reply in Dutch. Code, comments, commit messages, README and plans are in English.
-- For a feature/bugfix: write a plan `plans/PLAN-v1.N.md` (next free number; English, detailed enough for an agent: context, cause, design, files, tests, order of work, definition of done), implement it, run tests, commit.
+- For a feature/bugfix: write a plan `plans/PLAN-v1.N.md` (next free number; English, detailed enough for an agent: context, cause, design, files, tests, order of work, definition of done), implement it, run tests, commit. `plans/` is git-ignored: plans stay on the owner's machine and are never committed or referenced from committed files.
 - Work directly on `main` (no feature branches) unless asked for an experiment branch. Commit messages end with the Co-Authored-By line the session prescribes. The owner normally wants changes **committed and pushed** to `origin main`.
 - Update `README.md` and `plans/PLAN.md` when behaviour changes, so they stay the source of truth.
 - Releases: bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` (app target, Debug + Release) — the build number must go up for every App Store Connect/TestFlight upload; tag `vX.Y.Z` when asked. Export compliance is pre-answered via `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO` (the app uses no non-exempt encryption); revisit it if networking or custom crypto is ever added.
