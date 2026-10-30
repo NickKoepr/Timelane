@@ -29,20 +29,24 @@ struct PendingRestore: Sendable {
         try fileManager.moveItem(at: downloaded, to: pendingFile)
     }
 
-    /// Swaps a pending restore into place. The previous database is kept as `db-before-restore.sqlite`.
+    /// Copies a pending restore into the database file. The previous database is kept as `db-before-restore.sqlite`.
     /// Returns false when nothing was pending.
+    ///
+    /// The pages are copied with SQLite's backup API instead of renaming files: another process may still have
+    /// `db.sqlite` open (an old instance that is slow to quit, or a second copy of the app), and renaming a file
+    /// under an open connection makes every later query of that process fail with a disk I/O error.
     func applyIfPending(databaseFile: URL) throws -> Bool {
         guard hasPendingRestore else { return false }
         let fileManager = FileManager.default
-        let folder = databaseFile.deletingLastPathComponent()
-        let previous = folder.appendingPathComponent(Self.previousName)
-        for suffix in Self.suffixes {
-            try? fileManager.removeItem(atPath: previous.path + suffix)
-            if fileManager.fileExists(atPath: databaseFile.path + suffix) {
-                try fileManager.moveItem(atPath: databaseFile.path + suffix, toPath: previous.path + suffix)
-            }
+        let previous = databaseFile.deletingLastPathComponent().appendingPathComponent(Self.previousName)
+        for suffix in Self.suffixes { try? fileManager.removeItem(atPath: previous.path + suffix) }
+        // The queues are closed again before the pending file is removed.
+        do {
+            let current = try DatabaseQueue(path: databaseFile.path)
+            try current.backup(to: try DatabaseQueue(path: previous.path))
+            try DatabaseQueue(path: pendingFile.path).backup(to: current)
         }
-        try fileManager.moveItem(at: pendingFile, to: databaseFile)
+        for suffix in Self.suffixes { try? fileManager.removeItem(atPath: pendingFile.path + suffix) }
         return true
     }
 

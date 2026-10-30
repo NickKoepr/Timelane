@@ -70,7 +70,7 @@ struct PendingRestoreTests {
         }
     }
 
-    @Test func applySwapsFilesAndKeepsThePreviousDatabase() throws {
+    @Test func applyReplacesTheDatabaseAndKeepsThePreviousOne() throws {
         let (restore, directory) = try makeRestore()
         let (file, source) = try snapshotFile(projects: 2, entries: 3)
         defer { for url in [directory, source] { try? FileManager.default.removeItem(at: url) } }
@@ -95,5 +95,25 @@ struct PendingRestoreTests {
             let value5 = try Project.fetchAll(db).map(\.name)
             #expect(value5 == ["Old"])
         }
+    }
+
+    /// Regression: applying used to rename `db.sqlite`, which broke every connection another process still had
+    /// open on it ("disk I/O error" on each query).
+    @Test func applyKeepsOpenConnectionsWorking() throws {
+        let (restore, directory) = try makeRestore()
+        let (file, source) = try snapshotFile(projects: 2, entries: 3)
+        defer { for url in [directory, source] { try? FileManager.default.removeItem(at: url) } }
+        let databaseFile = directory.appendingPathComponent("db.sqlite")
+        let stillOpen = try AppDatabase.file(at: databaseFile)
+        try stillOpen.writer.write { db in var p = Project(name: "Old", colorHex: "#000000"); try p.insert(db) }
+
+        try restore.stage(file)
+        #expect(try restore.applyIfPending(databaseFile: databaseFile))
+
+        try stillOpen.writer.read { db in
+            let value = try Project.fetchCount(db)
+            #expect(value == 2)
+        }
+        try stillOpen.writer.write { db in var p = Project(name: "New", colorHex: "#000000"); try p.insert(db) }
     }
 }
