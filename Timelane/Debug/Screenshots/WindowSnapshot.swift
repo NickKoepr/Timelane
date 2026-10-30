@@ -2,6 +2,7 @@
 import AppKit
 
 /// Captures the app's own windows. No Screen Recording permission is needed for a process's own windows.
+@MainActor
 enum WindowSnapshot {
     private typealias CreateImage = @convention(c) (CGRect, UInt32, UInt32, UInt32) -> Unmanaged<CGImage>?
 
