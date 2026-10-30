@@ -7,8 +7,13 @@ enum AppRelauncher {
         let configuration = NSWorkspace.OpenConfiguration()
         configuration.createsNewApplicationInstance = true
         NSWorkspace.shared.openApplication(at: Bundle.main.bundleURL, configuration: configuration) { _, error in
-            Task { @MainActor in
-                if error == nil { NSApp.terminate(nil) } else { askToQuit() }
+            let succeeded = error == nil
+            // Not `Task { @MainActor in }`: that runs as a main-queue job, and `terminate:` (which waits in a
+            // nested run loop for the `.terminateLater` reply) can't drain the main queue from inside one.
+            RunLoop.main.perform(inModes: [.default]) {
+                MainActor.assumeIsolated {
+                    if succeeded { NSApp.terminate(nil) } else { askToQuit() }
+                }
             }
         }
     }

@@ -12,9 +12,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard !AppEnvironment.isIsolatedRun else { return .terminateNow }
-        Task {
-            await AppEnvironment.shared.tracker.stop()
-            NSApp.reply(toApplicationShouldTerminate: true)
+        let tracker = AppEnvironment.shared.tracker
+        let reply = TerminationReply()
+        Task.detached {
+            await tracker.stop()
+            reply.send()
         }
         return .terminateLater
     }
