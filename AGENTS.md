@@ -77,8 +77,9 @@ Timelane/                     app target (folder is a synchronized group: new fi
 TimelaneTests/                Swift Testing (`import Testing`, `@testable import Timelane`), in-memory DB, fake clocks
 Tools/generate-app-icon.swift regenerates AppIcon + MenuBarIcon (same clock drawing)
 Tools/make-app-store-screenshots.sh   captures every scene + composes App Store images (build/AppStoreScreenshots/)
+Tools/generate-readme-header.swift    draws docs/header.png from the raw timeline + menuBar captures and the app icon
 plans/                        PLAN.md (base spec, §11 = conventions) + PLAN-v1.x.md (one file per iteration)
-docs/icon.png                 README image
+docs/header.png, docs/icon.png README header image, app icon
 website/                      Static product site (HTML + CSS) for GitHub Pages, deployed by .github/workflows/pages.yml
 ```
 
