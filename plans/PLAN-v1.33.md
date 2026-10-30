@@ -78,7 +78,7 @@ Mac App Store</a>`). Do **not** use Apple's official badge artwork (licence/trad
   transparent background; add a `filter: drop-shadow(...)` rather than a box-shadow (a box-shadow would show the
   square corners).
 - The menu bar capture is portrait (380 × 600 pt); give its row a narrower image column so it isn't huge.
-- Icon: `website/images/icon.png` (copy of `docs/icon.png`, 256 px) for the header/hero and as favicon
+- Icon: `website/images/icon.png` (copy of the asset catalog's `icon_256.png`; `docs/icon.png` clips the shadow) for the header/hero and as favicon
   (`<link rel="icon" href="images/icon.png">` plus `apple-touch-icon`).
 - `<head>`: `lang="en"`, charset, viewport, `<title>Timelane — Log work hours per project</title>`,
   `meta description` (the promotional text), Open Graph tags (`og:title`, `og:description`, `og:image` =
@@ -99,7 +99,7 @@ for f in timeline entryForm projects overview trackedApps settings; do
   sips --resampleWidth 1600 "build/AppStoreScreenshots/raw/$f.png" --out "website/images/$out.png"
 done
 sips --resampleWidth 560 build/AppStoreScreenshots/raw/menuBar.png --out website/images/menu-bar.png
-cp docs/icon.png website/images/icon.png
+cp Timelane/Assets.xcassets/AppIcon.appiconset/icon_256.png website/images/icon.png
 ```
 Keep PNG (transparency). Use the resulting pixel sizes (`sips -g pixelWidth -g pixelHeight`) for the `<img>`
 `width`/`height` attributes. If the screenshots are regenerated later, rerun this block; document it in
