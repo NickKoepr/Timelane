@@ -6,8 +6,7 @@ struct OnboardingPageView: View {
 
     var body: some View {
         VStack(spacing: 14) {
-            Image(systemName: page.systemImage)
-                .font(.system(size: 56))
+            icon
                 .foregroundStyle(Color.accentColor)
                 .frame(height: 70)
                 .accessibilityHidden(true)
@@ -29,6 +28,13 @@ struct OnboardingPageView: View {
         }
         .padding(.horizontal, 40)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder private var icon: some View {
+        switch page.icon {
+        case .symbol(let name): Image(systemName: name).font(.system(size: 56))
+        case .appClock: OnboardingClockMark().frame(width: 64, height: 64)
+        }
     }
 }
 
