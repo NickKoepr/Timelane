@@ -8,11 +8,18 @@ on:
       - '**/*.md'
       - 'docs/**'
       - 'website/**'
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - 'website/**'
   workflow_dispatch:
 
+# PR runs replace each other; every push to main keeps its own run.
 concurrency:
   group: tests-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
