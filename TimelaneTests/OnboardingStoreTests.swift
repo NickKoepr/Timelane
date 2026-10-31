@@ -18,4 +18,13 @@ struct OnboardingStoreTests {
         #expect(!ids.isEmpty)
         #expect(Set(ids).count == ids.count)
     }
+
+    @Test func pageTextsAreValidMarkdown() throws {
+        for page in OnboardingPage.all {
+            for text in [page.message, page.footnote].compactMap(\.self) {
+                let rendered = try AttributedString(markdown: text)
+                #expect(!String(rendered.characters).contains("**"), "Unparsed bold in \(page.id)")
+            }
+        }
+    }
 }

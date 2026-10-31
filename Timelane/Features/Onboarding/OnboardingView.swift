@@ -5,25 +5,36 @@ struct OnboardingView: View {
     @State var viewModel: OnboardingViewModel
     let onClose: () -> Void
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var goingForward = true
+    private let width: CGFloat = 520
 
     var body: some View {
         VStack(spacing: 0) {
             topBar
-            ZStack {
-                OnboardingPageView(page: viewModel.currentPage)
-                    .id(viewModel.currentPage.id)
-                    .transition(reduceMotion ? .opacity : .push(from: goingForward ? .trailing : .leading))
-            }
-            .clipped()
-            .animation(reduceMotion ? .easeOut(duration: 0.15) : .easeInOut(duration: 0.25), value: viewModel.currentIndex)
+            pages
             bottomBar
         }
-        .frame(width: 520, height: 400)
+        .frame(width: width, height: 400)
         .focusable()
         .focusEffectDisabled()
-        .onKeyPress(.leftArrow) { move { viewModel.back() }; return .handled }
-        .onKeyPress(.rightArrow) { move { viewModel.next() }; return .handled }
+        .onKeyPress(.leftArrow) { viewModel.back(); return .handled }
+        .onKeyPress(.rightArrow) { viewModel.next(); return .handled }
+    }
+
+    /// All pages side by side, shifted by the current index: the slide direction always follows the index.
+    /// (A per-page `.transition` slid the wrong way after changing direction, because the leaving page
+    /// keeps the transition of its previous render.)
+    private var pages: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(viewModel.pages.enumerated()), id: \.element.id) { index, page in
+                OnboardingPageView(page: page)
+                    .frame(width: width)
+                    .accessibilityHidden(index != viewModel.currentIndex)
+            }
+        }
+        .offset(x: -CGFloat(viewModel.currentIndex) * width)
+        .frame(width: width, alignment: .leading)
+        .clipped()
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: viewModel.currentIndex)
     }
 
     private var topBar: some View {
@@ -40,12 +51,12 @@ struct OnboardingView: View {
 
     private var bottomBar: some View {
         HStack {
-            Button("Back") { move { viewModel.back() } }
+            Button("Back") { viewModel.back() }
                 .disabled(viewModel.isFirst)
                 .frame(width: 110, alignment: .leading)
             Spacer()
             OnboardingPageDots(count: viewModel.pages.count, current: viewModel.currentIndex) { index in
-                move { viewModel.go(to: index) }
+                viewModel.go(to: index)
             }
             Spacer()
             if viewModel.isLast {
@@ -53,18 +64,12 @@ struct OnboardingView: View {
                     .keyboardShortcut(.defaultAction)
                     .frame(width: 110, alignment: .trailing)
             } else {
-                Button("Next") { move { viewModel.next() } }
+                Button("Next") { viewModel.next() }
                     .keyboardShortcut(.defaultAction)
                     .frame(width: 110, alignment: .trailing)
             }
         }
         .padding(20)
-    }
-
-    private func move(_ change: () -> Void) {
-        let before = viewModel.currentIndex
-        change()
-        goingForward = viewModel.currentIndex >= before
     }
 
     private func close() {

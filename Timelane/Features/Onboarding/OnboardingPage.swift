@@ -1,33 +1,39 @@
 import Foundation
 
-/// One page of the welcome carousel.
+/// One page of the welcome carousel. `message` and `footnote` are Markdown (`**bold**`, `` `⌘R` ``).
 struct OnboardingPage: Identifiable, Equatable {
     let id: String
     let systemImage: String
     let title: String
     let message: String
+    var footnote: String?
 
     static let all: [OnboardingPage] = [
         OnboardingPage(
             id: "welcome", systemImage: "clock.badge.checkmark", title: "Welcome to Timelane",
-            message: "Register your working hours per project, right on your Mac. Everything stays on this Mac."),
+            message: "See where your working day went, and turn it into **hours per project** in seconds. "
+                + "No timers to forget, no guesswork at the end of the week."),
         OnboardingPage(
-            id: "tracked-apps", systemImage: "app.badge.checkmark", title: "Choose which apps to track",
-            message: "Add apps (Xcode, your browser, …) under Tracked Apps (⌘3). Only those apps are recorded; "
-                + "tracking pauses when you're idle, asleep or locked."),
+            id: "tracked-apps", systemImage: "app.badge.checkmark", title: "Choose the apps you work in",
+            message: "Add apps like Xcode or your browser under **Tracked Apps** (`⌘3`). "
+                + "Only these apps are recorded, so start here: without them, your timeline stays empty."),
         OnboardingPage(
-            id: "lanes", systemImage: "rectangle.split.2x1", title: "Two lanes",
-            message: "The left lane, Tracked apps, fills itself while you work. The right lane, Logged hours, holds "
-                + "the hours that count. Tracked time is not registered until it is in Logged hours."),
+            id: "lanes", systemImage: "rectangle.split.2x1", title: "Two lanes, one day",
+            message: "The left lane, **Tracked apps**, fills itself whenever a tracked app is in the foreground. "
+                + "The right lane, **Logged hours**, shows the hours you've registered. "
+                + "Only those count towards your projects."),
         OnboardingPage(
-            id: "register", systemImage: "hand.draw", title: "Register your hours",
-            message: "Drag over the timeline to select a period, or click an app session to take it over, then pick a "
-                + "project. New entries always land in Logged hours; drag or resize them there to adjust. "
-                + "Or press Record (⌘R) and Stop when you're done. "
-                + "Tip: link a tracked app to a project and its hours are logged automatically."),
+            id: "register", systemImage: "hand.draw", title: "Log your hours",
+            message: "**Drag** across the timeline to select a period, or **click** an app session to take it over. "
+                + "Pick a project, and the hours appear in **Logged hours**."),
         OnboardingPage(
-            id: "more", systemImage: "chart.bar.xaxis", title: "Projects, overview and menu bar",
-            message: "See monthly totals and export them under Projects, your year under Overview, and keep an eye on "
-                + "everything from the menu bar icon. Reopen this introduction via Help ▸ Welcome to Timelane."),
+            id: "record", systemImage: "record.circle", title: "Record, or let it log itself",
+            message: "Press **Record** (`⌘R`) when you start and **Stop** when you're done. "
+                + "Or link a tracked app to a project under **Tracked Apps**: its hours are then logged automatically."),
+        OnboardingPage(
+            id: "more", systemImage: "chart.bar.xaxis", title: "Your hours at a glance",
+            message: "**Projects** shows your monthly totals and exports them. **Overview** shows your whole year. "
+                + "And the **menu bar icon** keeps your timeline one click away.",
+            footnote: "You can reopen this introduction via **Help ▸ Welcome to Timelane**."),
     ]
 }
