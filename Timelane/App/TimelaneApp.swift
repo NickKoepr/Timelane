@@ -15,6 +15,7 @@ struct TimelaneApp: App {
         }
         .defaultSize(width: 900, height: 750)
         .windowResizability(.contentMinSize)
+        .commands { TimeEntryUndoCommands(history: environment.timeEntryHistory) }
 
         // Same clock as the app icon (template image from Tools/generate-app-icon.swift);
         // a red dot is added while the Record timer runs.

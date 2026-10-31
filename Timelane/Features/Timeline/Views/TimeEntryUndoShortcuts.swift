@@ -1,6 +1,7 @@
 import SwiftUI
 
-/// ⌘Z / ⇧⌘Z for logged hours. Registered once in hidden buttons (see `DayNavigationShortcuts`).
+/// ⌘Z / ⇧⌘Z for logged hours in the menu bar panel. Registered once in hidden buttons (see `DayNavigationShortcuts`).
+/// The main window uses Edit ▸ Undo / Redo instead (`TimeEntryUndoCommands`).
 struct TimeEntryUndoShortcuts: View {
     let history: TimeEntryHistory
 
