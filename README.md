@@ -105,6 +105,10 @@ Optional and off by default. Turn it on in *Timelane ▸ Settings…* (⌘,) on 
 
 This is a snapshot backup, not a live sync between Macs. It needs the iCloud capability (CloudKit) for the app; CI builds strip it (`CODE_SIGN_ENTITLEMENTS=`).
 
+## Releasing
+
+Publishing a release or pre-release on GitHub runs `.github/workflows/app-store-release.yml`: it archives Timelane, signs it for the Mac App Store and uploads it to App Store Connect (it shows up in TestFlight after processing). The tag is the version, as a plain number like `1.6` or `1.5.1`; the build number is the workflow run number plus `BUILD_NUMBER_OFFSET`. Turning an existing pre-release into a full release does not upload again. The workflow needs the repository secrets `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, `DIST_CERT_P12_BASE64`, `INSTALLER_CERT_P12_BASE64`, `P12_PASSWORD`, `PROVISIONING_PROFILE_BASE64` and `KEYCHAIN_PASSWORD`.
+
 ## Website
 
 The product website lives in `website/` (static HTML + CSS, no build step) and is deployed to GitHub Pages by `.github/workflows/pages.yml` on pushes to `main` that touch it. See `website/README.md`.
