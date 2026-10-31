@@ -23,9 +23,10 @@ struct MenuBarDayBar: View {
                 TimelineZoomControls(zoomState: viewModel.zoomState, apply: changeZoom)
             }
             HStack {
-                total("Registered", viewModel.registeredTotal)
-                Spacer()
+                // Same order as the lanes below: tracked apps left, logged hours right.
                 total("Tracked", viewModel.trackedTotal)
+                Spacer()
+                total("Registered", viewModel.registeredTotal)
             }
         }
         .padding(.horizontal, 12)
