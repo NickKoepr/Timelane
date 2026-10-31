@@ -20,6 +20,7 @@ struct TimelaneApp: App {
                 Button("About Timelane") { AboutPanel.show() }
             }
             TimeEntryUndoCommands(history: environment.timeEntryHistory)
+            OnboardingCommands(environment: environment)
         }
 
         // Same clock as the app icon (template image from Tools/generate-app-icon.swift);

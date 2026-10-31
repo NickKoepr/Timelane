@@ -37,7 +37,7 @@ open build/DerivedData/Build/Products/Debug/Timelane.app
 
 ```
 Timelane/                     app target (folder is a synchronized group: new files are picked up automatically)
-  App/                        TimelaneApp (@main: Window + MenuBarExtra), AppDelegate (keep-alive, start tracker),
+  App/                        TimelaneApp (@main: Window + MenuBarExtra; commands: undo/redo, Help ▸ Welcome), AppDelegate (keep-alive, start tracker),
                               AppEnvironment (composition root: DB, repositories, tracker, editor, timer), WindowMetrics
   Models/                     plain value types: Project, TimeEntry, AppSession, TrackedApp, ProjectColor, ProjectMonthTotal
   Database/                   AppDatabase (live / inMemory, ValueObservation → AsyncStream, DEBUG reset), Migrations (v1, v2),
@@ -68,6 +68,7 @@ Timelane/                     app target (folder is a synchronized group: new fi
                               TimeEntryUndoShortcuts (⌘Z / ⇧⌘Z)
     Projects/                 ProjectsViewModel, ProjectFormViewModel + views
     Overview/                 OverviewViewModel (+Derived), yearly heatmap, stat tiles, monthly chart, project list
+    Onboarding/               Welcome carousel (first launch + Help ▸ Welcome to Timelane): OnboardingPage, Store, ViewModel, views
     Settings/                 Settings window (⌘,): BackupSettingsViewModel + SettingsView/BackupSettingsView
     TrackedApps/              TrackedAppsViewModel, AddTrackedAppViewModel + views (incl. NSOpenPanel wrapper)
   MenuBar/                    MenuBarContentView, MenuBarViewModel, status line, day bar, MenuBarFormPopup, PanelOpenObserver
