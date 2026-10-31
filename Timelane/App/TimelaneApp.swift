@@ -15,6 +15,11 @@ struct TimelaneApp: App {
         }
         .defaultSize(width: 900, height: 750)
         .windowResizability(.contentMinSize)
+        .commands {
+            CommandGroup(replacing: .appInfo) {
+                Button("About Timelane") { AboutPanel.show() }
+            }
+        }
 
         // Same clock as the app icon (template image from Tools/generate-app-icon.swift);
         // a red dot is added while the Record timer runs.
