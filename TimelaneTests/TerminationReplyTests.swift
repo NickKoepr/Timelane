@@ -25,10 +25,12 @@ struct TerminationReplyTests {
         #expect(counter.value == 1)
     }
 
+    /// Polls instead of sleeping a fixed time: on a busy CI runner the global queue can run the
+    /// 50 ms timeout well after 300 ms.
     @Test func timeoutDeliversWhenNeverSent() async throws {
         let counter = Counter()
         _ = TerminationReply(timeout: 0.05) { counter.increment() }
-        try await Task.sleep(for: .milliseconds(300))
+        for _ in 0..<500 where counter.value == 0 { try await Task.sleep(for: .milliseconds(10)) }
         #expect(counter.value == 1)
     }
 
