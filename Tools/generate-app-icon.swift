@@ -1,7 +1,7 @@
 #!/usr/bin/env swift
-// Generates the Timelane app icon at every macOS size, and optionally the menu bar icon
-// (the same clock as a template image, so the menu bar and the app icon match).
-// Usage: swift Tools/generate-app-icon.swift <appiconset-dir> [<menubar-imageset-dir>]
+// Generates the Timelane app icon at every macOS size, and optionally the menu bar icon and the clock mark
+// (the same clock as template images: a PNG for the menu bar, an SVG for in-app use), so they all match.
+// Usage: swift Tools/generate-app-icon.swift <appiconset-dir> [<menubar-imageset-dir> [<clockmark-imageset-dir>]]
 import AppKit
 
 let canvas: CGFloat = 1024
@@ -33,29 +33,58 @@ func draw(in ctx: CGContext, scale: CGFloat = 1) {
     drawClock(in: ctx, color: color(clockHex))
 }
 
+/// Clock geometry on the 1024 canvas, shared by the bitmap drawing and the SVG.
+let clockCenter = CGPoint(x: 512, y: 512)
+let ringWidth: CGFloat = 60
+let outerRadius: CGFloat = 280
+/// Hands at 10:10 (angles counter-clockwise from 3 o'clock): hour hand towards 10, minute hand towards 2.
+let clockHands: [(angle: CGFloat, length: CGFloat, width: CGFloat)] = [
+    (.pi / 2 + .pi / 3, 125, 50),
+    (.pi / 2 - .pi / 3, 170, 44),
+]
+/// Large enough to cover the joint of both hands, so the centre reads as one smooth dot.
+let centreDotRadius: CGFloat = 42
+
 /// The clock alone, centred on (512, 512) with an outer radius of 280.
 func drawClock(in ctx: CGContext, color clock: CGColor) {
-    let center = CGPoint(x: 512, y: 512)
-    let ringWidth: CGFloat = 60
-    let outerRadius: CGFloat = 280
+    let center = clockCenter
     ctx.setStrokeColor(clock)
     ctx.setLineWidth(ringWidth)
     ctx.strokeEllipse(in: CGRect(x: center.x - outerRadius + ringWidth / 2, y: center.y - outerRadius + ringWidth / 2,
                                  width: (outerRadius - ringWidth / 2) * 2, height: (outerRadius - ringWidth / 2) * 2))
 
-    // Hands at 10:10 with round caps, plus centre dot.
+    // Hands with round caps, plus centre dot.
     ctx.setLineCap(.round)
-    func hand(angle: CGFloat, length: CGFloat, width: CGFloat) {
-        ctx.setLineWidth(width)
+    for hand in clockHands {
+        ctx.setLineWidth(hand.width)
         ctx.move(to: center)
-        ctx.addLine(to: CGPoint(x: center.x + cos(angle) * length, y: center.y + sin(angle) * length))
+        ctx.addLine(to: CGPoint(x: center.x + cos(hand.angle) * hand.length, y: center.y + sin(hand.angle) * hand.length))
         ctx.strokePath()
     }
-    hand(angle: .pi / 2 + .pi / 3, length: 125, width: 50)  // hour hand towards 10
-    hand(angle: .pi / 2 - .pi / 3, length: 170, width: 44)  // minute hand towards 2
     ctx.setFillColor(clock)
-    // Large enough to cover the joint of both hands, so the centre reads as one smooth dot.
-    ctx.fillEllipse(in: CGRect(x: center.x - 42, y: center.y - 42, width: 84, height: 84))
+    ctx.fillEllipse(in: CGRect(x: center.x - centreDotRadius, y: center.y - centreDotRadius,
+                               width: centreDotRadius * 2, height: centreDotRadius * 2))
+}
+
+/// The clock as a black SVG cropped to its outer circle (y flipped: SVG's origin is top-left).
+func clockSVG() -> Data {
+    func n(_ value: CGFloat) -> String { String(format: "%.2f", value) }
+    let c = CGPoint(x: clockCenter.x, y: canvas - clockCenter.y)
+    let hands = clockHands.map { hand in
+        "<line x1=\"\(n(c.x))\" y1=\"\(n(c.y))\" x2=\"\(n(c.x + cos(hand.angle) * hand.length))\" "
+            + "y2=\"\(n(c.y - sin(hand.angle) * hand.length))\" stroke-width=\"\(n(hand.width))\"/>"
+    }
+    let svg = """
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="\(n(c.x - outerRadius)) \(n(c.y - outerRadius)) \(n(outerRadius * 2)) \(n(outerRadius * 2))">
+      <g stroke="#000" fill="none" stroke-linecap="round">
+        <circle cx="\(n(c.x))" cy="\(n(c.y))" r="\(n(outerRadius - ringWidth / 2))" stroke-width="\(n(ringWidth))"/>
+        \(hands.joined(separator: "\n    "))
+      </g>
+      <circle cx="\(n(c.x))" cy="\(n(c.y))" r="\(n(centreDotRadius))"/>
+    </svg>
+
+    """
+    return Data(svg.utf8)
 }
 
 func render(pixels: Int, drawing: (CGContext) -> Void) -> Data {
@@ -88,8 +117,9 @@ func menuBarIcon(pixels: Int) -> Data {
     }
 }
 
-guard (2...3).contains(CommandLine.arguments.count) else {
-    FileHandle.standardError.write(Data("usage: generate-app-icon.swift <appiconset-dir> [<menubar-imageset-dir>]\n".utf8))
+guard (2...4).contains(CommandLine.arguments.count) else {
+    FileHandle.standardError.write(Data(
+        "usage: generate-app-icon.swift <appiconset-dir> [<menubar-imageset-dir> [<clockmark-imageset-dir>]]\n".utf8))
     exit(1)
 }
 let output = URL(fileURLWithPath: CommandLine.arguments[1], isDirectory: true)
@@ -99,10 +129,28 @@ for size in sizes {
 }
 print("Wrote \(sizes.count) icons to \(output.path)")
 
-if CommandLine.arguments.count == 3 {
+if CommandLine.arguments.count >= 3 {
     let menuBar = URL(fileURLWithPath: CommandLine.arguments[2], isDirectory: true)
     try FileManager.default.createDirectory(at: menuBar, withIntermediateDirectories: true)
     try menuBarIcon(pixels: 18).write(to: menuBar.appendingPathComponent("menubar_18.png"))
     try menuBarIcon(pixels: 36).write(to: menuBar.appendingPathComponent("menubar_36.png"))
     print("Wrote menu bar icon to \(menuBar.path)")
+}
+
+if CommandLine.arguments.count == 4 {
+    let clockMark = URL(fileURLWithPath: CommandLine.arguments[3], isDirectory: true)
+    try FileManager.default.createDirectory(at: clockMark, withIntermediateDirectories: true)
+    try clockSVG().write(to: clockMark.appendingPathComponent("clockmark.svg"))
+    let contents = """
+    {
+      "images" : [
+        { "filename" : "clockmark.svg", "idiom" : "universal" }
+      ],
+      "info" : { "author" : "xcode", "version" : 1 },
+      "properties" : { "preserves-vector-representation" : true, "template-rendering-intent" : "template" }
+    }
+
+    """
+    try Data(contents.utf8).write(to: clockMark.appendingPathComponent("Contents.json"))
+    print("Wrote clock mark to \(clockMark.path)")
 }

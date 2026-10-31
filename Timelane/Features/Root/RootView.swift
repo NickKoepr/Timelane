@@ -17,6 +17,10 @@ struct RootView: View {
         .frame(minWidth: WindowMetrics.minimumSize.width, minHeight: WindowMetrics.minimumSize.height)
         .background { sidebarShortcuts }
         .errorAlert(Bindable(environment.timeEntryHistory).errorMessage)
+        .sheet(isPresented: Bindable(environment).isShowingOnboarding) {
+            OnboardingView(viewModel: environment.makeOnboardingViewModel(),
+                           onClose: { environment.isShowingOnboarding = false })
+        }
         .onChange(of: environment.requestedSidebarItem, initial: true) {
             guard let item = environment.requestedSidebarItem else { return }
             selection = item

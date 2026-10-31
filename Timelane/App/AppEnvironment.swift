@@ -21,6 +21,9 @@ final class AppEnvironment {
     var requestedSidebarItem: SidebarItem?
     /// Set by the Overview heatmap to open the Timeline on a specific day; `TimelineScreen` consumes it.
     var requestedTimelineDay: Date?
+    /// Whether the welcome carousel is presented by `RootView`; on for a first launch, or via Help.
+    var isShowingOnboarding = false
+    let onboardingStore: OnboardingStore
 
     /// Id of the entry the auto logger is growing; the timelines draw it live.
     let liveAutoEntry = LiveAutoEntry()
@@ -29,8 +32,10 @@ final class AppEnvironment {
          autoLogStore: any AutoLogStateStore = InMemoryAutoLogStateStore(),
          backupStore: any CloudBackupStore = InMemoryCloudBackupStore(),
          backupSettings: any BackupSettingsStore = InMemoryBackupSettingsStore(),
-         pendingRestore: PendingRestore = .temporary()) {
+         pendingRestore: PendingRestore = .temporary(),
+         onboardingStore: OnboardingStore = .temporary()) {
         self.database = database
+        self.onboardingStore = onboardingStore
         self.backup = Self.makeBackup(database: database, store: backupStore, settings: backupSettings,
                                       pendingRestore: pendingRestore)
         self.recordingTimer = RecordingTimer(store: recordingTimerStore)
@@ -83,10 +88,13 @@ final class AppEnvironment {
                 // The saved auto-log entry id refers to the old database; in the restored one it may be another entry.
                 autoLogStore.state = AutoLogState()
             }
-            return AppEnvironment(database: try AppDatabase.live(), recordingTimerStore: UserDefaultsRecordingTimerStore(),
+            let onboardingStore = OnboardingStore()
+            let environment = AppEnvironment(database: try AppDatabase.live(), recordingTimerStore: UserDefaultsRecordingTimerStore(),
                                   autoLogStore: autoLogStore,
                                   backupStore: CloudKitBackupStore(), backupSettings: UserDefaultsBackupSettingsStore(),
-                                  pendingRestore: pendingRestore)
+                                  pendingRestore: pendingRestore, onboardingStore: onboardingStore)
+            environment.isShowingOnboarding = !onboardingStore.hasCompleted
+            return environment
         } catch {
             fatalError("Could not open the Timelane database: \(error)")
         }
