@@ -64,68 +64,42 @@ jobs:
           sudo xcode-select -s "$XCODE/Contents/Developer"
           xcodebuild -version
 
-      # Throw-away keychain with the distribution + installer certificates, and the
-      # Mac App Store provisioning profile (must include the iCloud/CloudKit capability).
-      - name: Install signing certificates and profile
+      # Cloud signing: App Store Connect manages the distribution and installer
+      # certificates, so only the API key is needed for those. The archive step is
+      # still signed for development first, so it needs one long-lived Apple
+      # Development certificate; without it Xcode would create a new one every run.
+      # No -allowProvisioningDeviceRegistration: the runner is never registered.
+      - name: Install development certificate
         id: signing
         env:
-          DIST_CERT_P12_BASE64: ${{ secrets.DIST_CERT_P12_BASE64 }}
-          INSTALLER_CERT_P12_BASE64: ${{ secrets.INSTALLER_CERT_P12_BASE64 }}
-          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
-          PROVISIONING_PROFILE_BASE64: ${{ secrets.PROVISIONING_PROFILE_BASE64 }}
+          DEV_CERT_P12_BASE64: ${{ secrets.DEV_CERT_P12_BASE64 }}
+          DEV_CERT_P12_PASSWORD: ${{ secrets.DEV_CERT_P12_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
         run: |
           KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
-          echo -n "$DIST_CERT_P12_BASE64" | base64 --decode -o "$RUNNER_TEMP/dist.p12"
-          echo -n "$INSTALLER_CERT_P12_BASE64" | base64 --decode -o "$RUNNER_TEMP/installer.p12"
-          echo -n "$PROVISIONING_PROFILE_BASE64" | base64 --decode -o "$RUNNER_TEMP/profile.provisionprofile"
-
+          echo -n "$DEV_CERT_P12_BASE64" | base64 --decode -o "$RUNNER_TEMP/dev.p12"
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          for P12 in dist installer; do
-            security import "$RUNNER_TEMP/$P12.p12" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
-          done
+          security import "$RUNNER_TEMP/dev.p12" -P "$DEV_CERT_P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security list-keychain -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
-
-          # Installer certificates are called "Mac Installer Distribution" (new) or
-          # "3rd Party Mac Developer Installer" (old); use whichever was imported.
-          INSTALLER_IDENTITY=$(security find-identity -v -p basic "$KEYCHAIN" \
-            | grep -oE '"(Mac Installer Distribution|3rd Party Mac Developer Installer)[^"]*"' \
-            | head -n 1 | tr -d '"')
-          if [ -z "$INSTALLER_IDENTITY" ]; then
-            echo "::error::No Mac Installer Distribution certificate in INSTALLER_CERT_P12_BASE64"
-            exit 1
-          fi
-
-          PROFILE_PLIST="$RUNNER_TEMP/profile.plist"
-          security cms -D -i "$RUNNER_TEMP/profile.provisionprofile" > "$PROFILE_PLIST"
-          PROFILE_UUID=$(plutil -extract UUID raw "$PROFILE_PLIST")
-          PROFILE_NAME=$(plutil -extract Name raw "$PROFILE_PLIST")
-          for DIR in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
-                     "$HOME/Library/MobileDevice/Provisioning Profiles"; do
-            mkdir -p "$DIR"
-            cp "$RUNNER_TEMP/profile.provisionprofile" "$DIR/$PROFILE_UUID.provisionprofile"
-          done
-
+          rm "$RUNNER_TEMP/dev.p12"
           echo "keychain=$KEYCHAIN" >> "$GITHUB_OUTPUT"
-          echo "installer_identity=$INSTALLER_IDENTITY" >> "$GITHUB_OUTPUT"
-          echo "profile_name=$PROFILE_NAME" >> "$GITHUB_OUTPUT"
 
       - name: Install App Store Connect API key
+        id: apikey
         env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_PRIVATE_KEY: ${{ secrets.ASC_PRIVATE_KEY }}
         run: |
-          mkdir -p "$HOME/.appstoreconnect/private_keys"
-          printf '%s\n' "$ASC_PRIVATE_KEY" > "$HOME/.appstoreconnect/private_keys/AuthKey_$ASC_KEY_ID.p8"
+          KEY="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s\n' "$ASC_PRIVATE_KEY" > "$KEY"
+          echo "path=$KEY" >> "$GITHUB_OUTPUT"
 
-      # Manual signing for the archive only. The profile goes through
-      # TIMELANE_RELEASE_PROVISIONING_PROFILE (app target, Release) instead of
-      # PROVISIONING_PROFILE_SPECIFIER, which would also hit the GRDB package
-      # target and fail. Local builds keep automatic signing.
       - name: Archive
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           xcodebuild archive \
             -project Timelane.xcodeproj \
@@ -136,52 +110,43 @@ jobs:
             -derivedDataPath build/DerivedData \
             -skipPackagePluginValidation \
             -skipMacroValidation \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath '${{ steps.apikey.outputs.path }}' \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
             MARKETING_VERSION='${{ steps.version.outputs.marketing }}' \
-            CURRENT_PROJECT_VERSION='${{ steps.version.outputs.build }}' \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY='Apple Distribution' \
-            OTHER_CODE_SIGN_FLAGS='--keychain ${{ steps.signing.outputs.keychain }}' \
-            TIMELANE_RELEASE_PROVISIONING_PROFILE='${{ steps.signing.outputs.profile_name }}'
+            CURRENT_PROJECT_VERSION='${{ steps.version.outputs.build }}'
 
-      - name: Export signed package
+      # Re-signs with the cloud-managed distribution certificate and uploads
+      # straight to App Store Connect (it appears in TestFlight after processing).
+      - name: Export and upload to App Store Connect
         env:
-          PROFILE_NAME: ${{ steps.signing.outputs.profile_name }}
-          INSTALLER_IDENTITY: ${{ steps.signing.outputs.installer_identity }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
         run: |
           PLIST="$RUNNER_TEMP/ExportOptions.plist"
           plutil -create xml1 "$PLIST"
           plutil -insert method -string app-store-connect "$PLIST"
-          plutil -insert destination -string export "$PLIST"
+          plutil -insert destination -string upload "$PLIST"
           plutil -insert teamID -string R5Q4D5KC5S "$PLIST"
-          plutil -insert signingStyle -string manual "$PLIST"
-          plutil -insert signingCertificate -string 'Apple Distribution' "$PLIST"
-          plutil -insert installerSigningCertificate -string "$INSTALLER_IDENTITY" "$PLIST"
-          plutil -insert provisioningProfiles -dictionary "$PLIST"
-          plutil -insert provisioningProfiles.nl\\.nickkoepr\\.timelane -string "$PROFILE_NAME" "$PLIST"
+          plutil -insert signingStyle -string automatic "$PLIST"
+          plutil -insert manageAppVersionAndBuildNumber -bool NO "$PLIST"
           plutil -insert uploadSymbols -bool YES "$PLIST"
 
           xcodebuild -exportArchive \
             -archivePath build/Timelane.xcarchive \
             -exportOptionsPlist "$PLIST" \
-            -exportPath build/Export
-          ls -l build/Export
-
-      - name: Upload to App Store Connect
-        env:
-          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
-          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
-        run: |
-          xcrun altool --upload-app \
-            --type macos \
-            --file build/Export/Timelane.pkg \
-            --apiKey "$ASC_KEY_ID" \
-            --apiIssuer "$ASC_ISSUER_ID"
+            -exportPath build/Export \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath '${{ steps.apikey.outputs.path }}' \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID"
           echo "Uploaded to App Store Connect; it appears in TestFlight after processing." >> "$GITHUB_STEP_SUMMARY"
 
-      - name: Clean up keychain and keys
+      - name: Clean up keychain and key
         if: always()
         run: |
           if [ -n "${{ steps.signing.outputs.keychain }}" ]; then
             security delete-keychain "${{ steps.signing.outputs.keychain }}" || true
           fi
-          rm -rf "$HOME/.appstoreconnect" "$RUNNER_TEMP"/*.p12 "$RUNNER_TEMP"/*.provisionprofile
+          rm -f "$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/dev.p12"

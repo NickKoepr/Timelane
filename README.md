@@ -107,7 +107,7 @@ This is a snapshot backup, not a live sync between Macs. It needs the iCloud cap
 
 ## Releasing
 
-Publishing a release or pre-release on GitHub runs `.github/workflows/app-store-release.yml`: it archives Timelane, signs it for the Mac App Store and uploads it to App Store Connect (it shows up in TestFlight after processing). The tag is the version, as a plain number like `1.6` or `1.5.1`; the build number is the workflow run number plus `BUILD_NUMBER_OFFSET`. Turning an existing pre-release into a full release does not upload again. The workflow needs the repository secrets `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY`, `DIST_CERT_P12_BASE64`, `INSTALLER_CERT_P12_BASE64`, `P12_PASSWORD`, `PROVISIONING_PROFILE_BASE64` and `KEYCHAIN_PASSWORD`.
+Publishing a release or pre-release on GitHub runs `.github/workflows/app-store-release.yml`: it archives Timelane, signs it for the Mac App Store and uploads it to App Store Connect (it shows up in TestFlight after processing). The tag is the version, as a plain number like `1.6` or `1.5.1`; the build number is the workflow run number plus `BUILD_NUMBER_OFFSET`. Turning an existing pre-release into a full release does not upload again. Signing uses Xcode cloud signing (App Store Connect manages the distribution certificates). The workflow needs the repository secrets `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_PRIVATE_KEY` (App Store Connect API key), `DEV_CERT_P12_BASE64`, `DEV_CERT_P12_PASSWORD` (an Apple Development certificate for the archive step) and `KEYCHAIN_PASSWORD`.
 
 ## Website
 
