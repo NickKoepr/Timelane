@@ -19,6 +19,7 @@ struct TimelaneApp: App {
             CommandGroup(replacing: .appInfo) {
                 Button("About Timelane") { AboutPanel.show() }
             }
+            TimeEntryUndoCommands(history: environment.timeEntryHistory)
         }
 
         // Same clock as the app icon (template image from Tools/generate-app-icon.swift);
