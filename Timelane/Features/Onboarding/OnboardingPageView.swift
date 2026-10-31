@@ -33,7 +33,7 @@ struct OnboardingPageView: View {
     @ViewBuilder private var icon: some View {
         switch page.icon {
         case .symbol(let name): Image(systemName: name).font(.system(size: 56))
-        case .appClock: OnboardingClockMark().frame(width: 64, height: 64)
+        case .appClock: Image("ClockMark").resizable().frame(width: 64, height: 64)
         }
     }
 }

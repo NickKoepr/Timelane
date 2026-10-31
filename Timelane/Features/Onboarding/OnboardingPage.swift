@@ -4,7 +4,7 @@ import Foundation
 struct OnboardingPage: Identifiable, Equatable {
     enum Icon: Equatable {
         case symbol(String)
-        /// The clock from the app icon (`OnboardingClockMark`).
+        /// The clock from the app icon (`ClockMark` asset, from `Tools/generate-app-icon.swift`).
         case appClock
     }
 
