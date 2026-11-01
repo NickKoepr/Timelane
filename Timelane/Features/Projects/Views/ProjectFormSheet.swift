@@ -11,6 +11,18 @@ struct ProjectFormSheet: View {
             TextField("Name", text: $viewModel.name)
                 .textFieldStyle(.roundedBorder)
                 .onSubmit(save)
+            VStack(alignment: .leading, spacing: 4) {
+                TextField("ID (optional)", text: $viewModel.customId)
+                    .textFieldStyle(.roundedBorder)
+                    .onSubmit(save)
+                if viewModel.customIdTooLong {
+                    Text("An ID can be at most \(ProjectCustomId.maxLength) characters.")
+                        .font(.caption).foregroundStyle(.red)
+                } else {
+                    Text("Your own reference, e.g. a customer or order code.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
             ColorPickerRow(selectedHex: $viewModel.colorHex)
             if let message = viewModel.errorMessage {
                 Text(message).font(.callout).foregroundStyle(.red)

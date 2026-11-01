@@ -40,7 +40,7 @@ struct YearNavigationBar: View {
                 Text("All projects").tag(Int64?.none)
                 Divider()
                 ForEach(projects) { project in
-                    Text(project.isArchived ? "\(project.name) (archived)" : project.name).tag(project.id)
+                    Text(project.isArchived ? "\(project.titleWithCustomId) (archived)" : project.titleWithCustomId).tag(project.id)
                 }
             }
             .pickerStyle(.menu)

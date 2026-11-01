@@ -7,7 +7,7 @@ extension AppEnvironment {
         do {
             let database = try AppDatabase.inMemory()
             try database.writer.write { db in
-                var alpha = Project(name: "Project A", colorHex: "#4F8EF7")
+                var alpha = Project(name: "Project A", colorHex: "#4F8EF7", customId: "ACME-042")
                 var beta = Project(name: "Internal / meetings", colorHex: "#34C759")
                 try alpha.insert(db)
                 try beta.insert(db)

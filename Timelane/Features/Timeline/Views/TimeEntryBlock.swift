@@ -23,22 +23,34 @@ struct TimeEntryBlock: View {
         entry.title ?? project?.name ?? "Unknown project"
     }
 
+    private var projectName: String { project?.name ?? "Unknown project" }
+
     /// Lines under the first one, in priority order; only as many as fit are shown.
-    private var detailLines: [String] {
-        var lines: [String] = []
-        if entry.title != nil { lines.append(project?.name ?? "Unknown project") }
-        lines.append("\(timeText) · \(DurationFormatter.short(duration))")
-        if let note = entry.note, !note.isEmpty { lines.append(note) }
+    private var detailLines: [(text: String, isProject: Bool)] {
+        var lines: [(String, Bool)] = []
+        if entry.title != nil { lines.append((projectName, true)) }
+        lines.append(("\(timeText) · \(DurationFormatter.short(duration))", false))
+        if let note = entry.note, !note.isEmpty { lines.append((note, false)) }
         return lines
+    }
+
+    @ViewBuilder private func line(_ text: String, isProject: Bool, font: Font) -> some View {
+        if isProject {
+            ProjectNameWithBadge(name: text, customId: project?.customId, style: .onTint, badgeFont: .system(size: 9))
+                .font(font)
+        } else {
+            Text(text).font(font).lineLimit(1)
+        }
     }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             if height >= 15 {
-                Text(primaryText).font(height >= 20 ? .caption.weight(.semibold) : .caption2.weight(.semibold)).lineLimit(1)
+                line(primaryText, isProject: entry.title == nil,
+                     font: height >= 20 ? .caption.weight(.semibold) : .caption2.weight(.semibold))
             }
-            ForEach(Array(detailLines.prefix(max(0, Int((height - 18) / 15))).enumerated()), id: \.offset) { _, line in
-                Text(line).font(.caption2).lineLimit(1).opacity(0.9)
+            ForEach(Array(detailLines.prefix(max(0, Int((height - 18) / 15))).enumerated()), id: \.offset) { _, item in
+                line(item.text, isProject: item.isProject, font: .caption2).opacity(0.9)
             }
         }
         .foregroundStyle(.white)
@@ -59,7 +71,7 @@ struct TimeEntryBlock: View {
             Button("Delete", role: .destructive, action: onDelete)
         }
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(primaryText), \(timeText)")
+        .accessibilityLabel("\(entry.title ?? project?.titleWithCustomId ?? "Unknown project"), \(timeText)")
         .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 

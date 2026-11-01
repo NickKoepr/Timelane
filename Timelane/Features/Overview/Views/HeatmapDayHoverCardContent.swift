@@ -14,7 +14,7 @@ struct HeatmapDayHoverCardContent: View {
                     ForEach(detail.rows, id: \.projectId) { row in
                         HStack(spacing: 6) {
                             Circle().fill(row.colorHex.map(ProjectColor.color(hex:)) ?? .clear).frame(width: 8, height: 8)
-                            Text(row.name).lineLimit(1)
+                            ProjectNameWithBadge(name: row.name, customId: row.customId, badgeFont: .system(size: 9))
                             if row.isArchived { Text("Archived").foregroundStyle(.secondary) }
                             Spacer(minLength: 4)
                             Text(DurationFormatter.short(row.seconds)).monospacedDigit()

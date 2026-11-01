@@ -9,7 +9,7 @@ struct ProjectRow: View {
                 .fill(total.project.color)
                 .frame(width: 12, height: 12)
                 .fixedSize()
-            Text(total.project.name).lineLimit(1).truncationMode(.tail)
+            ProjectNameWithBadge(name: total.project.name, customId: total.project.customId, badgeFont: .caption)
             if total.project.isArchived {
                 Text("Archived")
                     .font(.caption)
@@ -26,7 +26,7 @@ struct ProjectRow: View {
         .padding(.vertical, 3)
         .contentShape(Rectangle())
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(total.project.name), \(DurationFormatter.short(total.totalSeconds))")
+        .accessibilityLabel("\(total.project.titleWithCustomId), \(DurationFormatter.short(total.totalSeconds))")
     }
 }
 

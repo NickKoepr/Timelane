@@ -10,8 +10,9 @@ struct EntryHoverCardContent: View {
             if let title = entry.title { Text(title).font(.headline).lineLimit(2) }
             HStack(spacing: 6) {
                 Circle().fill(project?.color ?? .gray).frame(width: 9, height: 9)
-                Text(project?.name ?? "Unknown project")
-                    .font(entry.title == nil ? .headline : .subheadline).lineLimit(1)
+                ProjectNameWithBadge(name: project?.name ?? "Unknown project", customId: project?.customId,
+                                     badgeFont: .caption)
+                    .font(entry.title == nil ? .headline : .subheadline)
             }
             Text("\(range.start.formatted(date: .omitted, time: .shortened)) – \(range.end.formatted(date: .omitted, time: .shortened))")
                 .font(.caption.monospacedDigit())

@@ -15,7 +15,7 @@ struct ProjectSearchList: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 2) {
                     ForEach(viewModel.search.filtered) { project in
-                        row(color: project.color, title: project.name,
+                        row(color: project.color, title: project.name, customId: project.customId,
                             highlighted: project.id == viewModel.search.highlightedId,
                             chosen: project.id == viewModel.form.projectId)
                             .onTapGesture { viewModel.choose(project) }
@@ -54,12 +54,12 @@ struct ProjectSearchList: View {
         Text(text).font(.callout).foregroundStyle(.secondary).padding(6)
     }
 
-    private func row(color: Color? = nil, symbol: String? = nil, title: String,
+    private func row(color: Color? = nil, symbol: String? = nil, title: String, customId: String? = nil,
                      highlighted: Bool, chosen: Bool) -> some View {
         HStack(spacing: 8) {
             if let color { Circle().fill(color).frame(width: 10, height: 10) }
             if let symbol { Image(systemName: symbol).foregroundStyle(.secondary) }
-            Text(title).lineLimit(1)
+            ProjectNameWithBadge(name: title, customId: customId, badgeFont: .caption)
             Spacer()
             if chosen { Image(systemName: "checkmark").foregroundStyle(Color.accentColor) }
         }

@@ -7,6 +7,7 @@ struct OverviewDayDetail: Hashable, Sendable {
         let name: String             // project name, "Unknown project", or "+3 more"
         let colorHex: String?        // nil for the "+N more" row
         let isArchived: Bool
+        var customId: String? = nil  // memberwise default keeps the "+N more" row unchanged
         let seconds: TimeInterval
         let isHighlighted: Bool      // the filtered project
     }
@@ -26,7 +27,7 @@ struct OverviewDayDetail: Hashable, Sendable {
         let all = secondsByProject.filter { $0.value > 0 }.map { id, seconds -> Row in
             let project = byId[id]
             return Row(projectId: id, name: project?.name ?? "Unknown project", colorHex: project?.colorHex ?? "#8E8E93",
-                       isArchived: project?.isArchived ?? false, seconds: seconds,
+                       isArchived: project?.isArchived ?? false, customId: project?.customId, seconds: seconds,
                        isHighlighted: id == highlightedProjectId)
         }
         .sorted {
