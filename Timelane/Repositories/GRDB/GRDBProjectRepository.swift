@@ -23,6 +23,12 @@ struct GRDBProjectRepository: ProjectRepository {
     func save(_ project: Project) async throws -> Project {
         do {
             return try await database.writer.write { db in
+                if let customId = project.customId {
+                    let clash = try Int.fetchOne(db, sql: """
+                        SELECT COUNT(*) FROM project WHERE customId = ? COLLATE NOCASE AND id IS NOT ?
+                        """, arguments: [customId, project.id]) ?? 0
+                    if clash > 0 { throw RepositoryError.duplicateCustomId }
+                }
                 var saved = project
                 try saved.save(db)
                 return saved

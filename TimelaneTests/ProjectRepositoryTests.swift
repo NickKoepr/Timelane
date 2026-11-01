@@ -84,4 +84,33 @@ struct ProjectRepositoryTests {
         let remaining = try await projects.monthTotals(in: .month(of: date(2026, 11, 3), calendar: cal))
         #expect(remaining.count == 1)
     }
+
+    @Test func customIdRoundTripsAndNilIsAllowedRepeatedly() async throws {
+        let saved = try await projects.save(Project(name: "Alpha", colorHex: "#4F8EF7", customId: "ACME-042"))
+        _ = try await projects.save(Project(name: "Beta", colorHex: "#4F8EF7"))
+        _ = try await projects.save(Project(name: "Gamma", colorHex: "#4F8EF7"))
+        let all = try await projects.projects(includeArchived: true)
+        #expect(all.first { $0.id == saved.id }?.customId == "ACME-042")
+        #expect(all.filter { $0.customId == nil }.count == 2)
+    }
+
+    @Test func duplicateCustomIdIsRejectedCaseInsensitively() async throws {
+        _ = try await projects.save(Project(name: "Alpha", colorHex: "#4F8EF7", customId: "ACME-042"))
+        await #expect(throws: RepositoryError.duplicateCustomId) {
+            _ = try await projects.save(Project(name: "Beta", colorHex: "#4F8EF7", customId: "acme-042"))
+        }
+        await #expect(throws: RepositoryError.duplicateName) {
+            _ = try await projects.save(Project(name: "alpha", colorHex: "#4F8EF7", customId: "OTHER"))
+        }
+    }
+
+    @Test func editingKeepsOwnIdAndClearingStoresNil() async throws {
+        var project = try await projects.save(Project(name: "Alpha", colorHex: "#4F8EF7", customId: "ACME-042"))
+        project.name = "Alpha 2"
+        project = try await projects.save(project)
+        #expect(project.customId == "ACME-042")
+        project.customId = nil
+        _ = try await projects.save(project)
+        #expect(try await projects.projects(includeArchived: true).first?.customId == nil)
+    }
 }
