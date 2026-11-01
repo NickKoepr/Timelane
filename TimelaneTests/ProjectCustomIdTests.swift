@@ -18,4 +18,16 @@ struct ProjectCustomIdTests {
         let long = String(repeating: "a", count: 100)
         #expect(ProjectCustomId.normalized(long) == long)
     }
+
+    @Test func shortensLongIdsForDisplay() {
+        #expect(ProjectCustomId.shortened("ACME-042") == "ACME-042")
+        #expect(ProjectCustomId.shortened(String(repeating: "a", count: 20)) == String(repeating: "a", count: 20))
+        #expect(ProjectCustomId.shortened(String(repeating: "a", count: 21)) == String(repeating: "a", count: 20) + "…")
+    }
+
+    @Test func shortTitleShortensOnlyTheId() {
+        let project = Project(name: "Website", colorHex: "#4F8EF7", customId: String(repeating: "x", count: 30))
+        #expect(project.shortTitleWithCustomId == "Website (\(String(repeating: "x", count: 20))…)")
+        #expect(project.titleWithCustomId == "Website (\(String(repeating: "x", count: 30)))")
+    }
 }

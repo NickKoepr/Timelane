@@ -9,7 +9,8 @@ struct ProjectRow: View {
                 .fill(total.project.color)
                 .frame(width: 12, height: 12)
                 .fixedSize()
-            ProjectNameWithBadge(name: total.project.name, customId: total.project.customId, badgeFont: .caption)
+            ProjectNameWithBadge(name: total.project.name, customId: total.project.customId, badgeFont: .caption,
+                                 badgeMaxLength: nil)
             if total.project.isArchived {
                 Text("Archived")
                     .font(.caption)

@@ -6,11 +6,12 @@ struct ProjectNameWithBadge: View {
     let customId: String?
     var style: ProjectIdBadge.Style = .standard
     var badgeFont: Font = .caption2
+    var badgeMaxLength: Int? = ProjectCustomId.displayLength
 
     var body: some View {
         HStack(spacing: 5) {
             Text(name).lineLimit(1).truncationMode(.tail)
-            ProjectIdBadge(customId: customId, style: style, font: badgeFont)
+            ProjectIdBadge(customId: customId, style: style, font: badgeFont, maxLength: badgeMaxLength)
         }
     }
 }

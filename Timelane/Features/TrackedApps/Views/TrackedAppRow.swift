@@ -26,7 +26,7 @@ struct TrackedAppRow: View {
             Spacer(minLength: 8)
             Picker("Project", selection: Binding(get: { app.projectId }, set: { onProjectChange($0) })) {
                 Text("No project").tag(Int64?.none)
-                ForEach(projects) { project in Text(project.titleWithCustomId).tag(project.id) }
+                ForEach(projects) { project in Text(project.shortTitleWithCustomId).tag(project.id) }
             }
             .labelsHidden()
             .pickerStyle(.menu)

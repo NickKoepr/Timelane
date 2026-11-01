@@ -7,10 +7,12 @@ struct ProjectIdBadge: View {
     let customId: String?
     var style: Style = .standard
     var font: Font = .caption2
+    /// `nil` shows the whole ID (Projects screen); elsewhere long IDs are shortened.
+    var maxLength: Int? = ProjectCustomId.displayLength
 
     var body: some View {
         if let customId {
-            Text(customId)
+            Text(maxLength.map { ProjectCustomId.shortened(customId, to: $0) } ?? customId)
                 .font(font.monospaced())
                 .lineLimit(1)
                 .fixedSize()
