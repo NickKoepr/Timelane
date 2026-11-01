@@ -6,3 +6,6 @@ xcuserdata/
 
 # Design plans stay local
 plans/
+
+# Claude Code local state
+.claude/

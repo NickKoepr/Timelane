@@ -111,7 +111,8 @@ website/                      Static product site (HTML + CSS) for GitHub Pages,
 - For a feature/bugfix: write a plan `plans/PLAN-v1.N.md` (next free number; English, detailed enough for an agent: context, cause, design, files, tests, order of work, definition of done), implement it, run tests, commit. `plans/` is git-ignored: plans stay on the owner's machine and are never committed or referenced from committed files.
 - Work directly on `main` (no feature branches) unless asked for an experiment branch. Commit messages end with the Co-Authored-By line the session prescribes. The owner normally wants changes **committed and pushed** to `origin main`.
 - Update `README.md` and `plans/PLAN.md` when behaviour changes, so they stay the source of truth.
-- Releases: bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` (app target, Debug + Release) — the build number must go up for every App Store Connect/TestFlight upload; tag `vX.Y.Z` when asked. Export compliance is pre-answered via `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO` (the app uses no non-exempt encryption); revisit it if networking or custom crypto is ever added.
+- Releases: bump `MARKETING_VERSION` and `CURRENT_PROJECT_VERSION` (app target, Debug + Release) — the build number must go up for every App Store Connect/TestFlight upload; tag `vX.Y.Z` when asked.
+- Xcode Cloud (workflow configured in App Store Connect; `Timelane.xcodeproj/xcshareddata/xcodecloud/` links the product) archives tag builds and uploads them to App Store Connect. `ci_scripts/ci_pre_xcodebuild.sh` sets `MARKETING_VERSION` from the tag (`v1.7` → `1.7`) and fails builds without a version tag; Xcode Cloud sets the build number itself. Export compliance is pre-answered via `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO` (the app uses no non-exempt encryption); revisit it if networking or custom crypto is ever added.
 
 ## Known traps (learned the hard way)
 
