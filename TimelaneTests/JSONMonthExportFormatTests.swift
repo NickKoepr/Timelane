@@ -41,4 +41,15 @@ struct JSONMonthExportFormatTests {
         let data = try JSONMonthExportFormat().data(for: MonthExportFixtures.sample())
         #expect(String(decoding: data, as: UTF8.self).contains("\n  \"app\""))
     }
+
+    @Test func customIdsAreExportedWithExplicitNulls() throws {
+        let json = try decode()
+        let projects = try #require(json["projects"] as? [[String: Any]])
+        #expect(projects[0]["customId"] as? String == "ACME-042")
+        #expect(projects[1]["customId"] is NSNull)
+        let entries = try #require(json["entries"] as? [[String: Any]])
+        #expect(entries[0]["projectCustomId"] as? String == "ACME-042")
+        #expect(entries[2]["projectCustomId"] is NSNull)
+        #expect(json["schemaVersion"] as? Int == 1)
+    }
 }

@@ -13,6 +13,7 @@ enum MonthExportBuilder {
             guard let clipped = entry.range.intersection(with: month) else { continue }
             exported.append(MonthExport.Entry(
                 projectName: byId[entry.projectId]?.name ?? unknownProjectName,
+                projectCustomId: byId[entry.projectId]?.customId,
                 start: clipped.start, end: clipped.end,
                 title: clean(entry.title), note: clean(entry.note)
             ))
@@ -23,7 +24,7 @@ enum MonthExportBuilder {
         for entry in exported { seconds[entry.projectName, default: 0] += entry.duration }
         var totals = seconds.map { name, total -> MonthExport.ProjectTotal in
             let project = projects.first { $0.name == name }
-            return MonthExport.ProjectTotal(name: name, colorHex: project?.colorHex ?? "#8E8E93",
+            return MonthExport.ProjectTotal(name: name, customId: project?.customId, colorHex: project?.colorHex ?? "#8E8E93",
                                             isArchived: project?.isArchived ?? false, totalSeconds: total)
         }
         totals.sort {

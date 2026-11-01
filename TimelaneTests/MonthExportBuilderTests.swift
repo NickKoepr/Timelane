@@ -65,4 +65,17 @@ struct MonthExportBuilderTests {
         #expect(MonthExportFileName.make(for: month, fileExtension: "json", calendar: cal) == "Timelane 2026-10.json")
         #expect(MonthExportFileName.make(for: month, fileExtension: "xlsx", calendar: cal) == "Timelane 2026-10.xlsx")
     }
+
+    @Test func customIdsFollowTheProject() {
+        let acme = Project(id: 5, name: "Acme", colorHex: "#555555", customId: "ACME-1")
+        let export = build([acme, alpha], [
+            TimeEntry(projectId: 5, start: date(2026, 10, 5, 9), end: date(2026, 10, 5, 10)),
+            TimeEntry(projectId: 1, start: date(2026, 10, 6, 9), end: date(2026, 10, 6, 10)),
+            TimeEntry(projectId: 99, start: date(2026, 10, 7, 9), end: date(2026, 10, 7, 10)),
+        ])
+        #expect(export.entries.map(\.projectCustomId) == ["ACME-1", nil, nil])
+        #expect(export.projects.first { $0.name == "Acme" }?.customId == "ACME-1")
+        #expect(export.projects.first { $0.name == "Alpha" }?.customId == nil)
+        #expect(export.projects.first { $0.name == "Unknown project" }?.customId == nil)
+    }
 }
