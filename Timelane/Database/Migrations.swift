@@ -55,6 +55,14 @@ enum Migrations {
             }
         }
 
+        migrator.registerMigration("v4") { db in
+            // Optional user-facing project identifier (free text). The numeric id stays the primary key.
+            try db.alter(table: "project") { t in t.add(column: "customId", .text) }
+            try db.execute(sql: """
+                CREATE UNIQUE INDEX project_customId ON project(customId COLLATE NOCASE) WHERE customId IS NOT NULL
+                """)
+        }
+
         return migrator
     }
 }

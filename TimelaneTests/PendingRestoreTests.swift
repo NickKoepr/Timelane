@@ -116,4 +116,22 @@ struct PendingRestoreTests {
         }
         try stillOpen.writer.write { db in var p = Project(name: "New", colorHex: "#000000"); try p.insert(db) }
     }
+
+    @Test func stagingV3BackupMigratesToCurrentSchema() throws {
+        let (restore, directory) = try makeRestore()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let old = directory.appendingPathComponent("v3.sqlite")
+        let queue = try DatabaseQueue(path: old.path)
+        try Migrations.makeMigrator().migrate(queue, upTo: "v3")
+        try queue.write { try $0.execute(sql: "INSERT INTO project (name, colorHex, isArchived, createdAt) VALUES ('P', '#FFFFFF', 0, 0)") }
+
+        try restore.stage(old)
+        let staged = try DatabaseQueue(path: restore.pendingFile.path)
+        try staged.read { db in
+            let projects = try Project.fetchAll(db)
+            #expect(projects.count == 1)
+            #expect(projects[0].customId == nil)
+            #expect(try db.columns(in: "project").contains { $0.name == "customId" })
+        }
+    }
 }

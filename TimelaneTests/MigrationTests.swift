@@ -39,4 +39,23 @@ struct MigrationTests {
             #expect(try TrackedApp.fetchAll(db).first?.projectId == nil)
         }
     }
+
+    @Test func v4AddsNullableCustomIdWithUniqueIndex() throws {
+        let queue = try DatabaseQueue()
+        let migrator = Migrations.makeMigrator()
+        try migrator.migrate(queue, upTo: "v3")
+        try queue.write { db in
+            try db.execute(sql: "INSERT INTO project (name, colorHex, isArchived, createdAt) VALUES ('P', '#FFFFFF', 0, 0)")
+            try db.execute(sql: "INSERT INTO project (name, colorHex, isArchived, createdAt) VALUES ('Q', '#FFFFFF', 0, 0)")
+        }
+        try migrator.migrate(queue)
+        try queue.write { db in
+            let projects = try Project.fetchAll(db)
+            #expect(projects.count == 2)
+            #expect(projects.allSatisfy { $0.customId == nil })
+            #expect(try db.indexes(on: "project").contains { $0.name == "project_customId" })
+            try db.execute(sql: "UPDATE project SET customId = 'X' WHERE id = 1")
+            #expect(throws: DatabaseError.self) { try db.execute(sql: "UPDATE project SET customId = 'x' WHERE id = 2") }
+        }
+    }
 }

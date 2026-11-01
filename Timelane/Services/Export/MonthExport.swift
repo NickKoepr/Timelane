@@ -4,6 +4,7 @@ import Foundation
 struct MonthExport: Sendable, Hashable {
     struct ProjectTotal: Sendable, Hashable {
         var name: String
+        var customId: String?
         var colorHex: String
         var isArchived: Bool
         var totalSeconds: TimeInterval
@@ -11,6 +12,7 @@ struct MonthExport: Sendable, Hashable {
 
     struct Entry: Sendable, Hashable {
         var projectName: String
+        var projectCustomId: String?
         var start: Date        // clipped to the month
         var end: Date          // clipped to the month
         var title: String?

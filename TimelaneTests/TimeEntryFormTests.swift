@@ -47,6 +47,14 @@ struct ProjectSearchTests {
         #expect(search.newProjectName == "adm")
     }
 
+    @Test func matchesOnCustomId() {
+        var search = ProjectSearch(projects: [Project(id: 1, name: "Website", colorHex: "#000000", customId: "ACME-042"),
+                                              Project(id: 2, name: "Admin", colorHex: "#000000")], highlightedId: 1)
+        search.query = "acme"
+        #expect(search.filtered.map(\.name) == ["Website"])
+        #expect(search.highlightedId == 1)
+    }
+
     @Test func existingNameOffersNoCreation() {
         var search = ProjectSearch(projects: projects, highlightedId: 1)
         search.query = " website "

@@ -32,4 +32,40 @@ struct ProjectFormViewModelTests {
         #expect(all[0].project.name == "Alpha renamed")
         #expect(all[0].project.colorHex == "#FF9500")
     }
+
+    @Test func customIdRoundTripsAndNormalises() async throws {
+        let repo = GRDBProjectRepository(database: try AppDatabase.inMemory())
+        let form = ProjectFormViewModel(project: nil, defaultColorHex: "#34C759", repository: repo)
+        form.name = "Alpha"
+        form.customId = "  ACME-042  "
+        #expect(await form.save())
+        let saved = try await repo.projects(includeArchived: true)[0]
+        #expect(saved.customId == "ACME-042")
+
+        let edit = ProjectFormViewModel(project: saved, defaultColorHex: "#000000", repository: repo)
+        #expect(edit.customId == "ACME-042")
+        edit.customId = "   "
+        #expect(await edit.save())
+        #expect(try await repo.projects(includeArchived: true)[0].customId == nil)
+    }
+
+    @Test func tooLongCustomIdBlocksSaving() throws {
+        let repo = GRDBProjectRepository(database: try AppDatabase.inMemory())
+        let form = ProjectFormViewModel(project: nil, defaultColorHex: "#34C759", repository: repo)
+        form.name = "Alpha"
+        form.customId = String(repeating: "x", count: ProjectCustomId.maxLength)
+        #expect(form.canSave)
+        form.customId += "x"
+        #expect(!form.canSave)
+    }
+
+    @Test func duplicateCustomIdSetsErrorMessage() async throws {
+        let repo = GRDBProjectRepository(database: try AppDatabase.inMemory())
+        _ = try await repo.save(Project(name: "Alpha", colorHex: "#4F8EF7", customId: "A-1"))
+        let form = ProjectFormViewModel(project: nil, defaultColorHex: "#34C759", repository: repo)
+        form.name = "Beta"
+        form.customId = "a-1"
+        #expect(await form.save() == false)
+        #expect(form.errorMessage == RepositoryError.duplicateCustomId.errorDescription)
+    }
 }

@@ -10,7 +10,7 @@ struct OverviewProjectList: View {
                 HStack(spacing: 8) {
                     Circle().fill(row.project.color).frame(width: 10, height: 10)
                     HStack(spacing: 4) {
-                        Text(row.project.name).lineLimit(1)
+                        ProjectNameWithBadge(name: row.project.name, customId: row.project.customId, badgeFont: .caption)
                         if row.project.isArchived { Text("Archived").foregroundStyle(.secondary) }
                     }
                     .frame(minWidth: 80, maxWidth: 200, alignment: .leading)

@@ -17,7 +17,9 @@ struct ProjectSearch: Equatable {
     var filtered: [Project] {
         let text = trimmedQuery
         guard !text.isEmpty else { return projects }
-        return projects.filter { $0.name.localizedCaseInsensitiveContains(text) }
+        return projects.filter {
+            $0.name.localizedCaseInsensitiveContains(text) || ($0.customId?.localizedCaseInsensitiveContains(text) ?? false)
+        }
     }
 
     /// Offer inline creation when the typed name matches no existing project.

@@ -45,6 +45,7 @@ struct JSONMonthExportFormat: MonthExportFormat {
 
     private struct ProjectDTO: Encodable {
         let name: String
+        let customId: String?
         let color: String
         let archived: Bool
         let totalMinutes: Int
@@ -52,15 +53,30 @@ struct JSONMonthExportFormat: MonthExportFormat {
 
         init(_ total: MonthExport.ProjectTotal) {
             name = total.name
+            customId = total.customId
             color = total.colorHex
             archived = total.isArchived
             totalMinutes = DurationFormatter.minutes(total.totalSeconds)
             self.total = DurationFormatter.hoursMinutes(total.totalSeconds)
         }
+
+        // Encode nil explicitly so every project has the same keys.
+        enum CodingKeys: String, CodingKey { case name, customId, color, archived, totalMinutes, total }
+
+        func encode(to encoder: Encoder) throws {
+            var c = encoder.container(keyedBy: CodingKeys.self)
+            try c.encode(name, forKey: .name)
+            try c.encode(customId, forKey: .customId)
+            try c.encode(color, forKey: .color)
+            try c.encode(archived, forKey: .archived)
+            try c.encode(totalMinutes, forKey: .totalMinutes)
+            try c.encode(total, forKey: .total)
+        }
     }
 
     private struct EntryDTO: Encodable {
         let project: String
+        let projectCustomId: String?
         let date: String
         let start: String
         let end: String
@@ -72,6 +88,7 @@ struct JSONMonthExportFormat: MonthExportFormat {
         init(_ entry: MonthExport.Entry, formatter: ISO8601DateFormatter, calendar: Calendar) {
             let parts = calendar.dateComponents([.year, .month, .day], from: entry.start)
             project = entry.projectName
+            projectCustomId = entry.projectCustomId
             date = String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
             start = formatter.string(from: entry.start)
             end = formatter.string(from: entry.end)
@@ -83,12 +100,13 @@ struct JSONMonthExportFormat: MonthExportFormat {
 
         // Encode nil explicitly so every entry has the same keys.
         enum CodingKeys: String, CodingKey {
-            case project, date, start, end, durationMinutes, duration, title, note
+            case project, projectCustomId, date, start, end, durationMinutes, duration, title, note
         }
 
         func encode(to encoder: Encoder) throws {
             var c = encoder.container(keyedBy: CodingKeys.self)
             try c.encode(project, forKey: .project)
+            try c.encode(projectCustomId, forKey: .projectCustomId)
             try c.encode(date, forKey: .date)
             try c.encode(start, forKey: .start)
             try c.encode(end, forKey: .end)
