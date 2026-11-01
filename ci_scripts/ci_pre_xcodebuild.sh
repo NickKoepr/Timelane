@@ -17,3 +17,8 @@ esac
 sed -i '' -E "s/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = $VERSION;/" \
   "$CI_PRIMARY_REPOSITORY_PATH/Timelane.xcodeproj/project.pbxproj"
 echo "MARKETING_VERSION set to $VERSION"
+
+. "$(dirname "$0")/github_deployment.sh"
+if github_deployment_enabled; then
+  github_deployment_create
+fi
