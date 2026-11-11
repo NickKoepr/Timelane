@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Top bar of the timeline. `ViewThatFits` picks the richest variant that fits (≈ 960 / 760 / 440 pt of detail width);
-/// shortcuts are registered once in `DayNavigationShortcuts`, not on the visible buttons.
+/// Top bar of the timeline. `ViewThatFits` picks the richest variant that fits (≈ 960 / 760 / 440 pt of detail width).
+/// Every variant shows the labelled totals; shortcuts are registered once in `DayNavigationShortcuts`, not on the visible buttons.
 struct DayNavigationBar: View {
     let viewModel: TimelineViewModel
     let changeZoom: (ZoomChange) -> Void
@@ -25,7 +25,7 @@ struct DayNavigationBar: View {
             Spacer(minLength: 8)
             record
             zoom
-            DayTotalsView(registered: viewModel.registeredTotal, tracked: viewModel.trackedTotal).fixedSize()
+            totals
         }
     }
 
@@ -64,8 +64,9 @@ struct DayNavigationBar: View {
         TimelineZoomControls(zoomState: viewModel.zoomState, apply: changeZoom, registersShortcuts: false).fixedSize()
     }
 
+    /// Always the labelled totals ("Registered" / "Tracked"), whichever variant fits.
     private var totals: some View {
-        CompactDayTotals(registered: viewModel.registeredTotal, tracked: viewModel.trackedTotal)
+        DayTotalsView(registered: viewModel.registeredTotal, tracked: viewModel.trackedTotal).fixedSize()
     }
 
     /// The day title with its calendar button right next to it.

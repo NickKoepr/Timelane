@@ -13,11 +13,12 @@ extension TimelineViewModel {
         storedEntries.first { $0.id == entry.id } ?? entry
     }
 
-    /// Keeps `now` current while viewing today; one value feeds sessions, totals and the projection.
+    /// Keeps `today` current, and `now` while viewing today; one value feeds sessions, totals and the projection.
     func tick() async {
         while !Task.isCancelled {
             try? await Task.sleep(for: .seconds(TrackingSettings.autoLogInterval))
             guard !Task.isCancelled else { return }
+            refreshToday()
             guard isToday else { continue }
             refreshNow()
         }
