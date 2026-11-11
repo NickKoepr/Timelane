@@ -4,6 +4,8 @@ import Foundation
 @MainActor @Observable
 final class TimelineViewModel {
     private(set) var day: DateRange
+    /// The calendar day containing `clock()`, kept as observed state so views redraw at midnight.
+    private(set) var today: DateRange
     private(set) var sessionBlocks: [AppSessionBlockModel] = []
     /// The rows as stored; `entries` (in `+LiveEntry`) is what is drawn.
     private(set) var storedEntries: [TimeEntry] = []
@@ -47,14 +49,16 @@ final class TimelineViewModel {
         self.liveAutoEntry = liveAutoEntry
         self.calendar = calendar
         self.clock = clock
-        self.now = clock()
-        self.day = .day(of: clock(), calendar: calendar)
+        let start = clock()
+        self.now = start
+        self.today = .day(of: start, calendar: calendar)
+        self.day = .day(of: start, calendar: calendar)
     }
 
     // MARK: Presentation
 
     var geometry: TimelineGeometry { TimelineGeometry(day: day, pointsPerHour: zoomState.pointsPerHour) }
-    var isToday: Bool { day.contains(clock()) }
+    var isToday: Bool { day == today }
     var title: String { DayTitleFormatter(calendar: calendar).full(day.start) }
     var shortTitle: String { DayTitleFormatter(calendar: calendar).short(day.start) }
     var registeredTotal: TimeInterval { DayTotals.registered(entries: entries, in: day) }
@@ -125,13 +129,26 @@ final class TimelineViewModel {
 
     func goToPreviousDay() { show(day.shiftedDays(-1, calendar: calendar)) }
     func goToNextDay() { show(day.shiftedDays(1, calendar: calendar)) }
-    func goToToday() { show(.day(of: clock(), calendar: calendar)) }
+    func goToToday() {
+        refreshToday()
+        show(today)
+    }
     func go(to date: Date) { show(.day(of: date, calendar: calendar)) }
 
     func show(_ range: DateRange) {
         cancelRegistration()
         entryEditing.reset()
         day = range
+    }
+
+    /// Re-reads today from the clock. After midnight the timeline follows to the new day when the old today
+    /// was shown and nothing is in progress; otherwise only `today` moves (so "Today" becomes available).
+    func refreshToday() {
+        let current = DateRange.day(of: clock(), calendar: calendar)
+        guard current != today else { return }
+        let follows = day == today && form == nil && selection == nil
+        today = current
+        if follows { show(current) }
     }
 
     // MARK: Entries
@@ -158,6 +175,7 @@ final class TimelineViewModel {
 
     /// Observes the current day. Restart (via `.task(id: day)`) when the day changes.
     func task() async {
+        refreshToday()
         let range = day
         now = clock()
         sessions = []
