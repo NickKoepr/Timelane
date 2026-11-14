@@ -3,7 +3,8 @@ name: Tests
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    branches: [main]
+    # The iOS-port umbrella branch and its stacked sub-branches get CI too.
+    branches: [main, 'claude/icloud-sync-strategy-ios-737urc*']
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
