@@ -118,3 +118,30 @@ struct BackupSettingsViewModelTests {
         #expect(f.relaunches.count == 1)
     }
 }
+
+@MainActor
+struct BackupRestoreBlockedTests {
+    @Test func restoreIsBlockedWhileSyncIsOn() async throws {                   // E6
+        let store = InMemoryCloudBackupStore()
+        store.seed(data: Data("x".utf8), info: BackupFixtures.info())
+        let service = CloudBackupService(
+            snapshotter: BackupSnapshotter(database: try BackupFixtures.database(projects: 1, entries: 1)),
+            store: store, settings: InMemoryBackupSettingsStore(), pendingRestore: PendingRestore.temporary())
+        final class Flag { var on = true }
+        let syncOn = Flag()
+        let model = BackupSettingsViewModel(service: service, relaunch: {}, isRestoreBlocked: { syncOn.on })
+
+        #expect(model.isRestoreBlocked)
+        await model.requestRestore()
+        #expect(!model.isConfirmingRestore)
+        #expect(model.restoreCandidate == nil)
+
+        await model.confirmRestore()
+        #expect(model.errorMessage == "Turn off iCloud Sync to restore a backup.")
+
+        syncOn.on = false
+        #expect(!model.isRestoreBlocked)
+        await model.requestRestore()
+        #expect(model.isConfirmingRestore)
+    }
+}
