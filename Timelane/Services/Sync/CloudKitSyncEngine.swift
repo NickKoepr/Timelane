@@ -90,6 +90,8 @@ final class CloudKitSyncEngine: SyncEngineClient, CKSyncEngineDelegate, @uncheck
     func fetchChanges() async throws {
         guard let engine = locked({ $0.engine }) else { throw SyncEngineError.notStarted }
         do { try await engine.fetchChanges() } catch { throw Self.mapped(error) }
+        // The engine skips the request when it believes nothing changed; ask the server ourselves too.
+        try await fetchZoneChangesDirectly()
     }
 
     func sendChanges() async throws {
@@ -157,6 +159,7 @@ final class CloudKitSyncEngine: SyncEngineClient, CKSyncEngineDelegate, @uncheck
             storage.engine = engine
             storage.ignoresZoneDeletions = serialization == nil
         }
+        if serialization == nil { Self.clearDirectTokens() }   // a fresh start reads the zone from the beginning
     }
 
     static func mapped(_ error: Error) -> SyncEngineError {

@@ -276,7 +276,7 @@ struct SyncTwoDeviceTests {
         try await b.insertProject("Alpha", created: h(0))
         try await SyncTestDevice.syncAll([b])
 
-        a.service.pollInterval = .milliseconds(10)
+        a.service.pollIntervalOverride = .milliseconds(10)
         a.service.setPolling(true, for: .menuBar)
         defer { a.service.setPolling(false, for: .menuBar) }
         var names: [String] = []
@@ -292,7 +292,7 @@ struct SyncTwoDeviceTests {
         try await b.insertProject("Alpha", created: h(0))
         try await SyncTestDevice.syncAll([b])
 
-        a.service.pollInterval = .seconds(3600)          // only the immediate sync can bring Alpha in
+        a.service.pollIntervalOverride = .seconds(3600)          // only the immediate sync can bring Alpha in
         a.service.setPolling(true, for: .app)
         var names: [String] = []
         for _ in 0..<200 where names.isEmpty {
@@ -306,5 +306,25 @@ struct SyncTwoDeviceTests {
         #expect(a.service.pollTask != nil)               // the open menu bar panel keeps it going
         a.service.setPolling(false, for: .menuBar)
         #expect(a.service.pollTask == nil)
+    }
+
+    @Test func pollIntervalIsTheShortestOfTheVisiblePlaces() async throws {
+        let (a, _, _) = try await SyncTestWorld.pair()
+        a.service.setPolling(true, for: .menuBar)
+        #expect(a.service.pollTaskInterval == .seconds(60))
+        a.service.setPolling(true, for: .app)
+        #expect(a.service.pollTaskInterval == .seconds(30))
+        a.service.setPolling(false, for: .app)
+        #expect(a.service.pollTaskInterval == .seconds(60))
+        a.service.setPolling(false, for: .menuBar)
+        #expect(a.service.pollTaskInterval == nil)
+    }
+
+    @Test func syncNowWithoutChangesStillUpdatesLastSync() async throws {
+        let (a, _, _) = try await SyncTestWorld.pair()
+        let before = a.service.lastSync
+        try await Task.sleep(for: .milliseconds(5))
+        await a.service.syncNow()
+        #expect(a.service.lastSync != nil && a.service.lastSync != before)
     }
 }

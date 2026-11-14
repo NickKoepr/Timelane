@@ -35,8 +35,9 @@ final class SyncService {
     @ObservationIgnored var outboxTask: Task<Void, Never>?
     @ObservationIgnored var pollTask: Task<Void, Never>?
     @ObservationIgnored var pollSources = Set<SyncPollSource>()
-    /// How often a visible app asks iCloud for changes (see `SyncService+Polling`); tests make it short.
-    @ObservationIgnored var pollInterval: Duration = .seconds(60)
+    @ObservationIgnored var pollTaskInterval: Duration?
+    /// Replaces the per-place poll interval (see `SyncService+Polling`); tests make it short.
+    @ObservationIgnored var pollIntervalOverride: Duration?
     @ObservationIgnored var isEngineRunning = false
     @ObservationIgnored var isResettingZone = false
     /// Another device replaced (or someone removed) the iCloud data; handled at the start of the next sync round.

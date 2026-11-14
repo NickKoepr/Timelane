@@ -38,6 +38,8 @@ extension SyncService {
             if pauseReason != nil || errorMessage != nil { return }
             if eventCount == eventsBefore && !remoteResetPending && !syncRequested { break }
         }
+        // A pass that found nothing new still checked iCloud: show that in "Last synced".
+        if isEnabled { await markSynced() }
     }
 
     /// Runs `syncNow` soon, for follow-up work found inside an engine event or after local changes.
