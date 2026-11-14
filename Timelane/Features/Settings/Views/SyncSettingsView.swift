@@ -10,6 +10,7 @@ struct SyncSettingsView: View {
 
 private struct SyncSettingsContent: View {
     @State var viewModel: SyncSettingsViewModel
+    private var device: DeviceKind { .current }
 
     var body: some View {
         Form {
@@ -18,7 +19,7 @@ private struct SyncSettingsContent: View {
                     get: { viewModel.isEnabled },
                     set: { value in Task { await viewModel.setEnabled(value) } }))
                     .disabled(viewModel.isEnabling)
-                Text("Keeps your projects and logged hours in step on your Macs through your private iCloud. Tracked app activity, the tracked apps list and the Record timer stay on this Mac.")
+                Text("Keeps your projects and logged hours in step on your devices through your private iCloud. Tracked app activity, the tracked apps list and the Record timer stay on \(device.thisDevice).")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                 ForEach(viewModel.notices, id: \.self) { Text($0).foregroundStyle(.orange) }
@@ -28,17 +29,17 @@ private struct SyncSettingsContent: View {
         }
         .formStyle(.grouped)
         .confirmationDialog("iCloud already has Timelane data", isPresented: $viewModel.isChoosingExistingData) {
-            Button("Replace iCloud data with this Mac") { Task { await viewModel.resolveChoice(.replaceICloud) } }
-            Button("Replace this Mac's data with iCloud", role: .destructive) { Task { await viewModel.resolveChoice(.replaceLocal) } }
+            Button("Replace iCloud data with \(device.thisDevice)") { Task { await viewModel.resolveChoice(.replaceICloud) } }
+            Button("Replace \(device.thisDevice)'s data with iCloud", role: .destructive) { Task { await viewModel.resolveChoice(.replaceLocal) } }
             Button("Cancel", role: .cancel) { Task { await viewModel.resolveChoice(.cancel) } }
         } message: {
-            Text("Choose which data to keep. Replacing this Mac's data removes its local projects and logged hours; tracked app activity and the tracked apps list stay.")
+            Text("Choose which data to keep. Replacing \(device.thisDevice)'s data removes its local projects and logged hours; tracked app activity and the tracked apps list stay.")
         }
         .confirmationDialog("Turn off iCloud Sync?", isPresented: $viewModel.isConfirmingDisable) {
             Button("Turn Off") { Task { await viewModel.confirmDisable() } }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("Data on this Mac and in iCloud is kept.")
+            Text("Data on \(device.thisDevice) and in iCloud is kept.")
         }
     }
 

@@ -1,5 +1,5 @@
 #!/usr/bin/env swift
-// Generates the Timelane app icon at every macOS size, and optionally the menu bar icon and the clock mark
+// Generates the Timelane app icon at every macOS size plus a full-bleed opaque iOS icon (icon_ios_1024.png), and optionally the menu bar icon and the clock mark
 // (the same clock as template images: a PNG for the menu bar, an SVG for in-app use), so they all match.
 // Usage: swift Tools/generate-app-icon.swift <appiconset-dir> [<menubar-imageset-dir> [<clockmark-imageset-dir>]]
 import AppKit
@@ -87,10 +87,11 @@ func clockSVG() -> Data {
     return Data(svg.utf8)
 }
 
-func render(pixels: Int, drawing: (CGContext) -> Void) -> Data {
+/// `opaque` renders without an alpha channel (what App Store Connect wants for the iOS icon).
+func render(pixels: Int, opaque: Bool = false, drawing: (CGContext) -> Void) -> Data {
     let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels, bitsPerSample: 8,
-                               samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
-                               bytesPerRow: 0, bitsPerPixel: 0)!
+                               samplesPerPixel: opaque ? 3 : 4, hasAlpha: !opaque, isPlanar: false,
+                               colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
     let context = NSGraphicsContext(bitmapImageRep: rep)!
     context.cgContext.interpolationQuality = .high
     drawing(context.cgContext)
@@ -103,6 +104,17 @@ func appIcon(pixels: Int) -> Data {
         let scale = CGFloat(pixels) / canvas
         ctx.scaleBy(x: scale, y: scale)
         draw(in: ctx, scale: scale)
+    }
+}
+
+/// iOS icon: the same clock on a full-bleed, opaque square. No rounded corners or shadow: iOS masks the icon itself.
+func iosAppIcon(pixels: Int) -> Data {
+    render(pixels: pixels, opaque: true) { ctx in
+        let scale = CGFloat(pixels) / canvas
+        ctx.scaleBy(x: scale, y: scale)
+        ctx.setFillColor(color(backgroundHex))
+        ctx.fill(CGRect(x: 0, y: 0, width: canvas, height: canvas))
+        drawClock(in: ctx, color: color(clockHex))
     }
 }
 
@@ -128,6 +140,8 @@ for size in sizes {
     try appIcon(pixels: size).write(to: output.appendingPathComponent("icon_\(size).png"))
 }
 print("Wrote \(sizes.count) icons to \(output.path)")
+try iosAppIcon(pixels: 1024).write(to: output.appendingPathComponent("icon_ios_1024.png"))
+print("Wrote iOS icon to \(output.path)")
 
 if CommandLine.arguments.count >= 3 {
     let menuBar = URL(fileURLWithPath: CommandLine.arguments[2], isDirectory: true)

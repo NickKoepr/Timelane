@@ -20,7 +20,7 @@ extension SyncService {
                 eventCount += 1
                 guard !isResettingZone else { return }
                 await disable(notice: "The iCloud data of Timelane was removed (on another device or in iCloud settings). "
-                    + "Sync was turned off; your data on this Mac is kept.")
+                    + "Sync was turned off; your data on this device is kept.")
             }
         } catch {
             report(error)
@@ -31,9 +31,9 @@ extension SyncService {
         switch change {
         case .signIn: break
         case .signOut:
-            await disable(notice: "You signed out of iCloud, so sync was turned off. Your data on this Mac is kept.")
+            await disable(notice: "You signed out of iCloud, so sync was turned off. Your data on this device is kept.")
         case .switchAccounts:
-            await disable(notice: "The iCloud account changed, so sync was turned off. Your data on this Mac is kept; "
+            await disable(notice: "The iCloud account changed, so sync was turned off. Your data on this device is kept; "
                 + "turn sync on again to choose what to do with it.")
         }
     }

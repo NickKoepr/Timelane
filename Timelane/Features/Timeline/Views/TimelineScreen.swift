@@ -11,14 +11,7 @@ struct TimelineScreen: View {
     init(environment: AppEnvironment, onShowTrackedApps: @escaping () -> Void = {}) {
         self.environment = environment
         self.onShowTrackedApps = onShowTrackedApps
-        _viewModel = State(initialValue: TimelineViewModel(
-            timeEntries: environment.timeEntries,
-            appSessions: environment.appSessions,
-            projects: environment.projects,
-            trackedApps: environment.trackedApps,
-            editor: environment.timeEntryEditor,
-            recordingTimer: environment.recordingTimer,
-            liveAutoEntry: environment.liveAutoEntry))
+        _viewModel = State(initialValue: TimelineViewModel(environment: environment))
     }
 
     var body: some View {

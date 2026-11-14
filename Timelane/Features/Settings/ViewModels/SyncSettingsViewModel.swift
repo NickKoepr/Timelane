@@ -51,7 +51,7 @@ final class SyncSettingsViewModel {
                 return
             }
             if try await service.remoteHasData() {
-                isChoosingExistingData = true       // always ask, also when this Mac is empty
+                isChoosingExistingData = true       // always ask, also when this device is empty
                 return
             }
             try await service.enable(.replaceICloud)
@@ -62,10 +62,10 @@ final class SyncSettingsViewModel {
 
     static func unavailableMessage(_ status: CloudAccountStatus) -> String {
         switch status {
-        case .restricted: "iCloud is restricted on this Mac, so Timelane cannot sync."
+        case .restricted: "iCloud is restricted on \(DeviceKind.current.thisDevice), so Timelane cannot sync."
         case .temporarilyUnavailable: "iCloud is temporarily unavailable. Try again later."
         case .couldNotDetermine: "Timelane could not reach iCloud. Try again later."
-        default: "Sign in to iCloud in System Settings to use iCloud Sync."
+        default: "Sign in to iCloud in \(DeviceKind.current.systemSettingsName) to use iCloud Sync."
         }
     }
 

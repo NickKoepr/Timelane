@@ -7,7 +7,7 @@ final class OnboardingViewModel {
     private(set) var currentIndex = 0
     private let store: OnboardingStore
 
-    init(pages: [OnboardingPage] = OnboardingPage.all, store: OnboardingStore) {
+    init(pages: [OnboardingPage] = OnboardingPage.forCurrentPlatform, store: OnboardingStore) {
         self.pages = pages
         self.store = store
     }

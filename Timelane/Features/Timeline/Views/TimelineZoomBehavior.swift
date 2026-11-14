@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Pinch to zoom and anchored scrolling on the timeline scroll view.
-/// The pinch comes from an AppKit event monitor (SwiftUI's `MagnifyGesture` does not fire in the menu bar panel).
+/// On the Mac the pinch comes from an AppKit event monitor (SwiftUI's `MagnifyGesture` does not fire in the menu bar panel);
+/// on iOS it is a plain `MagnifyGesture`.
 /// The monitor never consumes events, so the one-finger selection drag and the entry move/resize drags are unaffected.
 private struct TimelineZoomBehavior: ViewModifier {
     let viewModel: TimelineViewModel
@@ -23,6 +24,15 @@ private struct TimelineZoomBehavior: ViewModifier {
                     if phase.contains(.ended) || phase.contains(.cancelled) { stepper.reset() }
                 }
             }
+            #else
+            // Touch: SwiftUI's own pinch works here (no menu bar panel). The total scale maps to discrete steps.
+            .simultaneousGesture(
+                MagnifyGesture()
+                    .onChanged { value in
+                        let step = stepper.step(for: value.magnification)
+                        if step > 0 { apply { $0.zoomIn() } } else if step < 0 { apply { $0.zoomOut() } }
+                    }
+                    .onEnded { _ in stepper.reset() })
             #endif
             // Every animation frame changes the scale; scroll along so the centred time stays put.
             .onChange(of: viewModel.zoomState.pointsPerHour) {

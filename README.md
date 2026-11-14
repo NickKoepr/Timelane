@@ -26,7 +26,16 @@ Keyboard: Cmd-1/2/3/4 switch between Timeline, Projects, Tracked Apps and Overvi
 
 ## Platforms
 
-Timelane is a macOS app. An iPhone/iPad app is in progress: the target is multiplatform (iOS 26.0 or later), shares the database, sync and layout code, and has no app tracking or menu bar. For now the iOS app is a basic shell; CI builds it for the iOS Simulator on every pull request.
+Timelane runs on macOS 26 and on iPhone/iPad (iOS 26). It is one multiplatform target that shares the database, sync and layout code.
+
+The **iOS app** has no app tracking and no menu bar. It has four tabs:
+
+- **Timeline**: one day with the *Logged hours* lane. Tap an empty spot to add an entry (a 30-minute slot, or the zoom step when zoomed in), touch and hold and drag to select a period, tap an entry to edit or delete it, pinch to zoom, swipe sideways (or use ‹ ›, the calendar and Today) to change day. Record / Stop sits in the navigation bar (the timer is local to the device and not synced).
+- **Overview**: the yearly heatmap and statistics; tapping a day opens it on the Timeline.
+- **Projects**: monthly totals per project, add / edit / archive / delete (swipe a row), and export of the month (Excel or JSON) to Files via the system file exporter.
+- **Settings**: iCloud Sync, Backup, the welcome tour and About.
+
+Entries are moved or resized on iOS through the edit form (dragging them on the timeline is Mac-only for now). The first launch shows a shorter welcome tour without the tracking and menu bar pages. CI builds the iOS app for the Simulator on every pull request.
 
 ## Getting started
 

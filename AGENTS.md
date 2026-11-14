@@ -80,7 +80,10 @@ Timelane/                     app target (folder is a synchronized group: new fi
     Onboarding/               Welcome carousel (first launch + Help ▸ Welcome to Timelane): OnboardingPage, Store, ViewModel, views
     Settings/                 Settings window (⌘,): Sync tab (SyncSettingsViewModel + SyncSettingsView) and Backup tab (BackupSettingsViewModel + BackupSettingsView)
     TrackedApps/              TrackedAppsViewModel, AddTrackedAppViewModel + views (incl. NSOpenPanel wrapper)
-  Features/IOS/               IOSRootView (placeholder TabView shell for iOS; macOS-only code never lives here)
+  Features/IOS/               iOS-only views (each file wrapped in `#if os(iOS)`): IOSRootView (TabView + first-launch carousel), IOSTimelineScreen / ScrollArea / Column /
+                              DayBar / SelectionGesture, IOSTimeEntryFormSheet, IOSProjectsScreen (+ FormSheet, ExportFormatSheet, ExportDocument for `fileExporter`),
+                              IOSSettingsView, IOSOnboardingView. They share the view models and the small shared views (TimeEntryLane, HourGridView, ProjectSearchList, …)
+                              with the Mac; macOS-only code never lives here
   MenuBar/                    (macOS only) MenuBarContentView, MenuBarViewModel, status line, day bar, MenuBarFormPopup, PanelOpenObserver
   Debug/Screenshots/          DEBUG-only App Store screenshot mode: ScreenshotSampleData, AppEnvironment.screenshot(),
                               ScreenshotDirector (sets up a scene, captures, quits), WindowSnapshot, ScreenshotPanelWindow
@@ -125,6 +128,11 @@ website/                      Static product site (HTML + CSS) for GitHub Pages,
 - Xcode Cloud (workflow configured in App Store Connect; `Timelane.xcodeproj/xcshareddata/xcodecloud/` links the product) archives tag builds and uploads them to App Store Connect. `ci_scripts/ci_pre_xcodebuild.sh` sets `MARKETING_VERSION` from the tag (`v1.7` → `1.7`) and fails builds without a version tag; Xcode Cloud sets the build number itself. With the secret workflow variable `GITHUB_TOKEN` (fine-grained, Deployments read & write) the pre/post scripts also report each archive as a GitHub deployment (`ci_scripts/github_deployment.sh`); GitHub errors never fail the build. Export compliance is pre-answered via `INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO` (the app uses no non-exempt encryption); revisit it if networking or custom crypto is ever added.
 
 ## Known traps (learned the hard way)
+
+- **iOS timeline**: no app lane (sessions are not recorded on iOS). Taps/selection use `TapSlot` and `IOSSelectionGesture` (long-press → drag, same `TimelineViewModel` selection intents); pinch is a `MagnifyGesture` inside `TimelineZoomBehavior` (the Mac uses `MagnifyEventMonitor`). `TimeEntryBlock` has no drag/resize gestures on iOS: a drag on an entry would block scrolling, so times change in the edit form. Swipe-to-change-day is a simultaneous drag (`DaySwipe`, horizontal-dominant only).
+- **iOS export**: `ExportSavePanel` is macOS-only; iOS builds the same `ExportFile` and presents `.fileExporter` with `ExportDocument` once the format sheet is dismissed (presenting both at once drops one).
+- **Platform copy**: never write "Mac" in shared strings; use `DeviceKind.current` (`thisDevice`, `noun`, `systemSettingsName`) in main-actor code, "this device" elsewhere. `OnboardingPage.platforms` filters carousel pages (Mac-only tracking/menu bar pages vs iOS pages).
+- **iOS Info.plist**: `INFOPLIST_KEY_UIBackgroundModes[sdk=iphone*] = remote-notification` (silent CloudKit pushes) lives in both app-target configs; the iOS app icon needs `icon_ios_1024.png` from `Tools/generate-app-icon.swift` (opaque, full bleed).
 
 - **Every file in `Timelane/` compiles for macOS AND iOS** (one multiplatform target, synchronized group). Wrap macOS-only files (AppKit, NSWorkspace, MenuBarExtra, panels, tracking) in `#if os(macOS)` … `#endif`, put small platform differences in `Type+macOS.swift` / `Type+iOS.swift` or `Utilities/Platform/`, and import the module of every member you use (MemberImportVisibility). Without a Swift toolchain, CI's `ios-build` job is the check. The test target stays macOS-only.
 
