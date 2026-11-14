@@ -57,9 +57,8 @@ struct SyncSchemaTests {
             try db.execute(sql: "DELETE FROM syncOutbox")
         }
         try await entries.save([], deleting: [entry.id!])
-        try await db.writer.write { db in
-            #expect(try Self.outbox(db) == ["TimeEntry|\(entry.syncId.uuidString)|delete"])
-        }
+        let afterDelete = try await db.writer.read { db in try Self.outbox(db) }
+        #expect(afterDelete == ["TimeEntry|\(entry.syncId.uuidString)|delete"])
     }
 
     @Test func triggersStaySilentWhileApplyingRemote() async throws {
