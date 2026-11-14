@@ -12,6 +12,7 @@ A native macOS app (SwiftUI) for developers to register working hours per projec
 - **Month export**: *Export…* (⇧⌘E) on the Projects screen writes all hours of the shown month to a JSON or Excel (.xlsx) file; you choose the format and the location. Projects with a custom ID include it (`customId` / `projectCustomId` in JSON, an ID column in Excel).
 - **Overview** (Cmd-4): a GitHub-style heatmap of the hours you registered per day in a calendar year (brighter square = more hours; hover for a card with the date and hours per project, click to open that day on the Timeline), with year navigation (Cmd-Left / Cmd-Right, Cmd-T), a project filter, statistic tiles (total, active days, average, busiest day), a stacked hours-per-month chart and a per-project breakdown.
 - **Tracked apps**: only the apps you add are recorded. Tracking pauses on idle (after 5 minutes without input), sleep and screen lock. Optionally link an app to a project in the Project column: while you use it, a time entry for that project appears after 1 minute and grows every 5 seconds in "Logged hours" (small gaps of up to 1 minute merge into one entry, in step with the merged app block, and the entry keeps growing right away when you return to the app; also when Timelane is restarted in between or the visits were shorter than a minute; changing the link only affects new hours, idle time at the end of a run is removed, you can edit or delete it like any other entry and it is never overwritten afterwards).
+- **Reminder to log your hours** (optional, off by default): a notification on the weekdays you choose, each day at its own time, reminds you to register your hours; clicking it opens today's timeline. Set it up in *Timelane ▸ Settings…* (⌘,) on the *Notifications* tab (see below).
 - **Welcome tour**: a short, skippable carousel on first launch explains tracked apps, the two lanes and how to register hours. Reopen it any time via Help ▸ Welcome to Timelane.
 - **Menu bar panel** with live tracking status (red dot while recording, grey "not tracking" icon for apps not on the list, grey pause icon when paused), the same timeline and a popup form to register time without opening the main window. The menu bar icon gets a small red dot while a recording runs. Tracking and the menu bar item keep running when the window is closed.
 - **Local storage** in a SQLite database.
@@ -65,6 +66,7 @@ Timelane/
   Services/             Day totals, overlap resolving, running apps, app icons
     Activity/           Pure yearly statistics: day bucketing, heatmap layout, levels, statistics
     Backup/             Opt-in iCloud backup: CloudBackupService, CloudKit store, schedule and safety rules
+    Reminders/          Opt-in reminder notification: settings per weekday, schedule, UNUserNotificationCenter scheduler
     Tracking/           AppActivityTracker, AutoTimeLogger (linked app → growing entry), idle detection, system event observer, heartbeat
   Utilities/            DateRange, calendar helpers, duration formatting, colours
   Features/
@@ -76,7 +78,7 @@ Timelane/
     Projects/           ViewModels/ and Views/ for projects and monthly totals
     Overview/           Yearly heatmap, statistics and charts
     TrackedApps/        ViewModels/ and Views/ for the tracked-apps list
-    Settings/           Settings window (Timelane ▸ Settings…, ⌘,) with the iCloud backup tab
+    Settings/           Settings window (Timelane ▸ Settings…, ⌘,) with the iCloud backup and notifications tabs
   MenuBar/              Menu bar panel: view model, content, form popup
   Debug/Screenshots/    DEBUG-only screenshot mode for the App Store images (sample data, self-capture)
   Assets.xcassets/      Accent colour and AppIcon
@@ -92,7 +94,7 @@ The database is a single SQLite file inside the app's sandbox container:
 
 `~/Library/Containers/nl.nickkoepr.timelane/Data/Library/Application Support/Timelane/db.sqlite`
 
-It stores projects, your time entries (start, end, optional title and note), the list of tracked apps, and app sessions: app name, bundle identifier, start and end. No window titles, keystrokes or screenshots are recorded. Nothing leaves your machine unless you turn on iCloud backup (see below); then the database goes only to your own private iCloud. Exported files are written only where you choose in the save panel.
+It stores projects, your time entries (start, end, optional title and note), the list of tracked apps, and app sessions: app name, bundle identifier, start and end. No window titles, keystrokes or screenshots are recorded. Nothing leaves your machine unless you turn on iCloud backup (see below); then the database goes only to your own private iCloud. Reminder notifications are scheduled locally by macOS and send nothing anywhere. Exported files are written only where you choose in the save panel.
 
 ## iCloud backup
 
@@ -105,6 +107,15 @@ Optional and off by default. Turn it on in *Timelane ▸ Settings…* (⌘,) on 
 - **Turning it off** stops uploads; the copy in iCloud is kept.
 
 This is a snapshot backup, not a live sync between Macs. It needs the iCloud capability (CloudKit) for the app; CI builds strip it (`CODE_SIGN_ENTITLEMENTS=`).
+
+## Reminder notifications
+
+Optional and off by default. Turn it on in *Timelane ▸ Settings…* (⌘,) on the *Notifications* tab.
+
+- **When:** on the weekdays you check, each at its own time (Monday to Friday at 17:00 when you first turn it on). The tab shows when the next reminder comes.
+- **Permission:** macOS asks once whether Timelane may send notifications, when you turn the reminder on. If you don't allow them, the reminder stays off and the tab links to System Settings ▸ Notifications. If you block them there later, the tab shows a warning; once you allow them again, the reminders return by themselves.
+- **How:** repeating local notifications scheduled with macOS, so they also arrive when Timelane isn't running and follow time-zone changes. Clicking one opens the main window on today's timeline.
+- **Turning it off** removes the scheduled reminders.
 
 ## Website
 
