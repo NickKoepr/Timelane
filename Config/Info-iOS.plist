@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<!-- iOS-only Info.plist keys that have no INFOPLIST_KEY_ build setting; merged into the generated Info.plist.
+     remote-notification: silent CloudKit pushes for iCloud sync. Lives outside Timelane/ (a synchronized group)
+     so it is not copied into the app as a resource. -->
+<dict>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+</dict>
+</plist>
