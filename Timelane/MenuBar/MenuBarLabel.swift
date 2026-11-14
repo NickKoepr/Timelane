@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// The menu bar item: the clock icon, with a red dot while the Record timer runs.
@@ -19,3 +20,4 @@ struct MenuBarLabel: View {
     }
     .padding()
 }
+#endif

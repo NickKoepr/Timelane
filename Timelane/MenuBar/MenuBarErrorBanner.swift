@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// Inline replacement for the error alert of the main window.
@@ -16,3 +17,4 @@ struct MenuBarErrorBanner: View {
         .background(.quaternary.opacity(0.5))
     }
 }
+#endif

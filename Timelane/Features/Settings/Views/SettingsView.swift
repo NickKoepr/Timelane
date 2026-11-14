@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// Timelane ▸ Settings… (⌘,). iCloud Sync first, then backup.
@@ -16,3 +17,4 @@ struct SettingsView: View {
 #Preview {
     SettingsView().environment(AppEnvironment.preview())
 }
+#endif

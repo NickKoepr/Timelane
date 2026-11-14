@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// Compact day navigation and zoom controls, plus the day's totals.
@@ -42,3 +43,4 @@ struct MenuBarDayBar: View {
         .lineLimit(1).fixedSize()
     }
 }
+#endif

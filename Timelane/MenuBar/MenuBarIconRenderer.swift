@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 
 /// Builds the menu bar images. `.normal` is the template clock; `.recording` is a non-template
@@ -36,3 +37,4 @@ enum MenuBarIconRenderer {
         return image
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// Help ▸ Welcome to Timelane; replaces the default "Timelane Help" item, as the app has no Help Book.
@@ -14,3 +15,4 @@ struct OnboardingCommands: Commands {
         }
     }
 }
+#endif

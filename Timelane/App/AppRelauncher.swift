@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 
 /// Restarts the app so a staged restore can replace the database (the swap happens in `AppDatabase.live()`).
@@ -41,3 +42,15 @@ enum AppRelauncher {
         }
     }
 }
+#else
+import Foundation
+
+/// iOS cannot relaunch itself: a staged restore is applied the next time the app starts.
+/// TODO(iOS UI): tell the user to close and reopen Timelane after staging a restore.
+@MainActor
+enum AppRelauncher {
+    static func relaunch() {}
+
+    nonisolated static func waitForOtherInstances() {}
+}
+#endif

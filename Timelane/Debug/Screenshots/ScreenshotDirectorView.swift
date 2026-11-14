@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG && os(macOS)
 import SwiftUI
 
 /// Invisible view in the main window that runs the screenshot director (it needs `openSettings`).

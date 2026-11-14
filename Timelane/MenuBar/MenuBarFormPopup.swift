@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// The time entry form as a popup card over the dimmed panel. Drawn inside the panel's own window:
@@ -29,3 +30,4 @@ struct MenuBarFormPopup: View {
             .padding(16)
     }
 }
+#endif

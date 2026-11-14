@@ -14,6 +14,7 @@ private struct TimelineZoomBehavior: ViewModifier {
         content
             .onScrollGeometryChange(for: CGSize.self, of: { CGSize(width: $0.contentOffset.y, height: $0.containerSize.height) },
                                     action: { _, new in anchor.visibleAreaChanged(offsetY: new.width, height: new.height) })
+            #if os(macOS)
             .background {
                 MagnifyEventMonitor { delta, phase in
                     if phase.contains(.began) { stepper.reset() }
@@ -22,6 +23,7 @@ private struct TimelineZoomBehavior: ViewModifier {
                     if phase.contains(.ended) || phase.contains(.cancelled) { stepper.reset() }
                 }
             }
+            #endif
             // Every animation frame changes the scale; scroll along so the centred time stays put.
             .onChange(of: viewModel.zoomState.pointsPerHour) {
                 guard let offset = anchor.offset(with: viewModel.geometry) else { return }

@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import UniformTypeIdentifiers
 
@@ -18,3 +19,4 @@ enum ApplicationOpenPanel {
         }
     }
 }
+#endif

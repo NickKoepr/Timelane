@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// The menu bar panel: live status on top, then the same timeline as the main window.
@@ -76,3 +77,4 @@ struct MenuBarContentView: View {
     let environment = AppEnvironment.preview()
     return MenuBarContentView(environment: environment).environment(environment)
 }
+#endif

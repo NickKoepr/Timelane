@@ -39,7 +39,7 @@ struct AppSessionBlockLabel: View {
 
     @ViewBuilder private func icon(size: CGFloat) -> some View {
         if let image = AppIconProvider.shared.icon(for: block.bundleIdentifier) {
-            Image(nsImage: image).resizable().frame(width: size, height: size)
+            image.resizable().frame(width: size, height: size)
         }
     }
 }

@@ -24,6 +24,10 @@ Keyboard: Cmd-1/2/3/4 switch between Timeline, Projects, Tracked Apps and Overvi
 - Xcode 27.1 (used to develop it), Swift 6
 - The app runs in the App Sandbox and needs no special permissions.
 
+## Platforms
+
+Timelane is a macOS app. An iPhone/iPad app is in progress: the target is multiplatform (iOS 26.0 or later), shares the database, sync and layout code, and has no app tracking or menu bar. For now the iOS app is a basic shell; CI builds it for the iOS Simulator on every pull request.
+
 ## Getting started
 
 ```sh

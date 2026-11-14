@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 
 /// Lets Edit ▸ Undo / Redo keep working for text editing. When a text field is being edited and has something
@@ -21,3 +22,4 @@ enum TextUndoForwarding {
         return NSApp.sendAction(action, to: nil, from: nil)
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import Observation
 
@@ -47,3 +48,4 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return .terminateLater
     }
 }
+#endif
