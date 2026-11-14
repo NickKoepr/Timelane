@@ -19,4 +19,22 @@ extension View {
         self
         #endif
     }
+
+    /// A checkbox on the Mac; the standard switch on iOS.
+    func checkboxToggleStyle() -> some View {
+        #if os(macOS)
+        toggleStyle(.checkbox)
+        #else
+        toggleStyle(.switch)
+        #endif
+    }
+
+    /// A borderless menu button on the Mac; the default menu button on iOS.
+    func borderlessMenuStyle() -> some View {
+        #if os(macOS)
+        menuStyle(.borderlessButton)
+        #else
+        menuStyle(.button)
+        #endif
+    }
 }

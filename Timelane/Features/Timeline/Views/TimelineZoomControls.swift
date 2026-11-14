@@ -20,7 +20,7 @@ struct TimelineZoomControls: View {
                     Button(level.displayName) { apply { $0.set(level) } }
                 }
             }
-            .menuStyle(.borderlessButton)
+            .borderlessMenuStyle()
             .fixedSize()
             .help("Timeline scale: time per 80 pt")
             Button { apply { $0.zoomIn() } } label: { Image(systemName: "plus.magnifyingglass") }
