@@ -203,4 +203,22 @@ struct SyncTwoDeviceTests {
         #expect(names == ["Alpha"])
         if case .idle = a.service.status {} else { Issue.record("expected idle after coming back online") }
     }
+
+    @Test func replacingICloudTurnsTheOtherDevicesOff() async throws {          // A1 "replace iCloud with this device"
+        let (a, b, server) = try await SyncTestWorld.pair()
+        try await a.insertProject("Alpha", created: h(0))
+        try await SyncTestDevice.syncAll([a, b])
+
+        await b.service.disable()
+        try await b.insertProject("Beta", created: h(1))
+        let remoteHasData = try await b.service.remoteHasData()
+        try await b.service.enable(.replaceICloud)
+        await a.service.syncNow()
+
+        let projectsA = try await a.allProjects()
+        #expect(remoteHasData)
+        #expect(server.records.count == 2)               // Alpha and Beta, uploaded after the zone was emptied
+        #expect(!a.service.isEnabled && a.service.notice != nil)
+        #expect(projectsA.map(\.name) == ["Alpha"])       // a keeps its data
+    }
 }

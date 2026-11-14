@@ -11,6 +11,7 @@ extension SyncService {
         defer { isSyncing = false }
 
         for _ in 0..<8 {
+            guard isEnabled else { return }     // an event may have turned sync off (sign-out, zone reset)
             let eventsBefore = eventCount
             do {
                 if zoneResetPending { try await recreateZoneAndUploadAll() }
