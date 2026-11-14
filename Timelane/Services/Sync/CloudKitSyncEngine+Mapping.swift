@@ -1,5 +1,6 @@
 import CloudKit
 import Foundation
+import os
 
 /// `CKRecord` <-> `SyncRecord`. Fields are plain values; references use the `projectSyncId` string, not `CKRecord.Reference`.
 extension CloudKitSyncEngine {

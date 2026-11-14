@@ -157,10 +157,11 @@ final class FakeSyncEngine: SyncEngineClient, @unchecked Sendable {
                 failed.append(SyncFailedSend(id: id, isDelete: true, failure: .unknownItem))
             }
         }
+        let sentNow = saved.count + deleted.count
         state.withLock { state in
             state.pendingSaves.removeAll { saves.contains($0) }
             state.pendingDeletes.removeAll { deletes.contains($0) }
-            state.sentCount += saved.count + deleted.count
+            state.sentCount += sentNow
         }
         if !saved.isEmpty || !deleted.isEmpty || !failed.isEmpty {
             await handler(.sent(saved: saved, deleted: deleted, failed: failed))
