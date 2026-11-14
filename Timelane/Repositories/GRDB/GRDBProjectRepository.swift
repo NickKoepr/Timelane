@@ -50,6 +50,8 @@ struct GRDBProjectRepository: ProjectRepository {
         try await database.writer.write { db in
             let count = try TimeEntry.filter(Column("projectId") == id).fetchCount(db)
             guard count == 0 else { throw RepositoryError.projectHasEntries }
+            // Keep a copy for sync: another device may still add entries to this project (C4).
+            if let project = try Project.fetchOne(db, id: id) { try SyncRows.writeTombstone(db, project: project) }
             _ = try Project.deleteOne(db, id: id)
         }
     }
