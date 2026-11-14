@@ -21,7 +21,9 @@ struct IOSOnboardingView: View {
                     OnboardingPageView(page: page).tag(index)
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .always))
+            .tabViewStyle(.page(indexDisplayMode: .never))
+            IOSPageDots(count: viewModel.pages.count, current: viewModel.currentIndex)
+                .padding(.bottom, 16)
             // Animated like a swipe; the page TabView only animates selection changes made inside a transaction.
             Button { viewModel.isLast ? close() : withAnimation { viewModel.next() } } label: {
                 Text(viewModel.isLast ? "Get Started" : "Next").frame(maxWidth: .infinity)
