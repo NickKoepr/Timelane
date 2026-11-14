@@ -53,10 +53,9 @@ struct TimelaneApp: App {
             guard !AppEnvironment.isIsolatedRun else { return }
             switch phase {
             case .active:
-                environment.sync.setPollInterval(SyncService.activePollInterval)
-                Task { await environment.sync.syncNow() }   // no-op while sync is off
+                environment.sync.setPolling(true, for: .app)   // syncs now, then once a minute; no-op while sync is off
             case .background:
-                environment.sync.setPollInterval(nil)
+                environment.sync.setPolling(false, for: .app)
                 IOSAppDelegate.syncBeforeSuspending()
             default: break
             }

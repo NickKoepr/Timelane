@@ -42,7 +42,7 @@ struct MenuBarContentView: View {
         .frame(width: Self.size.width, height: Self.size.height)
         .panelBackground()
         .background { TimeEntryUndoShortcuts(history: environment.timeEntryHistory) }
-        .background { PanelOpenObserver { viewModel.panelDidOpen() } }
+        .background { PanelOpenObserver(onOpen: { viewModel.panelDidOpen() }, onClose: { viewModel.panelDidClose() }) }
     }
 
     private var timelineLayer: some View {

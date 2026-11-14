@@ -276,13 +276,35 @@ struct SyncTwoDeviceTests {
         try await b.insertProject("Alpha", created: h(0))
         try await SyncTestDevice.syncAll([b])
 
-        a.service.setPollInterval(.milliseconds(10))
-        defer { a.service.setPollInterval(nil) }
+        a.service.pollInterval = .milliseconds(10)
+        a.service.setPolling(true, for: .menuBar)
+        defer { a.service.setPolling(false, for: .menuBar) }
         var names: [String] = []
         for _ in 0..<200 where names.isEmpty {
             try await Task.sleep(for: .milliseconds(10))
             names = try await a.allProjects().map(\.name)
         }
         #expect(names == ["Alpha"])
+    }
+
+    @Test func becomingVisibleSyncsAtOnceAndHidingStopsPolling() async throws {
+        let (a, b, _) = try await SyncTestWorld.pair()
+        try await b.insertProject("Alpha", created: h(0))
+        try await SyncTestDevice.syncAll([b])
+
+        a.service.pollInterval = .seconds(3600)          // only the immediate sync can bring Alpha in
+        a.service.setPolling(true, for: .app)
+        var names: [String] = []
+        for _ in 0..<200 where names.isEmpty {
+            try await Task.sleep(for: .milliseconds(10))
+            names = try await a.allProjects().map(\.name)
+        }
+        #expect(names == ["Alpha"] && a.service.pollTask != nil)
+
+        a.service.setPolling(true, for: .menuBar)
+        a.service.setPolling(false, for: .app)
+        #expect(a.service.pollTask != nil)               // the open menu bar panel keeps it going
+        a.service.setPolling(false, for: .menuBar)
+        #expect(a.service.pollTask == nil)
     }
 }

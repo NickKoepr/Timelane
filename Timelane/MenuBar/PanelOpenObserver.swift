@@ -2,21 +2,27 @@
 import AppKit
 import SwiftUI
 
-/// Calls `onOpen` every time the window hosting this view becomes key or visible again.
-/// `onAppear`/`task` of MenuBarExtra content only run once, not on each open of the panel.
+/// Calls `onOpen` every time the window hosting this view becomes key or visible again, and `onClose` when it
+/// is no longer visible. `onAppear`/`task` of MenuBarExtra content only run once, not on each open of the panel.
 struct PanelOpenObserver: NSViewRepresentable {
     let onOpen: () -> Void
+    var onClose: () -> Void = {}
 
     func makeNSView(context: Context) -> ObserverView {
         let view = ObserverView()
         view.onOpen = onOpen
+        view.onClose = onClose
         return view
     }
 
-    func updateNSView(_ view: ObserverView, context: Context) { view.onOpen = onOpen }
+    func updateNSView(_ view: ObserverView, context: Context) {
+        view.onOpen = onOpen
+        view.onClose = onClose
+    }
 
     final class ObserverView: NSView {
         var onOpen: () -> Void = {}
+        var onClose: () -> Void = {}
         private var tokens: [NSObjectProtocol] = []
 
         override func viewDidMoveToWindow() {
@@ -29,7 +35,9 @@ struct PanelOpenObserver: NSViewRepresentable {
                 MainActor.assumeIsolated { self?.onOpen() }
             })
             tokens.append(center.addObserver(forName: NSWindow.didChangeOcclusionStateNotification, object: window, queue: .main) { [weak self, weak window] _ in
-                MainActor.assumeIsolated { if window?.occlusionState.contains(.visible) == true { self?.onOpen() } }
+                MainActor.assumeIsolated {
+                    if window?.occlusionState.contains(.visible) == true { self?.onOpen() } else { self?.onClose() }
+                }
             })
         }
     }
