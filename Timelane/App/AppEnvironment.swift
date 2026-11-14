@@ -17,6 +17,8 @@ final class AppEnvironment {
     let recordingTimer: RecordingTimer
     /// Opt-in iCloud backup (off by default); also drives the Settings window.
     let backup: CloudBackupService
+    /// Opt-in reminder notification to log hours (off by default), set in Settings ▸ Notifications.
+    let reminders: DailyReminderService
     /// Set by the menu bar to open the main window on a specific screen; `RootView` consumes it.
     var requestedSidebarItem: SidebarItem?
     /// Set by the Overview heatmap to open the Timeline on a specific day; `TimelineScreen` consumes it.
@@ -24,6 +26,9 @@ final class AppEnvironment {
     /// Whether the welcome carousel is presented by `RootView`; on for a first launch, or via Help.
     var isShowingOnboarding = false
     let onboardingStore: OnboardingStore
+    /// SwiftUI's `openWindow(id: "main")`, registered by views (it only exists inside them), so code outside
+    /// views (a notification click) can open the main window. See `registersMainWindowOpener(in:)`.
+    @ObservationIgnored var openMainWindow: (@MainActor () -> Void)?
 
     /// Id of the entry the auto logger is growing; the timelines draw it live.
     let liveAutoEntry = LiveAutoEntry()
@@ -33,9 +38,12 @@ final class AppEnvironment {
          backupStore: any CloudBackupStore = InMemoryCloudBackupStore(),
          backupSettings: any BackupSettingsStore = InMemoryBackupSettingsStore(),
          pendingRestore: PendingRestore = .temporary(),
-         onboardingStore: OnboardingStore = .temporary()) {
+         onboardingStore: OnboardingStore = .temporary(),
+         reminderSettings: any DailyReminderSettingsStore = InMemoryDailyReminderSettingsStore(),
+         notificationScheduler: any NotificationScheduler = InMemoryNotificationScheduler()) {
         self.database = database
         self.onboardingStore = onboardingStore
+        self.reminders = DailyReminderService(store: reminderSettings, scheduler: notificationScheduler)
         self.backup = Self.makeBackup(database: database, store: backupStore, settings: backupSettings,
                                       pendingRestore: pendingRestore)
         self.recordingTimer = RecordingTimer(store: recordingTimerStore)
@@ -92,7 +100,9 @@ final class AppEnvironment {
             let environment = AppEnvironment(database: try AppDatabase.live(), recordingTimerStore: UserDefaultsRecordingTimerStore(),
                                   autoLogStore: autoLogStore,
                                   backupStore: CloudKitBackupStore(), backupSettings: UserDefaultsBackupSettingsStore(),
-                                  pendingRestore: pendingRestore, onboardingStore: onboardingStore)
+                                  pendingRestore: pendingRestore, onboardingStore: onboardingStore,
+                                  reminderSettings: UserDefaultsDailyReminderSettingsStore(),
+                                  notificationScheduler: UserNotificationScheduler())
             environment.isShowingOnboarding = !onboardingStore.hasCompleted
             return environment
         } catch {

@@ -26,6 +26,7 @@ struct RootView: View {
             selection = item
             environment.requestedSidebarItem = nil
         }
+        .registersMainWindowOpener(in: environment)
     }
 
     @ViewBuilder private var detail: some View {

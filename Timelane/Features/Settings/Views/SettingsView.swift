@@ -1,11 +1,13 @@
 import SwiftUI
 
-/// Timelane ▸ Settings… (⌘,). One tab for now; room for more settings later.
+/// Timelane ▸ Settings… (⌘,): opt-in features, each on its own tab. Backup stays first (the App Store screenshot).
 struct SettingsView: View {
     var body: some View {
         TabView {
             BackupSettingsView()
                 .tabItem { Label("Backup", systemImage: "icloud") }
+            NotificationSettingsView()
+                .tabItem { Label("Notifications", systemImage: "bell") }
         }
         .frame(width: 460)
     }
