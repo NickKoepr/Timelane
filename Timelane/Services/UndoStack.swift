@@ -27,6 +27,12 @@ struct UndoStack<Element: Sendable>: Sendable {
         redoStack.append(element)
     }
 
+    /// Forgets all history (e.g. when the rows it refers to were changed from outside).
+    mutating func removeAll() {
+        undoStack.removeAll()
+        redoStack.removeAll()
+    }
+
     mutating func didRedo() {
         guard let element = redoStack.popLast() else { return }
         undoStack.append(element)

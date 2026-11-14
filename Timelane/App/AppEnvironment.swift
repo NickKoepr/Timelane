@@ -12,11 +12,16 @@ final class AppEnvironment {
     /// Other writers (e.g. automatic logging) must use their own `TimeEntryEditor(repository:)` without `onChange`.
     let timeEntryEditor: TimeEntryEditor
     let timeEntryHistory: TimeEntryHistory
+    #if os(macOS)
+    /// App tracking exists on the Mac only; iOS has no foreground-app tracking.
     let tracker: AppActivityTracker
+    #endif
     /// The one Record/Stop timer, shared by the main window and the menu bar panel.
     let recordingTimer: RecordingTimer
     /// Opt-in iCloud backup (off by default); also drives the Settings window.
     let backup: CloudBackupService
+    /// Opt-in iCloud sync of projects and time entries (off by default); also drives the Settings window.
+    let sync: SyncService
     /// Set by the menu bar to open the main window on a specific screen; `RootView` consumes it.
     var requestedSidebarItem: SidebarItem?
     /// Set by the Overview heatmap to open the Timeline on a specific day; `TimelineScreen` consumes it.
@@ -33,7 +38,8 @@ final class AppEnvironment {
          backupStore: any CloudBackupStore = InMemoryCloudBackupStore(),
          backupSettings: any BackupSettingsStore = InMemoryBackupSettingsStore(),
          pendingRestore: PendingRestore = .temporary(),
-         onboardingStore: OnboardingStore = .temporary()) {
+         onboardingStore: OnboardingStore = .temporary(),
+         syncEngine: any SyncEngineClient = FakeSyncEngine()) {
         self.database = database
         self.onboardingStore = onboardingStore
         self.backup = Self.makeBackup(database: database, store: backupStore, settings: backupSettings,
@@ -43,15 +49,19 @@ final class AppEnvironment {
         self.timeEntries = GRDBTimeEntryRepository(database: database)
         self.appSessions = GRDBAppSessionRepository(database: database)
         self.trackedApps = GRDBTrackedAppRepository(database: database)
-        let live = liveAutoEntry
         let history = TimeEntryHistory(repository: timeEntries)
         self.timeEntryHistory = history
+        // Remote changes never land on the undo stack; steps that refer to a changed entry are dropped (E1).
+        self.sync = SyncService(store: GRDBSyncStore(database: database), engine: syncEngine, isolated: Self.isIsolatedRun,
+                                onRemoteEntryChanges: { ids in history.invalidate(touching: ids) })
         self.timeEntryEditor = TimeEntryEditor(repository: timeEntries, onChange: { change in
             await history.record(change)
         })
+        #if os(macOS)
         self.tracker = AppActivityTracker(
             repository: appSessions, trackedApps: trackedApps,
-            autoLogger: AutoTimeLogger(timeEntries: timeEntries, trackedApps: trackedApps, store: autoLogStore, live: live))
+            autoLogger: AutoTimeLogger(timeEntries: timeEntries, trackedApps: trackedApps, store: autoLogStore, live: liveAutoEntry))
+        #endif
     }
 
     /// The environment of the running app (shared with the app delegate).
@@ -92,7 +102,8 @@ final class AppEnvironment {
             let environment = AppEnvironment(database: try AppDatabase.live(), recordingTimerStore: UserDefaultsRecordingTimerStore(),
                                   autoLogStore: autoLogStore,
                                   backupStore: CloudKitBackupStore(), backupSettings: UserDefaultsBackupSettingsStore(),
-                                  pendingRestore: pendingRestore, onboardingStore: onboardingStore)
+                                  pendingRestore: pendingRestore, onboardingStore: onboardingStore,
+                                  syncEngine: CloudKitSyncEngine())
             environment.isShowingOnboarding = !onboardingStore.hasCompleted
             return environment
         } catch {

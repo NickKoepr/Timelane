@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 
 /// Turns `ActivityEvent`s into stored `AppSession`s. All sources feed one serial event stream.
@@ -152,3 +153,4 @@ final class AppActivityTracker {
         }
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 struct RootView: View {
@@ -54,3 +55,4 @@ struct RootView: View {
 #Preview {
     RootView().environment(AppEnvironment.preview())
 }
+#endif

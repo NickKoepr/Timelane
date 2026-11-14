@@ -2,10 +2,16 @@ import SwiftUI
 
 @main
 struct TimelaneApp: App {
+    #if os(macOS)
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    #else
+    @UIApplicationDelegateAdaptor(IOSAppDelegate.self) private var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
+    #endif
     @State private var environment = AppEnvironment.shared
 
     var body: some Scene {
+        #if os(macOS)
         Window("Timelane", id: "main") {
             RootView()
                 #if DEBUG
@@ -38,5 +44,15 @@ struct TimelaneApp: App {
             SettingsView()
                 .environment(environment)
         }
+        #else
+        WindowGroup {
+            IOSRootView()
+                .environment(environment)
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active, !AppEnvironment.isIsolatedRun else { return }
+            Task { await environment.sync.syncNow() }   // no-op while sync is off
+        }
+        #endif
     }
 }

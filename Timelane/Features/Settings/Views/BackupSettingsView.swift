@@ -5,12 +5,14 @@ struct BackupSettingsView: View {
 
     var body: some View {
         BackupSettingsContent(viewModel: BackupSettingsViewModel(
-            service: environment.backup, relaunch: { AppRelauncher.relaunch() }))
+            service: environment.backup, relaunch: { AppRelauncher.relaunch() },
+            isRestoreBlocked: { [sync = environment.sync] in sync.isEnabled }))
     }
 }
 
 private struct BackupSettingsContent: View {
     @State var viewModel: BackupSettingsViewModel
+    private var device: DeviceKind { .current }
 
     var body: some View {
         Form {
@@ -28,16 +30,16 @@ private struct BackupSettingsContent: View {
         .formStyle(.grouped)
         .confirmationDialog("A backup already exists in iCloud", isPresented: choiceBinding, presenting: viewModel.pendingChoice) { _ in
             Button("Restore It") { Task { await viewModel.resolveChoice(.restore) } }
-            Button("Replace with This Mac's Data", role: .destructive) { Task { await viewModel.resolveChoice(.replace) } }
+            Button("Replace with This \(device.noun)'s Data", role: .destructive) { Task { await viewModel.resolveChoice(.replace) } }
             Button("Cancel", role: .cancel) { Task { await viewModel.resolveChoice(.cancel) } }
         } message: { info in
-            Text("From \(info.deviceName), \(info.createdAt.formatted(date: .abbreviated, time: .shortened)): \(info.projectCount) projects, \(info.timeEntryCount) time entries. Restoring replaces the data on this Mac.")
+            Text("From \(info.deviceName), \(info.createdAt.formatted(date: .abbreviated, time: .shortened)): \(info.projectCount) projects, \(info.timeEntryCount) time entries. Restoring replaces the data on \(device.thisDevice).")
         }
         .confirmationDialog("Restore from iCloud?", isPresented: $viewModel.isConfirmingRestore, presenting: viewModel.restoreCandidate) { _ in
             Button("Restore and Restart", role: .destructive) { Task { await viewModel.confirmRestore() } }
             Button("Cancel", role: .cancel) {}
         } message: { info in
-            Text("The data on this Mac is replaced by the backup from \(info.createdAt.formatted(date: .abbreviated, time: .shortened)). Timelane restarts to finish. A copy of the current data is kept on this Mac.")
+            Text("The data on \(device.thisDevice) is replaced by the backup from \(info.createdAt.formatted(date: .abbreviated, time: .shortened)). Timelane restarts to finish. A copy of the current data is kept on \(device.thisDevice).")
         }
     }
 
@@ -53,8 +55,14 @@ private struct BackupSettingsContent: View {
             HStack {
                 Button("Back Up Now") { Task { await viewModel.backUpNow() } }
                 Button("Restore from iCloud…") { Task { await viewModel.requestRestore() } }
+                    .disabled(viewModel.isRestoreBlocked)
             }
             .disabled(viewModel.isWorking)
+            if viewModel.isRestoreBlocked {
+                Text("Turn off iCloud Sync to restore a backup.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
             Text("Turning backup off keeps the copy that is already in iCloud.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)

@@ -28,6 +28,7 @@ enum TimeEntryOverlapResolver {
                 head.updatedAt = now
                 var tail = other
                 tail.id = nil
+                tail.syncId = UUID()          // a new row needs its own identity (unique index)
                 tail.start = entry.end
                 tail.createdAt = now
                 tail.updatedAt = now

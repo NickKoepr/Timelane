@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import SwiftUI
 
@@ -33,3 +34,4 @@ struct PanelOpenObserver: NSViewRepresentable {
         }
     }
 }
+#endif

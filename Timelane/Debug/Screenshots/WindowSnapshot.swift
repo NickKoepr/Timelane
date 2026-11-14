@@ -1,4 +1,4 @@
-#if DEBUG
+#if DEBUG && os(macOS)
 import AppKit
 
 /// Captures the app's own windows. No Screen Recording permission is needed for a process's own windows.

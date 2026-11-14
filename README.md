@@ -24,6 +24,19 @@ Keyboard: Cmd-1/2/3/4 switch between Timeline, Projects, Tracked Apps and Overvi
 - Xcode 27.1 (used to develop it), Swift 6
 - The app runs in the App Sandbox and needs no special permissions.
 
+## Platforms
+
+Timelane runs on macOS 26 and on iPhone/iPad (iOS 26). It is one multiplatform target that shares the database, sync and layout code.
+
+The **iOS app** has no app tracking and no menu bar. It has four tabs:
+
+- **Timeline**: one day with the *Logged hours* lane. Tap an empty spot to add an entry (a 30-minute slot, or the zoom step when zoomed in), touch and hold and drag to select a period, tap an entry to edit or delete it, pinch to zoom, swipe sideways (or use ‹ ›, the calendar and Today) to change day. Record / Stop sits in the navigation bar (the timer is local to the device and not synced).
+- **Overview**: the yearly heatmap and statistics; tapping a day opens it on the Timeline.
+- **Projects**: monthly totals per project, add / edit / archive / delete (swipe a row), and export of the month (Excel or JSON) to Files via the system file exporter.
+- **Settings**: iCloud Sync, Backup, the welcome tour and About.
+
+Entries are moved or resized on iOS through the edit form (dragging them on the timeline is Mac-only for now). The first launch shows a shorter welcome tour without the tracking and menu bar pages. CI builds the iOS app for the Simulator on every pull request.
+
 ## Getting started
 
 ```sh
@@ -65,6 +78,7 @@ Timelane/
   Services/             Day totals, overlap resolving, running apps, app icons
     Activity/           Pure yearly statistics: day bucketing, heatmap layout, levels, statistics
     Backup/             Opt-in iCloud backup: CloudBackupService, CloudKit store, schedule and safety rules
+    Sync/               Opt-in iCloud sync of projects and entries: SyncService, CloudKit engine, pure merge/conflict rules, fakes for tests
     Tracking/           AppActivityTracker, AutoTimeLogger (linked app → growing entry), idle detection, system event observer, heartbeat
   Utilities/            DateRange, calendar helpers, duration formatting, colours
   Features/
@@ -76,7 +90,7 @@ Timelane/
     Projects/           ViewModels/ and Views/ for projects and monthly totals
     Overview/           Yearly heatmap, statistics and charts
     TrackedApps/        ViewModels/ and Views/ for the tracked-apps list
-    Settings/           Settings window (Timelane ▸ Settings…, ⌘,) with the iCloud backup tab
+    Settings/           Settings window (Timelane ▸ Settings…, ⌘,) with the iCloud sync and backup tabs
   MenuBar/              Menu bar panel: view model, content, form popup
   Debug/Screenshots/    DEBUG-only screenshot mode for the App Store images (sample data, self-capture)
   Assets.xcassets/      Accent colour and AppIcon
@@ -105,6 +119,18 @@ Optional and off by default. Turn it on in *Timelane ▸ Settings…* (⌘,) on 
 - **Turning it off** stops uploads; the copy in iCloud is kept.
 
 This is a snapshot backup, not a live sync between Macs. It needs the iCloud capability (CloudKit) for the app; CI builds strip it (`CODE_SIGN_ENTITLEMENTS=`).
+
+## iCloud sync
+
+Optional and off by default. Turn it on in *Timelane ▸ Settings…* (⌘,) on the *Sync* tab. It keeps **projects and logged hours** (time entries) the same on all your Macs, through your *private* iCloud (`iCloud.nl.nickkoepr.timelane`). Changes usually arrive within seconds.
+
+- **What syncs:** projects (name, colour, archived, customer id) and time entries (times, title, note, project).
+- **What does not:** app sessions (the tracked-apps lane), the list of tracked apps and the Record timer stay on each Mac.
+- **Turning it on:** if iCloud already holds Timelane data you are always asked: *Replace iCloud data with this Mac*, or *Replace this Mac's data with iCloud* (local projects and entries are replaced; app sessions and tracked apps stay). If iCloud is empty, this Mac's data is simply uploaded.
+- **Turning it off** keeps the data on this Mac and in iCloud. Turning it on again asks the same question. Signing out of iCloud or switching Apple ID turns sync off with a message; data is never moved between accounts silently.
+- **Conflicts:** the most recent change wins. For a time entry, the times, the title/note and the project are resolved separately, so a rename on one Mac and a move on another both survive. If a project is deleted on one Mac and edited on another, the delete wins; if an entry was added to a deleted project, the project comes back. Projects with the same name created on two Macs are merged; if two projects get the same customer id, the older edit keeps it and you see a notice. Entries never overlap: after a sync overlaps are resolved the same way as when you edit (newest action wins).
+- **Backup:** works next to sync, but restoring a backup is disabled while sync is on (turn sync off first).
+- **Requirements:** iCloud signed in, the iCloud (CloudKit) and Push Notifications capabilities on the App ID, and the same or a newer Timelane on every Mac (a Mac that is too old shows "Update Timelane on this device to keep syncing"). CI builds strip the entitlements.
 
 ## Website
 

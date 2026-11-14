@@ -8,7 +8,7 @@ struct AppIconView: View {
     var body: some View {
         Group {
             if let icon = AppIconProvider.shared.icon(for: bundleIdentifier) {
-                Image(nsImage: icon).resizable()
+                icon.resizable()
             } else {
                 Image(systemName: "app.dashed").resizable().foregroundStyle(.secondary)
             }

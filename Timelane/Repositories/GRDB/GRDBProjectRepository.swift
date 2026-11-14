@@ -30,6 +30,7 @@ struct GRDBProjectRepository: ProjectRepository {
                     if clash > 0 { throw RepositoryError.duplicateCustomId }
                 }
                 var saved = project
+                saved.updatedAt = .now
                 try saved.save(db)
                 return saved
             }
@@ -40,7 +41,8 @@ struct GRDBProjectRepository: ProjectRepository {
 
     func archive(id: Int64, archived: Bool) async throws {
         try await database.writer.write { db in
-            try db.execute(sql: "UPDATE project SET isArchived = ? WHERE id = ?", arguments: [archived, id])
+            try db.execute(sql: "UPDATE project SET isArchived = ?, updatedAt = ? WHERE id = ?",
+                           arguments: [archived, Date.now.timeIntervalSince1970, id])
         }
     }
 
@@ -48,6 +50,8 @@ struct GRDBProjectRepository: ProjectRepository {
         try await database.writer.write { db in
             let count = try TimeEntry.filter(Column("projectId") == id).fetchCount(db)
             guard count == 0 else { throw RepositoryError.projectHasEntries }
+            // Keep a copy for sync: another device may still add entries to this project (C4).
+            if let project = try Project.fetchOne(db, id: id) { try SyncRows.writeTombstone(db, project: project) }
             _ = try Project.deleteOne(db, id: id)
         }
     }

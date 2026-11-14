@@ -1,12 +1,9 @@
+#if os(macOS)
 import AppKit
 
 /// Timelane ▸ About Timelane: the standard About panel with links to the website, source and issue tracker.
 enum AboutPanel {
-    static let links: [(title: String, url: URL)] = [
-        ("Website", URL(string: "https://timelane.nickkoepr.nl")!),
-        ("GitHub", URL(string: "https://github.com/NickKoepr/Timelane")!),
-        ("Report an issue", URL(string: "https://github.com/NickKoepr/Timelane/issues")!),
-    ]
+    static let links = AboutLinks.all
 
     @MainActor static func show() {
         NSApp.activate()
@@ -28,3 +25,4 @@ enum AboutPanel {
         return text
     }
 }
+#endif

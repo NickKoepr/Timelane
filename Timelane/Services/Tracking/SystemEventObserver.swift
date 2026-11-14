@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 
 /// Translates workspace, sleep/wake and screen-lock notifications into `ActivityEvent`s.
@@ -53,3 +54,4 @@ extension ForegroundApp {
         self.init(bundleIdentifier: app.bundleIdentifier ?? "unknown.\(name)", name: name)
     }
 }
+#endif

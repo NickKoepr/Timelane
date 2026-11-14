@@ -1,7 +1,8 @@
+#if os(macOS)
 import AppKit
 import UniformTypeIdentifiers
 
-/// Asks where to save an export.
+/// Asks where to save an export. (iOS exports through `fileExporter` in `IOSProjectsScreen`.)
 enum ExportSavePanel {
     @MainActor static func chooseURL(fileName: String, contentType: UTType) -> URL? {
         let panel = NSSavePanel()
@@ -12,3 +13,4 @@ enum ExportSavePanel {
         return panel.runModal() == .OK ? panel.url : nil
     }
 }
+#endif

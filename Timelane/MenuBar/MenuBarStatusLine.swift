@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// The live tracking status: red dot + current app, grey "Not tracking: X" or grey "Paused".
@@ -30,3 +31,4 @@ struct MenuBarStatusLine: View {
         return false
     }
 }
+#endif

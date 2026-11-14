@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 struct MenuBarFooter: View {
@@ -13,3 +14,4 @@ struct MenuBarFooter: View {
         .padding(.vertical, 8)
     }
 }
+#endif

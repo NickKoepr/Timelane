@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import Synchronization
 
@@ -30,3 +31,4 @@ final class TerminationReply: Sendable {
         CFRunLoopWakeUp(CFRunLoopGetMain())
     }
 }
+#endif

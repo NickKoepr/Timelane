@@ -11,11 +11,17 @@ final class BackupSettingsViewModel {
 
     private let service: CloudBackupService
     private let relaunch: @MainActor () -> Void
+    private let restoreBlocked: @MainActor () -> Bool
 
-    init(service: CloudBackupService, relaunch: @escaping @MainActor () -> Void) {
+    /// - Parameter isRestoreBlocked: true while iCloud Sync is on (E6): a restore would fight the synced data.
+    init(service: CloudBackupService, relaunch: @escaping @MainActor () -> Void,
+         isRestoreBlocked: @escaping @MainActor () -> Bool = { false }) {
         self.service = service
         self.relaunch = relaunch
+        self.restoreBlocked = isRestoreBlocked
     }
+
+    var isRestoreBlocked: Bool { restoreBlocked() }
 
     var isEnabled: Bool { service.isEnabled }
     var isWorking: Bool { service.isWorking }
@@ -25,7 +31,7 @@ final class BackupSettingsViewModel {
     var statusText: String {
         if service.isWorking { return "Backing up…" }
         if service.skippedBecauseEmpty {
-            return "Skipped: this Mac has no data yet; your iCloud backup was kept."
+            return "Skipped: \(DeviceKind.current.thisDevice) has no data yet; your iCloud backup was kept."
         }
         guard let last = service.lastBackupAt else { return "Not backed up yet" }
         return "Last backed up \(last.formatted(date: .abbreviated, time: .shortened))"
@@ -79,6 +85,7 @@ final class BackupSettingsViewModel {
     /// Looks up the backup and asks for confirmation (the view shows the dialog).
     func requestRestore() async {
         errorMessage = nil
+        guard !isRestoreBlocked else { return }
         do {
             guard let remote = try await service.latestRemoteBackup() else { throw BackupError.noBackup }
             restoreCandidate = remote
@@ -94,6 +101,10 @@ final class BackupSettingsViewModel {
     }
 
     private func restoreAndRelaunch() async {
+        guard !isRestoreBlocked else {
+            errorMessage = "Turn off iCloud Sync to restore a backup."
+            return
+        }
         do {
             try await service.prepareRestore()
             relaunch()

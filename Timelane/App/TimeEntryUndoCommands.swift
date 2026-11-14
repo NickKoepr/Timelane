@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// Edit ▸ Undo / Redo (⌘Z / ⇧⌘Z) for logged hours; replaces the system items, which only know `NSUndoManager`.
@@ -24,3 +25,4 @@ struct TimeEntryUndoCommands: Commands {
         }
     }
 }
+#endif

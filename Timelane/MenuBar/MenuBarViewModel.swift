@@ -1,3 +1,4 @@
+#if os(macOS)
 import Foundation
 
 /// What the menu bar panel adds on top of the timeline: its own `TimelineViewModel` (own zoom level)
@@ -31,3 +32,4 @@ final class MenuBarViewModel {
         scrollTrigger += 1
     }
 }
+#endif
