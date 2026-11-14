@@ -19,6 +19,10 @@ protocol SyncEngineClient: AnyObject, Sendable {
 
     /// Deletes the zone with everything in it and creates it again (A1 "replace iCloud").
     func deleteZoneAndRecreate() async throws
+    /// Whether the zone exists (it may be empty).
+    func zoneExists() async throws -> Bool
+    /// Forgets all engine state and starts over, as on a first launch (follow another device's reset).
+    func restartFresh() async
     /// Whether iCloud holds any synced record.
     func zoneHasRecords() async throws -> Bool
 }

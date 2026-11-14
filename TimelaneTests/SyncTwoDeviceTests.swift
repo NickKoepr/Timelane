@@ -204,21 +204,70 @@ struct SyncTwoDeviceTests {
         if case .idle = a.service.status {} else { Issue.record("expected idle after coming back online") }
     }
 
-    @Test func replacingICloudTurnsTheOtherDevicesOff() async throws {          // A1 "replace iCloud with this device"
+    @Test func replacingICloudReplacesTheOtherDevices() async throws {         // A1 "replace iCloud with this device"
         let (a, b, server) = try await SyncTestWorld.pair()
         try await a.insertProject("Alpha", created: h(0))
         try await SyncTestDevice.syncAll([a, b])
 
         await b.service.disable()
         try await b.insertProject("Beta", created: h(1))
+        try await a.insertProject("Gamma", created: h(2))        // a's own change, never synced
         let remoteHasData = try await b.service.remoteHasData()
         try await b.service.enable(.replaceICloud)
         await a.service.syncNow()
 
         let projectsA = try await a.allProjects()
+        let outboxA = try await a.outbox()
         #expect(remoteHasData)
         #expect(server.records.count == 2)               // Alpha and Beta, uploaded after the zone was emptied
-        #expect(!a.service.isEnabled && a.service.notice != nil)
-        #expect(projectsA.map(\.name) == ["Alpha"])       // a keeps its data
+        #expect(a.service.isEnabled && a.service.notice == SyncService.replacedNotice)
+        #expect(projectsA.map(\.name).sorted() == ["Alpha", "Beta"])   // a follows iCloud; Gamma is gone
+        #expect(outboxA.isEmpty)
+        #expect(b.service.isEnabled && b.service.notice == nil)
+
+        // Both keep syncing normally afterwards.
+        try await a.insertProject("Delta", created: h(3))
+        try await SyncTestDevice.syncAll([a, b])
+        let namesB = try await b.allProjects().map(\.name).sorted()
+        #expect(namesB == ["Alpha", "Beta", "Delta"])
+    }
+
+    @Test func removedICloudDataTurnsSyncOffAndKeepsLocalData() async throws {  // zone deleted and not created again
+        let (a, b, server) = try await SyncTestWorld.pair()
+        try await a.insertProject("Alpha", created: h(0))
+        try await SyncTestDevice.syncAll([a, b])
+
+        server.deleteZone()
+        await a.service.syncNow()
+
+        let projectsA = try await a.allProjects()
+        #expect(!a.service.isEnabled && a.service.notice == SyncService.zoneRemovedNotice)
+        #expect(projectsA.map(\.name) == ["Alpha"])
+        #expect(server.records.isEmpty)                  // nothing was uploaded into the removed zone
+    }
+
+    @Test func syncRequestedWhileSyncingRunsAnotherRound() async throws {
+        let (a, b, _) = try await SyncTestWorld.pair()
+        a.service.isSyncing = true
+        await a.service.syncNow()
+        #expect(a.service.syncRequested)
+        a.service.isSyncing = false
+
+        try await b.insertProject("Alpha", created: h(0))
+        try await SyncTestDevice.syncAll([b])
+        await a.service.syncNow()
+        let names = try await a.allProjects().map(\.name)
+        #expect(names == ["Alpha"] && !a.service.syncRequested)
+    }
+
+    @Test func syncNowStartsAStoppedEngine() async throws {
+        let (a, b, _) = try await SyncTestWorld.pair()
+        try await b.insertProject("Alpha", created: h(0))
+        try await SyncTestDevice.syncAll([b])
+        await a.service.stopEngine()
+
+        await a.service.syncNow()
+        let names = try await a.allProjects().map(\.name)
+        #expect(a.service.isEngineRunning && names == ["Alpha"])
     }
 }

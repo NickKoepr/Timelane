@@ -28,24 +28,34 @@ final class SyncService {
     let engine: any SyncEngineClient
     let isolated: Bool
     let forwardDelay: Duration
+    let zoneCheckDelay: Duration
+    let syncsAutomatically: Bool
     let onRemoteEntryChanges: @MainActor (Set<Int64>) -> Void
     @ObservationIgnored var forwarder: SyncOutboxForwarder?
     @ObservationIgnored var outboxTask: Task<Void, Never>?
     @ObservationIgnored var isEngineRunning = false
     @ObservationIgnored var isResettingZone = false
-    @ObservationIgnored var zoneResetPending = false
+    /// Another device replaced (or someone removed) the iCloud data; handled at the start of the next sync round.
+    @ObservationIgnored var remoteResetPending = false
+    /// A sync was asked for while one was running: the running pass does another round.
+    @ObservationIgnored var syncRequested = false
     @ObservationIgnored var eventCount = 0
 
     /// - Parameters:
     ///   - isolated: tests, previews and screenshot runs never start the engine.
     ///   - forwardDelay: how long a changed record waits before it is handed to the engine (D6).
+    ///   - zoneCheckDelay: the wait between checks whether a deleted zone was created again by another device.
+    ///   - syncsAutomatically: run a sync pass after local changes were handed to the engine (off in tests).
     ///   - onRemoteEntryChanges: told which local time entries a remote change touched (E1: forget undo steps).
-    init(store: any SyncStore, engine: any SyncEngineClient, isolated: Bool = false, forwardDelay: Duration = .seconds(10),
+    init(store: any SyncStore, engine: any SyncEngineClient, isolated: Bool = false, forwardDelay: Duration = .seconds(5),
+         zoneCheckDelay: Duration = .seconds(3), syncsAutomatically: Bool = true,
          onRemoteEntryChanges: @escaping @MainActor (Set<Int64>) -> Void = { _ in }) {
         self.store = store
         self.engine = engine
         self.isolated = isolated
         self.forwardDelay = forwardDelay
+        self.zoneCheckDelay = zoneCheckDelay
+        self.syncsAutomatically = syncsAutomatically
         self.onRemoteEntryChanges = onRemoteEntryChanges
     }
 
@@ -87,8 +97,10 @@ final class SyncService {
 
     // MARK: Engine plumbing
 
+    /// Nothing goes up while a remote reset is pending: local rows may be about to be replaced.
     func uploadRecord(for id: SyncRecordID) async -> SyncUploadRecord? {
-        (try? await store.uploadRecord(for: id)) ?? nil
+        guard !remoteResetPending else { return nil }
+        return (try? await store.uploadRecord(for: id)) ?? nil
     }
 
     /// Adds the outbox rows to the engine's pending changes.
@@ -100,7 +112,12 @@ final class SyncService {
     }
 
     private func beginForwardingOutbox() {
-        forwarder = SyncOutboxForwarder(delay: forwardDelay) { [weak self] items in await self?.forward(items) }
+        forwarder = SyncOutboxForwarder(delay: forwardDelay) { [weak self] items in
+            guard let self else { return }
+            await forward(items)
+            // CKSyncEngine may wait a long time before it sends by itself; send (and fetch) now.
+            if syncsAutomatically { scheduleSync() }
+        }
         outboxTask = Task { [weak self, store] in
             for await items in store.observeOutbox() {
                 guard let self else { return }

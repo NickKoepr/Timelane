@@ -4,6 +4,13 @@ import Foundation
 extension SyncService {
     func handle(_ event: SyncEngineEvent) async {
         guard isEnabled else { return }
+        // Before a pending reset is handled, downloads and send results belong to data that is about to be replaced.
+        if remoteResetPending {
+            switch event {
+            case .fetched, .sent: return
+            default: break
+            }
+        }
         do {
             switch event {
             case .stateUpdate(let data):
@@ -18,9 +25,7 @@ extension SyncService {
                 try await handleSent(saved: saved, deleted: deleted, failed: failed)
             case .zoneDeleted:
                 eventCount += 1
-                guard !isResettingZone else { return }
-                await disable(notice: "The iCloud data of Timelane was removed (on another device or in iCloud settings). "
-                    + "Sync was turned off; your data on this device is kept.")
+                noteRemoteReset()
             }
         } catch {
             report(error)
@@ -89,8 +94,7 @@ extension SyncService {
                 scheduleSync()
             }
         case .zoneNotFound:
-            zoneResetPending = true
-            scheduleSync()
+            noteRemoteReset()
         case .quotaExceeded:
             pauseReason = "iCloud storage is full"
         case .networkUnavailable:

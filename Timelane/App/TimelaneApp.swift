@@ -50,8 +50,12 @@ struct TimelaneApp: App {
                 .environment(environment)
         }
         .onChange(of: scenePhase) { _, phase in
-            guard phase == .active, !AppEnvironment.isIsolatedRun else { return }
-            Task { await environment.sync.syncNow() }   // no-op while sync is off
+            guard !AppEnvironment.isIsolatedRun else { return }
+            switch phase {
+            case .active: Task { await environment.sync.syncNow() }   // no-op while sync is off
+            case .background: IOSAppDelegate.syncBeforeSuspending()
+            default: break
+            }
         }
         #endif
     }

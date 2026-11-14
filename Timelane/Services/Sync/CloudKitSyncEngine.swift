@@ -24,6 +24,9 @@ final class CloudKitSyncEngine: SyncEngineClient, CKSyncEngineDelegate, @uncheck
         var inFlight: [CKRecord.ID: SyncRecord] = [:]
         /// Record types of queued deletes (a `CKRecord.ID` carries no type).
         var deleteTypes: [UUID: SyncRecordType] = [:]
+        /// An engine started without state learns the database from scratch; a zone deletion it reports before its
+        /// first fetch finished is history (for example this device's own "Replace iCloud data"), not news.
+        var ignoresZoneDeletions = false
     }
 
     private let lock = NSLock()
@@ -102,12 +105,32 @@ final class CloudKitSyncEngine: SyncEngineClient, CKSyncEngineDelegate, @uncheck
         } catch {
             throw Self.mapped(error)
         }
+        // Create it again at once: other devices see the deletion and check whether the zone came back.
+        do {
+            _ = try await container.privateCloudDatabase.save(CKRecordZone(zoneID: Self.zoneID))
+        } catch {
+            throw Self.mapped(error)
+        }
+        await restartFresh()
+    }
+
+    func restartFresh() async {
         locked { storage in
             storage.inFlight = [:]
             storage.deleteTypes = [:]
         }
-        // A fresh engine without state: its pending zone save re-creates the zone on the next send.
         makeEngine(nil)
+    }
+
+    func zoneExists() async throws -> Bool {
+        do {
+            _ = try await container.privateCloudDatabase.recordZone(for: Self.zoneID)
+            return true
+        } catch let error as CKError where error.code == .zoneNotFound || error.code == .unknownItem {
+            return false
+        } catch {
+            throw Self.mapped(error)
+        }
     }
 
     func zoneHasRecords() async throws -> Bool {
@@ -130,7 +153,10 @@ final class CloudKitSyncEngine: SyncEngineClient, CKSyncEngineDelegate, @uncheck
         configuration.automaticallySync = true
         let engine = CKSyncEngine(configuration)
         engine.state.add(pendingDatabaseChanges: [.saveZone(CKRecordZone(zoneID: Self.zoneID))])
-        locked { $0.engine = engine }
+        locked { storage in
+            storage.engine = engine
+            storage.ignoresZoneDeletions = serialization == nil
+        }
     }
 
     static func mapped(_ error: Error) -> SyncEngineError {

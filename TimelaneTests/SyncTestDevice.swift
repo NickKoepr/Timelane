@@ -36,6 +36,7 @@ final class SyncTestDevice {
         self.remoteChanges = log
         self.projects = GRDBProjectRepository(database: database)
         self.service = SyncService(store: store, engine: engine, isolated: false, forwardDelay: .zero,
+                                   zoneCheckDelay: .zero, syncsAutomatically: false,
                                    onRemoteEntryChanges: { ids in
                                        log.batches.append(ids)
                                        history.invalidate(touching: ids)

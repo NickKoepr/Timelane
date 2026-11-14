@@ -5,7 +5,10 @@ extension CloudKitSyncEngine {
     func handleEvent(_ event: CKSyncEngine.Event, syncEngine: CKSyncEngine) async {
         // An engine that was replaced (zone reset) may still deliver events; they belong to the old state.
         guard let handler = locked({ storage in storage.engine === syncEngine ? storage.handler : nil }) else { return }
-        for translated in translate(event) { await handler(translated) }
+        var events = translate(event)
+        if locked({ $0.ignoresZoneDeletions }) { events.removeAll { if case .zoneDeleted = $0 { true } else { false } } }
+        if case .didFetchChanges = event { locked { $0.ignoresZoneDeletions = false } }
+        for translated in events { await handler(translated) }
     }
 
     func nextRecordZoneChangeBatch(_ context: CKSyncEngine.SendChangesContext, syncEngine: CKSyncEngine) async

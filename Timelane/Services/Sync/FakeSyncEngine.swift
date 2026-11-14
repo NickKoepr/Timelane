@@ -94,6 +94,20 @@ final class FakeSyncEngine: SyncEngineClient, @unchecked Sendable {
         return !server.records.isEmpty
     }
 
+    func zoneExists() async throws -> Bool {
+        guard server.isOnline else { throw SyncEngineError.offline }
+        return server.zoneExists
+    }
+
+    func restartFresh() async {
+        state.withLock { state in
+            state.token = 0
+            state.epoch = server.epoch
+            state.pendingSaves = []
+            state.pendingDeletes = []
+        }
+    }
+
     func deleteZoneAndRecreate() async throws {
         guard server.isOnline else { throw SyncEngineError.offline }
         server.deleteZone()
