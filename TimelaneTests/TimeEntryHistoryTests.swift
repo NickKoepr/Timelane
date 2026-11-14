@@ -25,6 +25,19 @@ struct TimeEntryHistoryTests {
         try await editor.create(projectId: projectId, range: DateRange(start: d(from), end: d(to)), title: "T", note: note)
     }
 
+    @Test func invalidateOnlyDropsHistoryThatTouchesAChangedEntry() async throws {
+        try await create(9, 10)
+        let id = try #require(try await all().first?.id)
+
+        history.invalidate(touching: [id + 100])
+        #expect(history.canUndo)
+
+        await history.undo()
+        #expect(history.canRedo)
+        history.invalidate(touching: [id])
+        #expect(!history.canUndo && !history.canRedo)
+    }
+
     @Test func createUndoRedoKeepsId() async throws {
         try await create(9, 10)
         let original = try await all()

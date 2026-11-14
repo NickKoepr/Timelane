@@ -89,6 +89,23 @@ struct AutoTimeLoggerTests {
         #expect(all[0].title == nil && all[0].note == nil)
     }
 
+    /// D7: an entry the user changed (on another device) is theirs now; the logger starts a new one at "now".
+    @Test func entryWithATitleAddedElsewhereIsNotGrownAnymore() async throws {
+        let f = try await LoggerFixture()
+        await f.logger.sessionStarted(bundleIdentifier: "xcode", at: f.clock)
+        await f.run(minutes: 5)
+        var own = try #require(try await f.stored().first)
+        own.title = "Meeting"
+        try await TimeEntryEditor(repository: f.entries).update(own)
+
+        await f.run(minutes: 3)
+
+        let all = try await f.stored()
+        #expect(all.count == 2)
+        #expect(all[0].title == "Meeting" && all[0].end == f.at(5))
+        #expect(all[1].title == nil && all[1].start == f.at(5.5) && all[1].end == f.at(8))
+    }
+
     @Test func sessionEndingAfter40SecondsCreatesNothing() async throws {
         let f = try await LoggerFixture()
         await f.logger.sessionStarted(bundleIdentifier: "xcode", at: f.clock)
