@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 struct ProjectsScreen: View {
@@ -103,3 +104,4 @@ struct ProjectsScreen: View {
 #Preview("Empty") {
     ProjectsScreen(environment: .inMemory()).frame(width: 800, height: 600)
 }
+#endif

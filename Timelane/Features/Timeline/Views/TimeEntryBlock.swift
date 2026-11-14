@@ -64,7 +64,9 @@ struct TimeEntryBlock: View {
         .overlay(alignment: .bottom) { handle(.resizeBottom) }
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
+        #if os(macOS)
         .gesture(dragGesture(.move))
+        #endif
         .contextMenu {
             Button("Edit…", action: onEdit)
             Divider()
@@ -76,7 +78,9 @@ struct TimeEntryBlock: View {
     }
 
     /// A 6pt strip on the top/bottom edge for resizing.
+    /// Not on iOS: a finger on an entry scrolls the day, and times are changed in the edit form.
     @ViewBuilder private func handle(_ mode: EntryDragMode) -> some View {
+        #if os(macOS)
         if canDrag {
             Color.clear
                 .frame(height: 6)
@@ -84,11 +88,14 @@ struct TimeEntryBlock: View {
                 .rowResizePointer()
                 .gesture(dragGesture(mode))
         }
+        #endif
     }
 
+    #if os(macOS)
     private func dragGesture(_ mode: EntryDragMode) -> some Gesture {
         DragGesture(minimumDistance: 3, coordinateSpace: .named("timeline"))
             .onChanged { if canDrag { onDrag(mode, $0.translation.height) } }
             .onEnded { _ in if canDrag { onDragEnd() } }
     }
+    #endif
 }

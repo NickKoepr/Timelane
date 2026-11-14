@@ -31,7 +31,7 @@ final class BackupSettingsViewModel {
     var statusText: String {
         if service.isWorking { return "Backing up…" }
         if service.skippedBecauseEmpty {
-            return "Skipped: this Mac has no data yet; your iCloud backup was kept."
+            return "Skipped: \(DeviceKind.current.thisDevice) has no data yet; your iCloud backup was kept."
         }
         guard let last = service.lastBackupAt else { return "Not backed up yet" }
         return "Last backed up \(last.formatted(date: .abbreviated, time: .shortened))"

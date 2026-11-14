@@ -1,9 +1,8 @@
-import UniformTypeIdentifiers
-
 #if os(macOS)
 import AppKit
+import UniformTypeIdentifiers
 
-/// Asks where to save an export.
+/// Asks where to save an export. (iOS exports through `fileExporter` in `IOSProjectsScreen`.)
 enum ExportSavePanel {
     @MainActor static func chooseURL(fileName: String, contentType: UTType) -> URL? {
         let panel = NSSavePanel()
@@ -13,11 +12,5 @@ enum ExportSavePanel {
         panel.prompt = "Export"
         return panel.runModal() == .OK ? panel.url : nil
     }
-}
-#else
-/// iOS has no save panel; exporting there goes through `fileExporter` / `ShareLink` in the iOS Projects screen.
-/// Until that exists this reports "cancelled", so the shared Projects screen still compiles.
-enum ExportSavePanel {
-    @MainActor static func chooseURL(fileName: String, contentType: UTType) -> URL? { nil }
 }
 #endif

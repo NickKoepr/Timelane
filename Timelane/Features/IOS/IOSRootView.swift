@@ -1,39 +1,38 @@
 #if os(iOS)
 import SwiftUI
 
-/// Placeholder iOS shell: the shared screens in tabs, so the app launches and syncs.
-/// The real touch UI (timeline gestures, forms, onboarding) comes with the iOS app.
+/// The iOS shell: Timeline, Overview, Projects and Settings in tabs, plus the first-launch welcome carousel.
 struct IOSRootView: View {
+    private enum Page: Hashable { case timeline, overview, projects, settings }
+
     @Environment(AppEnvironment.self) private var environment
+    @State private var selection = Page.timeline
 
     var body: some View {
-        TabView {
-            Tab("Timeline", systemImage: "calendar.day.timeline.leading") {
-                NavigationStack { TimelineScreen(environment: environment) }
+        TabView(selection: $selection) {
+            Tab("Timeline", systemImage: "calendar.day.timeline.leading", value: Page.timeline) {
+                NavigationStack { IOSTimelineScreen(environment: environment) }
             }
-            Tab("Overview", systemImage: "chart.bar") {
+            Tab("Overview", systemImage: "chart.bar", value: Page.overview) {
                 NavigationStack { OverviewScreen(environment: environment) }
             }
-            Tab("Projects", systemImage: "folder") {
-                NavigationStack { ProjectsScreen(environment: environment) }
+            Tab("Projects", systemImage: "folder", value: Page.projects) {
+                NavigationStack { IOSProjectsScreen(environment: environment) }
             }
-            Tab("Settings", systemImage: "gearshape") {
+            Tab("Settings", systemImage: "gearshape", value: Page.settings) {
                 IOSSettingsView()
             }
         }
+        // A day tapped in the Overview heatmap asks for the Timeline.
+        .onChange(of: environment.requestedSidebarItem) {
+            guard environment.requestedSidebarItem == .timeline else { return }
+            selection = .timeline
+            environment.requestedSidebarItem = nil
+        }
         .errorAlert(Bindable(environment.timeEntryHistory).errorMessage)
-    }
-}
-
-/// iCloud Sync and Backup, each on its own page.
-private struct IOSSettingsView: View {
-    var body: some View {
-        NavigationStack {
-            List {
-                NavigationLink("iCloud Sync") { SyncSettingsView().navigationTitle("iCloud Sync") }
-                NavigationLink("Backup") { BackupSettingsView().navigationTitle("Backup") }
-            }
-            .navigationTitle("Settings")
+        .fullScreenCover(isPresented: Bindable(environment).isShowingOnboarding) {
+            IOSOnboardingView(viewModel: environment.makeOnboardingViewModel(),
+                              onClose: { environment.isShowingOnboarding = false })
         }
     }
 }

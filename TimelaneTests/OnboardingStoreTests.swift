@@ -28,3 +28,25 @@ struct OnboardingStoreTests {
         }
     }
 }
+
+struct OnboardingPlatformTests {
+    @Test func macPagesAreTheOriginalSix() {
+        let ids = OnboardingPage.pages(for: .macOS).map(\.id)
+        #expect(ids == ["welcome", "tracked-apps", "lanes", "register", "record", "more"])
+    }
+
+    @Test func iOSHasNoTrackingOrMenuBarPages() {
+        let pages = OnboardingPage.pages(for: .iOS)
+        #expect(pages.map(\.id) == ["welcome", "register-ios", "record-ios", "more-ios"])
+        for page in pages {
+            #expect(!page.message.contains("Tracked Apps"))
+            #expect(!page.message.contains("menu bar"))
+            #expect(!page.message.contains("⌘"))
+        }
+    }
+
+    @Test func everyPageBelongsToAPlatform() {
+        for page in OnboardingPage.all { #expect(!page.platforms.isEmpty) }
+        #expect(OnboardingPage.forCurrentPlatform == OnboardingPage.pages(for: .current))
+    }
+}
