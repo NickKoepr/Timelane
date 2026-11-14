@@ -57,11 +57,13 @@ struct ActivityBackupTests {
         #expect(try local.writer.read { db in try TrackedApp.fetchCount(db) } == 2)
     }
 
-    @Test func restoreActivityMergesAndTakesOwnership() async throws {
+    @Test func restoreBackupOnAMacAddsActivityAndTakesOwnership() async throws {
         let store = InMemoryCloudBackupStore()
         let (file, directory) = try backupFile()
         defer { try? FileManager.default.removeItem(at: directory) }
         try store.seed(.appActivity, file: file, info: BackupFixtures.info(entries: 0, createdAt: Date(timeIntervalSince1970: 5)))
+        let source = try BackupFixtures.database(projects: 1, entries: 1)
+        try BackupFixtures.seedSnapshot(of: source, part: .projectsAndHours, into: store)
         let device = try SyncTestDevice(server: InMemorySyncServer())
         try await device.service.enable(.replaceICloud)
         let settings = InMemoryBackupSettingsStore()
@@ -69,13 +71,32 @@ struct ActivityBackupTests {
         await backup.refreshRemote()
         #expect(backup.activityNotOwned)
 
-        let result = try await backup.restoreActivity()
+        let added = try await backup.restoreBackup()
 
-        #expect(result.sessions == 2)
+        #expect(added?.sessions == 2)
         #expect(try BackupFixtures.sessionCount(device.database) == 2)
+        #expect(try await device.allEntries().count == 1)
         #expect(store.uploadCount(.appActivity) == 1)
         #expect(!backup.activityNotOwned)
         #expect(settings.activityUploadedAt == store.info(.appActivity)?.createdAt)
+    }
+
+    @Test func restoreBackupOnAPhoneLeavesActivityAlone() async throws {
+        let store = InMemoryCloudBackupStore()
+        let (file, directory) = try backupFile()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        try store.seed(.appActivity, file: file, info: BackupFixtures.info(entries: 0))
+        try BackupFixtures.seedSnapshot(of: try BackupFixtures.database(projects: 1, entries: 1), part: .projectsAndHours, into: store)
+        let phone = try SyncTestDevice(server: InMemorySyncServer())
+        try await phone.service.enable(.replaceICloud)
+        let backup = phone.backupService(store: store, backsUpActivity: false)
+
+        let added = try await backup.restoreBackup()
+
+        #expect(added == nil)
+        #expect(try BackupFixtures.sessionCount(phone.database) == 0)
+        #expect(store.uploadCount(.appActivity) == 0)
+        #expect(!store.downloads.contains(.appActivity))
     }
 
     @Test func iCloudMigrationTellsBackupOnlyDevicesOnce() {

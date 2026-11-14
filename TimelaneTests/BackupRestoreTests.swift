@@ -22,7 +22,7 @@ struct BackupRestoreTests {
         try await SyncTestDevice.syncAll([a, b])
         #expect(a.history.canUndo)
 
-        try await backup.restoreProjects()
+        try await backup.restoreBackup()
         try await SyncTestDevice.syncAll([a, b])
 
         let projectsA = try await a.allProjects().map(\.name)
@@ -50,7 +50,7 @@ struct BackupRestoreTests {
         try BackupFixtures.addSession(a.database, from: 1000, to: 1600)     // after the backup
         let oldIds = try await a.allEntries().compactMap(\.id)
 
-        try await backup.restoreProjects()
+        try await backup.restoreBackup()
 
         let newIds = try await a.allEntries().compactMap(\.id)
         #expect(try BackupFixtures.sessionCount(a.database) == 2)
@@ -69,7 +69,7 @@ struct BackupRestoreTests {
         }
         await a.service.syncNow()
         await backup.backUpNow()
-        try await backup.restoreProjects()
+        try await backup.restoreBackup()
         let linked = try await a.database.writer.read { db in
             try String.fetchOne(db, sql: "SELECT project.name FROM trackedApp JOIN project ON project.id = trackedApp.projectId")
         }
@@ -96,14 +96,14 @@ struct BackupRestoreTests {
         try queue.close()
         try store.seed(.legacy, file: file, info: BackupFixtures.info(projects: 1, entries: 1))
 
-        try await backup.restoreProjects()
+        try await backup.restoreBackup()
         try await SyncTestDevice.syncAll([a, b])
 
         let projectsB = try await b.allProjects().map(\.name)
         let entriesA = try await a.allEntries()
         #expect(projectsB == ["Legacy"])
         #expect(entriesA.count == 1)
-        #expect(try BackupFixtures.sessionCount(a.database) == 0)          // projects and hours only
+        #expect(try BackupFixtures.sessionCount(a.database) == 1)          // a Mac also gets the app activity
     }
 
     @Test func interruptedRestoreFinishesAfterARelaunch() async throws {
@@ -143,7 +143,7 @@ struct BackupRestoreTests {
         try await SyncTestDevice.syncAll([a, b])
 
         server.isOnline = false
-        await #expect(throws: (any Error).self) { try await backup.restoreProjects() }
+        await #expect(throws: (any Error).self) { try await backup.restoreBackup() }
         #expect(a.service.restoreUploadPending)
         let projectsA = try await a.allProjects().map(\.name)
         #expect(projectsA == ["Backed up"])

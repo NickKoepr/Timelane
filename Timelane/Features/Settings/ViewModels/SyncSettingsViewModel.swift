@@ -103,7 +103,7 @@ final class SyncSettingsViewModel {
         isEnabling = true
         defer { isEnabling = false }
         do {
-            if choice == .restore { try await backup.restoreProjects() }
+            if choice == .restore { try await backup.restoreBackup() }
             try await service.enable(.replaceICloud)
         } catch {
             errorMessage = error.localizedDescription

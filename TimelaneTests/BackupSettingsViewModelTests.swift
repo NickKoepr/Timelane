@@ -58,6 +58,7 @@ struct BackupSettingsViewModelTests {
         #expect(!f.model.isConfirmingRestore)
         #expect(f.model.shownError == nil)
         #expect(names == ["Work"])
+        #expect(f.model.restoreMessage?.hasPrefix("Restored. Added 0 app sessions") == true)
     }
 
     @Test func activityOfAnotherDeviceIsExplained() async throws {

@@ -1,13 +1,12 @@
 import Foundation
 
-/// The backup part of the iCloud settings: what is in iCloud, Back Up Now, and the two restores.
+/// The backup part of the iCloud settings: what is in iCloud, Back Up Now and Restore.
 @MainActor @Observable
 final class BackupSettingsViewModel {
     var isConfirmingRestore = false
-    var isConfirmingActivityRestore = false
     var errorMessage: String?
-    /// What the last app activity restore added.
-    var activityRestoreMessage: String?
+    /// What the last restore added to the app activity (Mac).
+    var restoreMessage: String?
 
     private let service: CloudBackupService
 
@@ -22,7 +21,8 @@ final class BackupSettingsViewModel {
     /// A failure of the last (automatic or manual) run, or of the last settings action.
     var shownError: String? { errorMessage ?? service.lastError }
     var restoreCandidate: BackupInfo? { service.restorableProjects }
-    var activityCandidate: BackupInfo? { service.restorableActivity }
+    /// The app activity a restore adds (Mac); nil when there is none or this device has no app activity.
+    var activityCandidate: BackupInfo? { showsActivity ? service.restorableActivity : nil }
 
     var projectsStatusText: String {
         if service.isWorking { return "Backing up…" }
@@ -45,7 +45,7 @@ final class BackupSettingsViewModel {
         }
         if service.activityNotOwned {
             return "The app activity backup in iCloud is from \(info.deviceName) (\(Self.date(info))). The activity of "
-                + "\(DeviceKind.current.thisDevice) is not backed up until you restore or replace it."
+                + "\(DeviceKind.current.thisDevice) is not backed up until you restore the backup or replace it."
         }
         return "Latest backup \(Self.describe(info))"
     }
@@ -62,6 +62,7 @@ final class BackupSettingsViewModel {
     /// Looks up the backup and asks for confirmation (the view shows the dialog).
     func requestRestore() async {
         errorMessage = nil
+        restoreMessage = nil
         await service.refreshRemote()
         guard service.lastError == nil else { return }          // shown through `shownError`
         guard restoreCandidate != nil else {
@@ -74,29 +75,12 @@ final class BackupSettingsViewModel {
     func confirmRestore() async {
         isConfirmingRestore = false
         do {
-            try await service.restoreProjects()
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-
-    func requestActivityRestore() async {
-        errorMessage = nil
-        activityRestoreMessage = nil
-        await service.refreshRemote()
-        guard service.lastError == nil else { return }
-        guard activityCandidate != nil else {
-            errorMessage = BackupError.noBackup.errorDescription
-            return
-        }
-        isConfirmingActivityRestore = true
-    }
-
-    func confirmActivityRestore() async {
-        isConfirmingActivityRestore = false
-        do {
-            let result = try await service.restoreActivity()
-            activityRestoreMessage = "Added \(result.sessions) app sessions and \(result.trackedApps) tracked apps."
+            if let added = try await service.restoreBackup() {
+                restoreMessage = "Restored. Added \(added.sessions) app sessions and \(added.trackedApps) tracked apps "
+                    + "that were missing on \(DeviceKind.current.thisDevice)."
+            } else if service.lastError == nil {
+                restoreMessage = "Restored."
+            }
         } catch {
             errorMessage = error.localizedDescription
         }

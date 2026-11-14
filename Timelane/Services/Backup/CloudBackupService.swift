@@ -65,6 +65,7 @@ final class CloudBackupService {
 
     /// The backup a restore of projects and hours would use: the current part, or an older version's backup.
     var restorableProjects: BackupInfo? { remote[.projectsAndHours] ?? remote[.legacy] }
+    /// The app activity a restore would add on a Mac.
     var restorableActivity: BackupInfo? { remote[.appActivity] ?? remote[.legacy] }
 
     func markDirty(_ part: BackupPart) { dirty.insert(part) }
