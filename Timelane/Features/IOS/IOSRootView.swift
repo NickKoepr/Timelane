@@ -1,7 +1,7 @@
 #if os(iOS)
 import SwiftUI
 
-/// The iOS shell: Timeline, Overview, Projects and Settings in tabs, plus the first-launch welcome carousel.
+/// The iOS shell: Timeline, Projects, Overview and Settings in tabs, plus the first-launch welcome carousel.
 struct IOSRootView: View {
     private enum Page: Hashable { case timeline, overview, projects, settings }
 
@@ -13,11 +13,11 @@ struct IOSRootView: View {
             Tab("Timeline", systemImage: "calendar.day.timeline.leading", value: Page.timeline) {
                 NavigationStack { IOSTimelineScreen(environment: environment) }
             }
-            Tab("Overview", systemImage: "chart.bar", value: Page.overview) {
-                NavigationStack { OverviewScreen(environment: environment) }
-            }
             Tab("Projects", systemImage: "folder", value: Page.projects) {
                 NavigationStack { IOSProjectsScreen(environment: environment) }
+            }
+            Tab("Overview", systemImage: "chart.bar", value: Page.overview) {
+                NavigationStack { OverviewScreen(environment: environment) }
             }
             Tab("Settings", systemImage: "gearshape", value: Page.settings) {
                 IOSSettingsView()

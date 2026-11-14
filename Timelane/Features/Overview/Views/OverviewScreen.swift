@@ -32,6 +32,9 @@ struct OverviewScreen: View {
         .task(id: viewModel.year) { await viewModel.task() }
         .errorAlert($viewModel.errorMessage)
         .navigationTitle("Overview")
+        #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)   // a large title pushed the year bar and content far down
+        #endif
     }
 
     private var content: some View {

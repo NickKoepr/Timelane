@@ -11,7 +11,7 @@ struct IOSDayBar: View {
             HStack(spacing: 4) {
                 Button { viewModel.goToPreviousDay() } label: { Image(systemName: "chevron.left").frame(width: 36, height: 36) }
                     .accessibilityLabel("Previous day")
-                HStack(spacing: 2) {
+                HStack(spacing: 8) {
                     Text(viewModel.shortTitle).font(.headline).lineLimit(1).minimumScaleFactor(0.8)
                     DayDatePicker(viewModel: viewModel)
                 }

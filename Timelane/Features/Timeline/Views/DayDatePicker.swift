@@ -11,6 +11,9 @@ struct DayDatePicker: View {
             .help("Choose a day")
             .accessibilityLabel("Choose a day")
             .fixedSize()
+            #if os(iOS)
+            .sheet(isPresented: $isPresented) { IOSDayPickerSheet(selection: selection) }
+            #else
             .popover(isPresented: $isPresented, arrowEdge: .bottom) {
                 DatePicker("Day", selection: selection, displayedComponents: .date)
                     .labelsHidden()
@@ -18,6 +21,7 @@ struct DayDatePicker: View {
                     .focusEffectDisabled()   // no blue focus ring around the calendar
                     .padding(12)
             }
+            #endif
     }
 
     /// Picking a day shows it and closes the calendar.

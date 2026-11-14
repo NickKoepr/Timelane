@@ -23,6 +23,7 @@ struct IOSSettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .navigationBarTitleDisplayMode(.inline)   // same compact bar as the other tabs
         }
     }
 }

@@ -20,9 +20,10 @@ struct OverviewProjectList: View {
                                 Capsule().fill(row.project.color).frame(width: proxy.size.width * row.share)
                             }
                         }
-                    Text(DurationFormatter.short(row.seconds)).frame(minWidth: 64, alignment: .trailing)
+                    Text(DurationFormatter.short(row.seconds)).frame(minWidth: 64, alignment: .trailing).fixedSize()
                     Text(row.share.formatted(.percent.precision(.fractionLength(0))))
-                        .foregroundStyle(.secondary).frame(width: 40, alignment: .trailing)
+                        .foregroundStyle(.secondary).frame(minWidth: 40, alignment: .trailing)
+                        .fixedSize()   // "100%" never wraps the % onto a second line
                 }
                 .monospacedDigit()
                 .accessibilityElement(children: .combine)

@@ -12,13 +12,17 @@ struct YearNavigationBar: View {
     let current: () -> Void
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            bar { Button("This year", action: current).disabled(isCurrentYear) }
-            bar {
-                Button(action: current) { Image(systemName: "calendar") }
-                    .disabled(isCurrentYear)
-                    .help("This year (⌘T)")
+        Group {
+            #if os(iOS)
+            // A phone is always too narrow for the text button, and the menu picker under-reports its width to
+            // `ViewThatFits` (which then picked the wide bar and truncated "This year").
+            compactBar
+            #else
+            ViewThatFits(in: .horizontal) {
+                bar { Button("This year", action: current).disabled(isCurrentYear) }
+                compactBar
             }
+            #endif
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal)
@@ -26,6 +30,15 @@ struct YearNavigationBar: View {
         .fixedSize(horizontal: false, vertical: true)
         .background {
             YearNavigationShortcuts(isCurrentYear: isCurrentYear, previous: previous, next: next, current: current)
+        }
+    }
+
+    private var compactBar: some View {
+        bar {
+            Button(action: current) { Image(systemName: "calendar") }
+                .disabled(isCurrentYear)
+                .help("This year (⌘T)")
+                .accessibilityLabel("This year")
         }
     }
 
@@ -46,6 +59,7 @@ struct YearNavigationBar: View {
             .pickerStyle(.menu)
             .labelsHidden()
             .frame(maxWidth: 180) // a long project name truncates instead of pushing the bar past the column
+            .layoutPriority(1)    // the filter gets its width first; on iOS a squeezed menu label wrapped onto two lines
         }
         .lineLimit(1)
     }
