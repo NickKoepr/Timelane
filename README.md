@@ -122,7 +122,7 @@ This is a snapshot backup, not a live sync between Macs. It needs the iCloud cap
 
 ## iCloud sync
 
-Optional and off by default. Turn it on in *Timelane ▸ Settings…* (⌘,) on the *Sync* tab. It keeps **projects and logged hours** (time entries) the same on all your Macs, through your *private* iCloud (`iCloud.nl.nickkoepr.timelane`). Changes usually arrive within seconds.
+Optional and off by default. Turn it on in *Timelane ▸ Settings…* (⌘,) on the *Sync* tab. It keeps **projects and logged hours** (time entries) the same on all your Macs, through your *private* iCloud (`iCloud.nl.nickkoepr.timelane`). Changes usually arrive within seconds: besides iCloud's push notifications (best effort), the app checks for changes every 15 s while it is on screen (every 60 s on a Mac where Timelane is not the active app).
 
 - **What syncs:** projects (name, colour, archived, customer id) and time entries (times, title, note, project).
 - **What does not:** app sessions (the tracked-apps lane), the list of tracked apps and the Record timer stay on each Mac.

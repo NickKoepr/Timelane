@@ -33,6 +33,7 @@ final class SyncService {
     let onRemoteEntryChanges: @MainActor (Set<Int64>) -> Void
     @ObservationIgnored var forwarder: SyncOutboxForwarder?
     @ObservationIgnored var outboxTask: Task<Void, Never>?
+    @ObservationIgnored var pollTask: Task<Void, Never>?
     @ObservationIgnored var isEngineRunning = false
     @ObservationIgnored var isResettingZone = false
     /// Another device replaced (or someone removed) the iCloud data; handled at the start of the next sync round.

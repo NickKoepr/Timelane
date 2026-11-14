@@ -270,4 +270,19 @@ struct SyncTwoDeviceTests {
         let names = try await a.allProjects().map(\.name)
         #expect(a.service.isEngineRunning && names == ["Alpha"])
     }
+
+    @Test func pollingFetchesChangesWithoutAPush() async throws {
+        let (a, b, _) = try await SyncTestWorld.pair()
+        try await b.insertProject("Alpha", created: h(0))
+        try await SyncTestDevice.syncAll([b])
+
+        a.service.setPollInterval(.milliseconds(10))
+        defer { a.service.setPollInterval(nil) }
+        var names: [String] = []
+        for _ in 0..<200 where names.isEmpty {
+            try await Task.sleep(for: .milliseconds(10))
+            names = try await a.allProjects().map(\.name)
+        }
+        #expect(names == ["Alpha"])
+    }
 }

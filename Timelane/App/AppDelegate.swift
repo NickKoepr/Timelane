@@ -9,10 +9,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task { await AppEnvironment.shared.backup.run() }
         Task {
             await AppEnvironment.shared.sync.load()
+            // Launched in the background (e.g. at login): poll slowly until the app becomes active.
+            await MainActor.run {
+                if !NSApplication.shared.isActive {
+                    AppEnvironment.shared.sync.setPollInterval(SyncService.inactivePollInterval)
+                }
+            }
             await MainActor.run { Self.watchSyncEnabled() }
         }
         NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
-            Task { @MainActor in await AppEnvironment.shared.sync.syncNow() }   // no-op while sync is off
+            Task { @MainActor in
+                let sync = AppEnvironment.shared.sync
+                sync.setPollInterval(SyncService.activePollInterval)
+                await sync.syncNow()   // no-op while sync is off
+            }
+        }
+        NotificationCenter.default.addObserver(forName: NSApplication.didResignActiveNotification, object: nil, queue: .main) { _ in
+            Task { @MainActor in AppEnvironment.shared.sync.setPollInterval(SyncService.inactivePollInterval) }
         }
     }
 
