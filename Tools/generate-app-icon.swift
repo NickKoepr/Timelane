@@ -1,6 +1,8 @@
 #!/usr/bin/env swift
-// Generates the Timelane app icon at every macOS size plus a full-bleed opaque iOS icon (icon_ios_1024.png), and optionally the menu bar icon and the clock mark
-// (the same clock as template images: a PNG for the menu bar, an SVG for in-app use), so they all match.
+// Generates the Timelane app icon at every macOS size plus the iOS icon (full-bleed opaque light icon, dark and tinted variants) and the
+// appiconset's Contents.json, and optionally the menu bar icon and the clock mark (the same clock as template images: a PNG for the menu bar,
+// an SVG for in-app use), so they all match. Contents.json is generated too: never point the iOS entry at a macOS icon (its transparent
+// margin and shadow show up as black bars on iOS).
 // Usage: swift Tools/generate-app-icon.swift <appiconset-dir> [<menubar-imageset-dir> [<clockmark-imageset-dir>]]
 import AppKit
 
@@ -15,11 +17,16 @@ func color(_ hex: UInt32, _ alpha: CGFloat = 1) -> CGColor {
 /// Flat background colour of the icon body. Change this to recolour the icon.
 let backgroundHex: UInt32 = 0x2F6BEA
 let clockHex: UInt32 = 0xFFFFFF
+/// Clock colour of the dark iOS icon (drawn on the system's dark backdrop): a lighter shade of the brand colour.
+let darkClockHex: UInt32 = 0x5A8CF2
 
 /// Draws the icon on a 1024 x 1024 canvas (origin bottom-left): flat colour body, white clock.
+/// Side of the rounded macOS icon body on the 1024 canvas; the iOS icon is that body, full bleed.
+let macBodySize: CGFloat = 824
+
 /// `scale` is the CTM scale to the output size: shadow offset and blur are in device space and ignore the CTM.
 func draw(in ctx: CGContext, scale: CGFloat = 1) {
-    let body = CGRect(x: 100, y: 100, width: 824, height: 824)
+    let body = CGRect(x: (canvas - macBodySize) / 2, y: (canvas - macBodySize) / 2, width: macBodySize, height: macBodySize)
     let bodyPath = CGPath(roundedRect: body, cornerWidth: 185, cornerHeight: 185, transform: nil)
 
     // Flat body with a soft drop shadow (no gradient, no sheen).
@@ -89,13 +96,16 @@ func clockSVG() -> Data {
 
 /// `opaque` renders without an alpha channel (what App Store Connect wants for the iOS icon).
 func render(pixels: Int, opaque: Bool = false, drawing: (CGContext) -> Void) -> Data {
-    let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: pixels, pixelsHigh: pixels, bitsPerSample: 8,
-                               samplesPerPixel: opaque ? 3 : 4, hasAlpha: !opaque, isPlanar: false,
-                               colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)!
-    let context = NSGraphicsContext(bitmapImageRep: rep)!
-    context.cgContext.interpolationQuality = .high
-    drawing(context.cgContext)
-    return rep.representation(using: .png, properties: [:])!
+    let alpha: CGImageAlphaInfo = opaque ? .noneSkipLast : .premultipliedLast
+    let ctx = CGContext(data: nil, width: pixels, height: pixels, bitsPerComponent: 8, bytesPerRow: 0,
+                        space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: alpha.rawValue)!
+    ctx.interpolationQuality = .high
+    drawing(ctx)
+    let data = NSMutableData()
+    let destination = CGImageDestinationCreateWithData(data, "public.png" as CFString, 1, nil)!
+    CGImageDestinationAddImage(destination, ctx.makeImage()!, nil)
+    guard CGImageDestinationFinalize(destination) else { fatalError("could not encode PNG") }
+    return data as Data
 }
 
 /// App icon at `pixels` x `pixels`.
@@ -107,15 +117,63 @@ func appIcon(pixels: Int) -> Data {
     }
 }
 
-/// iOS icon: the same clock on a full-bleed, opaque square. No rounded corners or shadow: iOS masks the icon itself.
-func iosAppIcon(pixels: Int) -> Data {
-    render(pixels: pixels, opaque: true) { ctx in
+/// iOS icon appearances (iOS 18+ home screen modes).
+enum IOSAppearance: String, CaseIterable {
+    case light, dark, tinted
+
+    var fileName: String { self == .light ? "icon_ios_1024.png" : "icon_ios_\(rawValue)_1024.png" }
+}
+
+/// iOS icon: the same clock on a full-bleed square. No rounded corners or shadow: iOS masks the icon itself.
+/// - light: white clock on the opaque brand colour (App Store Connect wants no alpha channel here).
+/// - dark: the clock in the brand colour on transparent; iOS draws its own dark backdrop behind it.
+/// - tinted: a grayscale icon (white clock on black); iOS colours it with the user's tint.
+func iosAppIcon(pixels: Int, appearance: IOSAppearance) -> Data {
+    render(pixels: pixels, opaque: appearance != .dark) { ctx in
         let scale = CGFloat(pixels) / canvas
         ctx.scaleBy(x: scale, y: scale)
-        ctx.setFillColor(color(backgroundHex))
-        ctx.fill(CGRect(x: 0, y: 0, width: canvas, height: canvas))
-        drawClock(in: ctx, color: color(clockHex))
+        // Opaque variants fill the square first, then zoom in so the clock fills the icon like it fills the macOS body.
+        if appearance != .dark {
+            ctx.setFillColor(color(appearance == .light ? backgroundHex : 0x000000))
+            ctx.fill(CGRect(x: 0, y: 0, width: canvas, height: canvas))
+        }
+        ctx.translateBy(x: canvas / 2, y: canvas / 2)
+        ctx.scaleBy(x: canvas / macBodySize, y: canvas / macBodySize)
+        ctx.translateBy(x: -canvas / 2, y: -canvas / 2)
+        switch appearance {
+        case .light:
+            drawClock(in: ctx, color: color(clockHex))
+        case .dark:
+            drawClock(in: ctx, color: color(darkClockHex))
+        case .tinted:
+            drawClock(in: ctx, color: color(0xFFFFFF))
+        }
     }
+}
+
+/// The appiconset's Contents.json: every macOS size plus the three iOS appearances.
+func appIconContents() -> Data {
+    var images: [String] = []
+    for size in [16, 32, 128, 256, 512] { // the macOS icon slots (in points), each at 1x and 2x
+        images.append("{ \"filename\" : \"icon_\(size).png\", \"idiom\" : \"mac\", \"scale\" : \"1x\", \"size\" : \"\(size)x\(size)\" }")
+        images.append("{ \"filename\" : \"icon_\(size * 2).png\", \"idiom\" : \"mac\", \"scale\" : \"2x\", \"size\" : \"\(size)x\(size)\" }")
+    }
+    for appearance in IOSAppearance.allCases {
+        let luminosity = appearance == .light ? ""
+            : ", \"appearances\" : [ { \"appearance\" : \"luminosity\", \"value\" : \"\(appearance.rawValue)\" } ]"
+        images.append("{ \"filename\" : \"\(appearance.fileName)\", \"idiom\" : \"universal\", \"platform\" : \"ios\", "
+            + "\"size\" : \"1024x1024\"\(luminosity) }")
+    }
+    let json = """
+    {
+      "images" : [
+        \(images.joined(separator: ",\n    "))
+      ],
+      "info" : { "author" : "xcode", "version" : 1 }
+    }
+
+    """
+    return Data(json.utf8)
 }
 
 /// Menu bar template image: the clock in black on transparent, 16 of 18 points tall.
@@ -140,8 +198,11 @@ for size in sizes {
     try appIcon(pixels: size).write(to: output.appendingPathComponent("icon_\(size).png"))
 }
 print("Wrote \(sizes.count) icons to \(output.path)")
-try iosAppIcon(pixels: 1024).write(to: output.appendingPathComponent("icon_ios_1024.png"))
-print("Wrote iOS icon to \(output.path)")
+for appearance in IOSAppearance.allCases {
+    try iosAppIcon(pixels: 1024, appearance: appearance).write(to: output.appendingPathComponent(appearance.fileName))
+}
+try appIconContents().write(to: output.appendingPathComponent("Contents.json"))
+print("Wrote iOS icons (light, dark, tinted) and Contents.json to \(output.path)")
 
 if CommandLine.arguments.count >= 3 {
     let menuBar = URL(fileURLWithPath: CommandLine.arguments[2], isDirectory: true)
