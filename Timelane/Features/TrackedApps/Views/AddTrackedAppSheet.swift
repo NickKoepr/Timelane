@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 /// Pick one or more apps to track: running apps, apps seen before, or any app from disk.
@@ -55,3 +56,4 @@ struct AddTrackedAppSheet: View {
         trackedApps: environment.trackedApps, appSessions: environment.appSessions,
         runningApps: RunningApps.regular, onFinish: {}))
 }
+#endif

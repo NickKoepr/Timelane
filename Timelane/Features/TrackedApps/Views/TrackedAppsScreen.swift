@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 struct TrackedAppsScreen: View {
@@ -73,3 +74,4 @@ struct TrackedAppsScreen: View {
 #Preview("Empty") {
     TrackedAppsScreen(environment: .inMemory()).frame(width: 800, height: 600)
 }
+#endif

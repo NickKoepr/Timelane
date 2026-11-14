@@ -1,3 +1,4 @@
+#if os(macOS)
 import Foundation
 
 extension AppActivityTracker {
@@ -6,3 +7,4 @@ extension AppActivityTracker {
         TrackingStatus(isPaused: isPaused, currentApp: currentApp, isCurrentAppTracked: isCurrentAppTracked)
     }
 }
+#endif

@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 
 /// Apps the user can see in the Dock right now.
@@ -8,3 +9,4 @@ enum RunningApps {
             .compactMap(ForegroundApp.init)
     }
 }
+#endif

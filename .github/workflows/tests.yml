@@ -94,3 +94,110 @@ jobs:
           name: TestResults
           path: build/TestResults.xcresult
           retention-days: 7
+
+  # The target is multiplatform: every file in Timelane/ also compiles for iOS (macOS-only code is guarded
+  # with #if os(macOS)). This job only builds; the tests stay on macOS.
+  ios-build:
+    name: iOS build
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 27
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$XCODE" ]; then
+            XCODE=/Applications/Xcode.app
+          fi
+          if ! "$XCODE/Contents/Developer/usr/bin/xcodebuild" -version | grep -q '^Xcode 27'; then
+            echo "::error::No Xcode 27 found on this runner (looked at /Applications/Xcode_27*.app and Xcode.app)"
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+          swift --version
+
+      - name: Cache SwiftPM checkouts
+        uses: actions/cache@v4
+        with:
+          path: build/DerivedData-iOS/SourcePackages
+          key: spm-ios-${{ runner.os }}-${{ hashFiles('Timelane.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            spm-ios-${{ runner.os }}-
+
+      - name: Resolve packages
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project Timelane.xcodeproj \
+            -scheme Timelane \
+            -derivedDataPath build/DerivedData-iOS \
+            -skipPackagePluginValidation \
+            -skipMacroValidation
+
+      # No signing: the runner has neither the owner's team nor the iCloud entitlements.
+      # CODE_SIGN_ENTITLEMENTS= (empty) also overrides the SDK-conditional entitlements settings.
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild build \
+            -project Timelane.xcodeproj \
+            -scheme Timelane \
+            -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/DerivedData-iOS \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_ENTITLEMENTS=
+
+  macos-build:
+    name: macOS build (Release)
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 27
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$XCODE" ]; then
+            XCODE=/Applications/Xcode.app
+          fi
+          if ! "$XCODE/Contents/Developer/usr/bin/xcodebuild" -version | grep -q '^Xcode 27'; then
+            echo "::error::No Xcode 27 found on this runner (looked at /Applications/Xcode_27*.app and Xcode.app)"
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+          swift --version
+
+      - name: Cache SwiftPM checkouts
+        uses: actions/cache@v4
+        with:
+          path: build/DerivedData-macOS/SourcePackages
+          key: spm-macos-${{ runner.os }}-${{ hashFiles('Timelane.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            spm-macos-${{ runner.os }}-
+
+      - name: Resolve packages
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project Timelane.xcodeproj \
+            -scheme Timelane \
+            -derivedDataPath build/DerivedData-macOS \
+            -skipPackagePluginValidation \
+            -skipMacroValidation
+
+      # A Release build catches code that only compiles in Debug (the DEBUG-only screenshot hooks).
+      # No signing and no entitlements, like the other jobs.
+      - name: Build for macOS (Release)
+        run: |
+          xcodebuild build \
+            -project Timelane.xcodeproj \
+            -scheme Timelane \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build/DerivedData-macOS \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_ENTITLEMENTS=

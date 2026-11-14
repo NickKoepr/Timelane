@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 
 /// Timelane ▸ About Timelane: the standard About panel with links to the website, source and issue tracker.
@@ -28,3 +29,4 @@ enum AboutPanel {
         return text
     }
 }
+#endif

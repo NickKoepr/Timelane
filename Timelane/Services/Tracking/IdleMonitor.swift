@@ -1,3 +1,4 @@
+#if os(macOS)
 import CoreGraphics
 import Foundation
 
@@ -29,3 +30,4 @@ final class IdleMonitor {
         if let event = detector.evaluate(idleSeconds: idle, now: .now) { sink(event) }
     }
 }
+#endif

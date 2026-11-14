@@ -4,7 +4,7 @@ import SwiftUI
 struct LaneDivider: View {
     var body: some View {
         Rectangle()
-            .fill(Color(nsColor: .separatorColor))
+            .fill(Color.platformSeparator)
             .frame(width: 1)
             .allowsHitTesting(false)
             .accessibilityHidden(true)

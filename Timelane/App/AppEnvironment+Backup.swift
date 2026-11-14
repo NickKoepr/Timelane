@@ -9,6 +9,6 @@ extension AppEnvironment {
         return CloudBackupService(
             snapshotter: BackupSnapshotter(database: database), store: store, settings: settings,
             pendingRestore: pendingRestore, changes: { database.changes() },
-            deviceName: isRunningTests ? "Mac" : (Host.current().localizedName ?? "Mac"), appVersion: version)
+            deviceName: isRunningTests ? "Mac" : DeviceName.current, appVersion: version)
     }
 }

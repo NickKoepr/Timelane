@@ -20,7 +20,7 @@ struct ExportFormatSheet: View {
                     .tag(format.id)
                 }
             }
-            .pickerStyle(.radioGroup)
+            .exportFormatPickerStyle()
             .labelsHidden()
             HStack {
                 Spacer()

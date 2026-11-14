@@ -1,3 +1,4 @@
+#if os(macOS)
 import AppKit
 import OSLog
 import SwiftUI
@@ -47,3 +48,4 @@ struct MagnifyEventMonitor: NSViewRepresentable {
         }
     }
 }
+#endif

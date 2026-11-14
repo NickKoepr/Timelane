@@ -6,7 +6,7 @@ struct SessionHoverCardContent: View {
     var body: some View {
         HStack(spacing: 10) {
             if let icon = AppIconProvider.shared.icon(for: block.bundleIdentifier) {
-                Image(nsImage: icon).resizable().frame(width: 24, height: 24)
+                icon.resizable().frame(width: 24, height: 24)
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(block.appName).font(.headline).lineLimit(1)

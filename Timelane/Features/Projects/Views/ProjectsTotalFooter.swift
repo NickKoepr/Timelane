@@ -9,7 +9,7 @@ struct ProjectsTotalFooter: View {
             Divider()
             HStack {
                 Toggle("Show archived", isOn: $showArchived)
-                    .toggleStyle(.checkbox)
+                    .checkboxToggleStyle()
                 Spacer()
             }
             .padding(.horizontal)

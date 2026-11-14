@@ -1,3 +1,4 @@
+#if os(macOS)
 import SwiftUI
 
 extension View {
@@ -7,3 +8,4 @@ extension View {
         background(Color(nsColor: .windowBackgroundColor))
     }
 }
+#endif

@@ -81,7 +81,7 @@ struct TimeEntryBlock: View {
             Color.clear
                 .frame(height: 6)
                 .contentShape(Rectangle())
-                .pointerStyle(.rowResize)
+                .rowResizePointer()
                 .gesture(dragGesture(mode))
         }
     }
