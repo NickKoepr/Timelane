@@ -5,7 +5,8 @@ struct BackupSettingsView: View {
 
     var body: some View {
         BackupSettingsContent(viewModel: BackupSettingsViewModel(
-            service: environment.backup, relaunch: { AppRelauncher.relaunch() }))
+            service: environment.backup, relaunch: { AppRelauncher.relaunch() },
+            isRestoreBlocked: { [sync = environment.sync] in sync.isEnabled }))
     }
 }
 
@@ -53,8 +54,14 @@ private struct BackupSettingsContent: View {
             HStack {
                 Button("Back Up Now") { Task { await viewModel.backUpNow() } }
                 Button("Restore from iCloud…") { Task { await viewModel.requestRestore() } }
+                    .disabled(viewModel.isRestoreBlocked)
             }
             .disabled(viewModel.isWorking)
+            if viewModel.isRestoreBlocked {
+                Text("Turn off iCloud Sync to restore a backup.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
             Text("Turning backup off keeps the copy that is already in iCloud.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)

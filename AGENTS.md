@@ -42,11 +42,15 @@ Timelane/                     app target (folder is a synchronized group: new fi
   Models/                     plain value types: Project, TimeEntry, AppSession, TrackedApp, ProjectColor, ProjectMonthTotal
   Database/                   AppDatabase (live / inMemory, ValueObservation → AsyncStream, DEBUG reset), Migrations (v1, v2),
                               Records/ (GRDB conformances, dates as Unix Double)
-  Repositories/               protocols (ProjectRepository, TimeEntryRepository, AppSessionRepository, TrackedAppRepository)
-    GRDB/                     the GRDB implementations
+  Repositories/               protocols (ProjectRepository, TimeEntryRepository, AppSessionRepository, TrackedAppRepository, SyncStore)
+    GRDB/                     the GRDB implementations (incl. GRDBSyncStore: outbox, system fields, parked inbox, inbound apply)
   Services/Export/            MonthExport(+Builder/Service/FileName), Formats/ (MonthExportFormat, ExportFormats registry, JSON, Excel),
                               Spreadsheet/ (workbook model, XLSXWriter), Zip/ (stored ZipArchiveWriter, CRC32). To add an export format:
                               implement `MonthExportFormat` and add it to `ExportFormats.all` — nothing else changes.
+  Services/Sync/              Opt-in iCloud sync (projects + time entries, CKSyncEngine): SyncService (+Enable/Events/Sync), SyncEngineClient,
+                              CloudKitSyncEngine (+Delegate/Events/Mapping; only file family importing CloudKit for sync), FakeSyncEngine +
+                              InMemorySyncServer (tests/previews), pure rules (SyncMergePolicy, ProjectConflictResolver, TimeEntrySettler,
+                              SyncDeleteDecision, DeterministicUUID), SyncOutboxForwarder
   Services/Backup/            Opt-in iCloud backup: CloudBackupService, CloudBackupStore (CloudKit + in-memory fake),
                               BackupSchedule/BackupSafety (pure), BackupSettingsStore, BackupInfo/BackupError
   Services/                   DayTotals, TimeEntryOverlapResolver (pure), AppCandidates, AppIconProvider, RunningApps
@@ -69,7 +73,7 @@ Timelane/                     app target (folder is a synchronized group: new fi
     Projects/                 ProjectsViewModel, ProjectFormViewModel + views
     Overview/                 OverviewViewModel (+Derived), yearly heatmap, stat tiles, monthly chart, project list
     Onboarding/               Welcome carousel (first launch + Help ▸ Welcome to Timelane): OnboardingPage, Store, ViewModel, views
-    Settings/                 Settings window (⌘,): BackupSettingsViewModel + SettingsView/BackupSettingsView
+    Settings/                 Settings window (⌘,): Sync tab (SyncSettingsViewModel + SyncSettingsView) and Backup tab (BackupSettingsViewModel + BackupSettingsView)
     TrackedApps/              TrackedAppsViewModel, AddTrackedAppViewModel + views (incl. NSOpenPanel wrapper)
   MenuBar/                    MenuBarContentView, MenuBarViewModel, status line, day bar, MenuBarFormPopup, PanelOpenObserver
   Debug/Screenshots/          DEBUG-only App Store screenshot mode: ScreenshotSampleData, AppEnvironment.screenshot(),
@@ -127,5 +131,6 @@ website/                      Static product site (HTML + CSS) for GitHub Pages,
 - **Tracking rule**: the tracked-apps list only decides what is *recorded*; everything already recorded is always shown.
 - **App icons**: never use SF Symbols in the app icon (licence); regenerate with `swift Tools/generate-app-icon.swift Timelane/Assets.xcassets/AppIcon.appiconset Timelane/Assets.xcassets/MenuBarIcon.imageset Timelane/Assets.xcassets/ClockMark.imageset`. The Dock caches icons: `touch` the app and run `lsregister -f` on it after changing the icon.
 - **iCloud backup**: never create a `CKContainer` in tests or ad-hoc builds (it crashes without the entitlement). Only `CloudKitBackupStore` imports CloudKit and creates the container lazily; everything else uses `InMemoryCloudBackupStore`. CI strips the entitlements with `CODE_SIGN_ENTITLEMENTS=` on the `xcodebuild` command line. A restore is only *staged* (`pending-restore.sqlite`); `AppDatabase.live()` swaps it in on the next launch, keeping `db-before-restore.sqlite`.
+- **iCloud sync**: never create a `CKSyncEngine`/`CKContainer` in tests or ad-hoc builds; tests use `FakeSyncEngine` + `InMemorySyncServer` (nothing runs in the background, tests call `syncNow()`). The `syncApplyingRemote` marker makes the v5 triggers skip the outbox while inbound changes are applied, so remote rows are not echoed back; always set it inside the same transaction as the apply and clear it again. Corrections made by the sync rules (project merges, overlap settling, renames) must be deterministic and must not bump timestamps, otherwise devices keep correcting each other forever. The v5 triggers fill the outbox for *every* writer (UI, AutoTimeLogger, undo/redo, restore), so new write paths need no extra code. A backup restore is disabled while sync is on (`BackupSettingsViewModel.isRestoreBlocked`). Push needs the `aps-environment` entitlement; CI strips entitlements.
 - **App Store screenshots**: `Tools/make-app-store-screenshots.sh [scene ...]`. The screenshot copy is unsandboxed and has its own bundle id, so it never touches the real app's database or defaults; the app captures *its own* windows (`CGWindowListCreateImage` via `dlsym`, no Screen Recording permission needed). It sets `ignoresMouseEvents` so the pointer can't add hover cards, and quits itself after 30 s at the latest. Invalid `-screenshotScene`/`-screenshotOutput` arguments make it stop (`fatalError`) instead of falling back to the live database. Hooks in app code are `#if DEBUG`; check a Release build still compiles after touching them.
 - **Tests**: shared state (UserDefaults keys, timer store) must be injected with throw-away suites / in-memory stores in tests; one unexplained flaky run was seen once while the app was running.
