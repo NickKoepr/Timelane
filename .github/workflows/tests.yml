@@ -3,8 +3,7 @@ name: Tests
 on:
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
-    # The iOS-port umbrella branch and its stacked sub-branches get CI too.
-    branches: [main, 'claude/icloud-sync-strategy-ios-737urc*']
+    # Every PR gets CI, whatever its base branch (stacked and umbrella PRs too).
     paths-ignore:
       - '**/*.md'
       - 'docs/**'
