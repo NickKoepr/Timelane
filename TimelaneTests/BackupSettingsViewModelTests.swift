@@ -24,11 +24,9 @@ struct BackupSettingsViewModelTests {
         let f = try await make()
         await f.model.task()
         #expect(f.model.projectsStatusText == "No backup yet")
-        #expect(f.model.activityStatusText == "No app activity backup yet")
         await f.model.backUpNow()
         #expect(f.model.projectsStatusText.hasPrefix("Latest backup "))
         #expect(f.model.projectsStatusText.hasSuffix("from Test Mac · 1 projects, 0 time entries"))
-        #expect(f.model.activityStatusText.hasPrefix("Latest backup "))
     }
 
     @Test func legacyBackupIsShownAndRestorable() async throws {
@@ -58,16 +56,5 @@ struct BackupSettingsViewModelTests {
         #expect(!f.model.isConfirmingRestore)
         #expect(f.model.shownError == nil)
         #expect(names == ["Work"])
-        #expect(f.model.restoreMessage?.hasPrefix("Restored. Added 0 app sessions") == true)
-    }
-
-    @Test func activityOfAnotherDeviceIsExplained() async throws {
-        let f = try await make()
-        f.store.seed(.appActivity, data: Data(), info: BackupFixtures.info(entries: 0))
-        await f.model.task()
-        #expect(f.model.activityNotOwned)
-        #expect(f.model.activityStatusText.hasPrefix("The app activity backup in iCloud is from Test Mac"))
-        await f.model.replaceActivityBackup()
-        #expect(!f.model.activityNotOwned)
     }
 }

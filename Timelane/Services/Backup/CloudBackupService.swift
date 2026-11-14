@@ -3,8 +3,8 @@ import Observation
 import os
 
 /// The backup half of the iCloud feature. While iCloud (sync) is on it keeps two parts up to date: projects and
-/// hours (from any device, only when caught up with sync) and, on a Mac, the app activity (only by the Mac that owns
-/// it). Automatic runs never throw at the UI: errors end up in `lastError`.
+/// hours (from any device, only when caught up with sync) and, on a Mac, the app activity. The split is technical:
+/// the UI shows one backup. Automatic runs never throw at the UI: errors end up in `lastError`.
 @MainActor @Observable
 final class CloudBackupService {
     /// Why the last automatic backup of projects and hours did not upload.
@@ -20,8 +20,6 @@ final class CloudBackupService {
     var projectsSkip: ProjectsSkip?
     /// The remote parts as last seen (refreshed after uploads and by `refreshRemote`).
     var remote: [BackupPart: BackupInfo] = [:]
-    /// The app activity backup in iCloud belongs to another device, so this Mac does not overwrite it by itself.
-    var activityNotOwned = false
     /// Whether this device records app activity (macOS) and therefore backs it up.
     let backsUpActivity: Bool
 
@@ -65,8 +63,6 @@ final class CloudBackupService {
 
     /// The backup a restore of projects and hours would use: the current part, or an older version's backup.
     var restorableProjects: BackupInfo? { remote[.projectsAndHours] ?? remote[.legacy] }
-    /// The app activity a restore would add on a Mac.
-    var restorableActivity: BackupInfo? { remote[.appActivity] ?? remote[.legacy] }
 
     func markDirty(_ part: BackupPart) { dirty.insert(part) }
 
@@ -83,8 +79,6 @@ final class CloudBackupService {
                 if let info = try await store.latestBackup(part) { found[part] = info }
             }
             remote = found
-            activityNotOwned = backsUpActivity
-                && !ActivityBackupOwnership.mayReplace(remote: found[.appActivity], lastOwnUpload: settings.activityUploadedAt)
         } catch {
             lastError = error.localizedDescription
         }
@@ -100,24 +94,18 @@ final class CloudBackupService {
         }
         if backsUpActivity, BackupSchedule.appActivity.shouldBackUp(
             now: date, isDirty: dirty.contains(.appActivity), lastAttempt: lastAttempt[.appActivity]) {
-            await run { try await self.backUpActivity(replacingOtherDevice: false) }
+            await run { try await self.backUpActivity() }
         }
     }
 
-    /// "Back Up Now": syncs first, then backs up both parts. Never overwrites another Mac's app activity.
+    /// "Back Up Now": syncs first, then backs up both parts.
     func backUpNow() async {
         guard isEnabled, !isWorking else { return }
         await sync.syncNow()
         await run {
             try await self.backUpProjects(automatic: false)
-            if self.backsUpActivity { try await self.backUpActivity(replacingOtherDevice: false) }
+            if self.backsUpActivity { try await self.backUpActivity() }
         }
-    }
-
-    /// "Replace with This Mac's Activity": takes over the app activity backup from another device.
-    func replaceActivityBackup() async {
-        guard isEnabled, backsUpActivity, !isWorking else { return }
-        await run { try await self.backUpActivity(replacingOtherDevice: true) }
     }
 
     /// The run loop: changes mark their part dirty, a minute timer asks the schedules.

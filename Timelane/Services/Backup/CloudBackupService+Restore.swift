@@ -3,11 +3,9 @@ import Foundation
 extension CloudBackupService {
     /// Restores the backup: the projects and hours (the current part, else an older version's whole-database backup)
     /// replace those on every device; on a Mac the app activity from the backup that this Mac is missing is added
-    /// too (nothing is removed) and this Mac becomes the owner of the activity backup. A copy of the whole database
-    /// is kept first (`safetyCopy`). Returns what was added to the app activity (nil where there is none).
-    @discardableResult
-    func restoreBackup() async throws -> ActivityBackupMerger.Result? {
-        guard !isWorking else { return nil }
+    /// too (nothing is removed). A copy of the whole database is kept first (`safetyCopy`).
+    func restoreBackup() async throws {
+        guard !isWorking else { return }
         isWorking = true
         lastError = nil
         defer { isWorking = false }
@@ -19,35 +17,27 @@ extension CloudBackupService {
         try await Task.detached { try snapshotter.copyWholeDatabase(to: safetyCopy) }.value
         try await sync.restore(fromBackup: file)
         projectsSkip = nil
-        guard backsUpActivity else { return nil }
+        guard backsUpActivity else { return }
         // Projects and hours are restored now; a failure below must not look like the whole restore failed.
         do {
-            return try await restoreActivity()
+            try await restoreActivity()
         } catch {
             lastError = "Projects and hours were restored, but app activity could not be: \(error.localizedDescription)"
-            return nil
         }
     }
 
-    /// Adds the app activity of the backup this Mac is missing, then backs up the combined activity.
-    private func restoreActivity() async throws -> ActivityBackupMerger.Result {
-        let part: BackupPart
+    private func restoreActivity() async throws {
         if try await store.latestBackup(.appActivity) != nil {
-            part = .appActivity
+            try await mergeActivity(from: .appActivity)
         } else if try await store.latestBackup(.legacy) != nil {
-            part = .legacy
+            try await mergeActivity(from: .legacy)
         } else {
-            return ActivityBackupMerger.Result()        // nothing to add
+            return
         }
-        let file = try await downloadValidated(part)
-        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
-        let merger = merger
-        let result = try await Task.detached { try merger.merge(from: file) }.value
-        try await backUpActivity(replacingOtherDevice: true)
-        return result
+        try await uploadActivity()
     }
 
-    private func downloadValidated(_ part: BackupPart) async throws -> URL {
+    func downloadValidated(_ part: BackupPart) async throws -> URL {
         guard let (file, _) = try await store.download(part) else { throw BackupError.noBackup }
         do {
             try await Task.detached { try BackupFileValidator.validateAndMigrate(file) }.value

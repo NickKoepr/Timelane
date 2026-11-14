@@ -68,16 +68,11 @@ struct ActivityBackupTests {
         try await device.service.enable(.replaceICloud)
         let settings = InMemoryBackupSettingsStore()
         let backup = device.backupService(store: store, settings: settings)
-        await backup.refreshRemote()
-        #expect(backup.activityNotOwned)
+        try await backup.restoreBackup()
 
-        let added = try await backup.restoreBackup()
-
-        #expect(added?.sessions == 2)
         #expect(try BackupFixtures.sessionCount(device.database) == 2)
         #expect(try await device.allEntries().count == 1)
         #expect(store.uploadCount(.appActivity) == 1)
-        #expect(!backup.activityNotOwned)
         #expect(settings.activityUploadedAt == store.info(.appActivity)?.createdAt)
     }
 
@@ -91,9 +86,8 @@ struct ActivityBackupTests {
         try await phone.service.enable(.replaceICloud)
         let backup = phone.backupService(store: store, backsUpActivity: false)
 
-        let added = try await backup.restoreBackup()
+        try await backup.restoreBackup()
 
-        #expect(added == nil)
         #expect(try BackupFixtures.sessionCount(phone.database) == 0)
         #expect(store.uploadCount(.appActivity) == 0)
         #expect(!store.downloads.contains(.appActivity))

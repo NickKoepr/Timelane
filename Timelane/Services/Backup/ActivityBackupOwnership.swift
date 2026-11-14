@@ -1,8 +1,8 @@
 import Foundation
 
-/// Whether this Mac may replace the app activity backup automatically: only when there is none, or when the one in
-/// iCloud is the last one this Mac uploaded. A new or reinstalled Mac, or a second Mac, never overwrites another
-/// Mac's activity by itself; the user chooses (restore it, or replace it).
+/// Whether this Mac may replace the app activity backup as it is: only when there is none, or when the one in iCloud
+/// is the last one this Mac uploaded. Otherwise (a new Mac, or a second one) the activity in iCloud is added to this
+/// Mac first, so replacing the backup never loses it.
 enum ActivityBackupOwnership {
     static func mayReplace(remote: BackupInfo?, lastOwnUpload: Date?) -> Bool {
         guard let remote else { return true }

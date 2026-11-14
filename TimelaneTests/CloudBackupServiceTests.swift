@@ -95,23 +95,26 @@ struct CloudBackupServiceTests {
         #expect(store.info(.projectsAndHours)?.projectCount == 1)
     }
 
-    @Test func activityOfAnotherMacIsNotOverwritten() async throws {
+    @Test func activityOfAnotherMacIsKeptWhenThisMacTakesOver() async throws {
         let f = try await make()
-        let other = BackupFixtures.info(projects: 1, entries: 0, createdAt: Date(timeIntervalSince1970: 5))
-        f.store.seed(.appActivity, data: Data("other".utf8), info: other)
-        await f.service.backUpNow()
-        #expect(f.store.uploadCount(.appActivity) == 0)
-        #expect(f.service.activityNotOwned)
-        #expect(f.store.storedData(.appActivity) == Data("other".utf8))
+        let other = try AppDatabase.inMemory()
+        try BackupFixtures.addSession(other, bundle: "com.other", from: 0, to: 600)
+        try BackupFixtures.seedSnapshot(of: other, part: .appActivity, into: f.store,
+                                        createdAt: Date(timeIntervalSince1970: 5))
+        try BackupFixtures.addSession(f.device.database, from: 1000, to: 1600)
 
-        await f.service.replaceActivityBackup()
+        await f.service.backUpNow()
+
+        #expect(f.service.lastError == nil)
         #expect(f.store.uploadCount(.appActivity) == 1)
-        #expect(!f.service.activityNotOwned)
+        #expect(try BackupFixtures.sessionCount(f.device.database) == 2)     // the other Mac's session was added
+        #expect(f.settings.activityUploadedAt == f.store.info(.appActivity)?.createdAt)
 
         f.service.markDirty(.appActivity)
         f.clock.now.addTimeInterval(60 * 60)
-        await f.service.tick()                                   // now it is ours: automatic runs replace it
+        await f.service.tick()                                   // now it is ours: no download, just replace
         #expect(f.store.uploadCount(.appActivity) == 2)
+        #expect(f.store.downloads == [.appActivity])
     }
 
     @Test func automaticBackupOfEmptyDeviceKeepsRemoteWithData() async throws {

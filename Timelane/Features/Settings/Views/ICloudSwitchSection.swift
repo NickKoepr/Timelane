@@ -44,7 +44,7 @@ struct ICloudSwitchSection: View {
         var text = "Keeps your projects and logged hours the same on all your devices, with a backup in your private "
             + "iCloud that you can go back to."
         if showsActivity {
-            text += " App activity and the tracked apps list are not synced: they stay on \(device.thisDevice) and are backed up from it."
+            text += " App activity and the tracked apps list are not synced: they stay on \(device.thisDevice), but are part of the backup."
         }
         return text + " The Record timer stays on \(device.thisDevice)."
     }

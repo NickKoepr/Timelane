@@ -22,7 +22,6 @@ private struct ICloudSettingsContent: View {
             if sync.isEnabled {
                 ICloudSyncStatusSection(viewModel: sync)
                 ICloudBackupSection(viewModel: backup)
-                if backup.showsActivity { ICloudActivitySection(viewModel: backup) }
             }
         }
         .formStyle(.grouped)

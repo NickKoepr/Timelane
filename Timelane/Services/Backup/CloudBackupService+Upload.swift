@@ -35,25 +35,35 @@ extension CloudBackupService {
         }
     }
 
-    /// Uploads the app activity of this Mac, unless another device owns the backup in iCloud and
-    /// `replacingOtherDevice` is false (then `activityNotOwned` is set and nothing is uploaded).
-    func backUpActivity(replacingOtherDevice: Bool) async throws {
+    /// Uploads the app activity of this Mac. When the backup in iCloud was made by another device (a new Mac, or a
+    /// second one) its activity is added to this Mac first, so taking over the backup never loses it.
+    func backUpActivity() async throws {
         lastAttempt[.appActivity] = now()
         try await requireAccount()
         dirty.remove(.appActivity)
         let existing = try await store.latestBackup(.appActivity)
-        guard replacingOtherDevice
-              || ActivityBackupOwnership.mayReplace(remote: existing, lastOwnUpload: settings.activityUploadedAt) else {
-            remote[.appActivity] = existing
-            activityNotOwned = true
-            return
+        if existing != nil,
+           !ActivityBackupOwnership.mayReplace(remote: existing, lastOwnUpload: settings.activityUploadedAt) {
+            try await mergeActivity(from: .appActivity)
         }
+        try await uploadActivity()
+    }
+
+    /// Adds the app activity of a stored part that this Mac is missing (nothing is removed).
+    @discardableResult
+    func mergeActivity(from part: BackupPart) async throws -> ActivityBackupMerger.Result {
+        let file = try await downloadValidated(part)
+        defer { try? FileManager.default.removeItem(at: file.deletingLastPathComponent()) }
+        let merger = merger
+        return try await Task.detached { try merger.merge(from: file) }.value
+    }
+
+    func uploadActivity() async throws {
         let (file, info, directory) = try await snapshot(.appActivity)
         defer { try? FileManager.default.removeItem(at: directory) }
         try await store.upload(file, info: info, as: .appActivity)
         settings.activityUploadedAt = info.createdAt
         remote[.appActivity] = info
-        activityNotOwned = false
     }
 
     /// Removes the whole-database backup of older versions once nothing depends on it: when an app activity backup
