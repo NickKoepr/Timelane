@@ -24,8 +24,10 @@ struct GRDBTimeEntryRepository: TimeEntryRepository {
             var savedIds: [Int64] = []
             for entry in entries {
                 var copy = entry
+                let previous = try copy.id.flatMap { try SyncTimeEntryRow.fetch(db, id: $0) }
                 try copy.save(db)
                 guard let id = copy.id else { throw RepositoryError.invalidRange }
+                try TimeEntrySyncColumns.stamp(db, saved: copy, previous: previous?.entry)
                 savedIds.append(id)
             }
             // Re-read so callers get exactly what is stored (Dates lose bits in the Double round trip).

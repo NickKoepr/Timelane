@@ -63,6 +63,11 @@ enum Migrations {
                 """)
         }
 
+        migrator.registerMigration("v5") { db in
+            // iCloud sync groundwork: global ids, change timestamps, bookkeeping tables, change-capture triggers.
+            try SyncSchemaMigration.apply(db)
+        }
+
         return migrator
     }
 }
