@@ -83,7 +83,7 @@ struct TimeEntrySyncColumnsTests {
         #expect(all.contains { $0.syncId == original.syncId && $0.end == d(10) })
     }
 
-    @Test func undoKeepsSyncId() async throws {
+    @MainActor @Test func undoKeepsSyncId() async throws {
         let history = TimeEntryHistory(repository: repo)
         let editor = TimeEntryEditor(repository: repo, onChange: { await history.record($0) })
         try await editor.create(projectId: projectId, range: DateRange(start: d(9), end: d(10)), title: "T", note: nil)
