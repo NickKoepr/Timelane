@@ -23,7 +23,13 @@ struct OverviewScreen: View {
             )
             Divider()
             if viewModel.isLoaded {
-                ScrollView { content.padding() }
+                ScrollView {
+                    content
+                        .padding()
+                        #if os(iOS)
+                        .padding(.bottom, 16)   // room between the last project row and the tab bar
+                        #endif
+                }
             } else {
                 Color.clear.frame(maxWidth: .infinity, maxHeight: .infinity)
             }

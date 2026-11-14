@@ -49,19 +49,46 @@ struct YearNavigationBar: View {
             Button(action: next) { Image(systemName: "chevron.right") }.help("Next year (⌘→)")
             current()
             Spacer(minLength: 8)
-            Picker("Project", selection: $selectedProjectId) {
-                Text("All projects").tag(Int64?.none)
-                Divider()
-                ForEach(projects) { project in
-                    Text(project.isArchived ? "\(project.shortTitleWithCustomId) (archived)" : project.shortTitleWithCustomId).tag(project.id)
-                }
-            }
-            .pickerStyle(.menu)
-            .labelsHidden()
-            .frame(maxWidth: 180) // a long project name truncates instead of pushing the bar past the column
-            .layoutPriority(1)    // the filter gets its width first; on iOS a squeezed menu label wrapped onto two lines
+            projectFilter
+                .frame(maxWidth: 180, alignment: .trailing) // a long name truncates; a short one hugs the trailing edge
+                .layoutPriority(1)    // the filter gets its width first; on iOS a squeezed menu label wrapped onto two lines
         }
         .lineLimit(1)
+    }
+
+    @ViewBuilder private var projectFilter: some View {
+        #if os(iOS)
+        // A menu with a plain label: the menu-style Picker's button has an inner margin, so it never lined up with
+        // the trailing edge of the content below.
+        Menu { projectPicker } label: {
+            HStack(spacing: 4) {
+                Text(selectedProjectTitle).truncationMode(.tail)
+                Image(systemName: "chevron.up.chevron.down").imageScale(.small)
+            }
+        }
+        .accessibilityLabel("Project")
+        .accessibilityValue(selectedProjectTitle)
+        #else
+        projectPicker.pickerStyle(.menu).labelsHidden()
+        #endif
+    }
+
+    private var projectPicker: some View {
+        Picker("Project", selection: $selectedProjectId) {
+            Text("All projects").tag(Int64?.none)
+            Divider()
+            ForEach(projects) { project in
+                Text(title(of: project)).tag(project.id)
+            }
+        }
+    }
+
+    private var selectedProjectTitle: String {
+        projects.first { $0.id == selectedProjectId }.map(title(of:)) ?? "All projects"
+    }
+
+    private func title(of project: Project) -> String {
+        project.isArchived ? "\(project.shortTitleWithCustomId) (archived)" : project.shortTitleWithCustomId
     }
 }
 

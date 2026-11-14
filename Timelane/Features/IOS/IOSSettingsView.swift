@@ -1,7 +1,7 @@
 #if os(iOS)
 import SwiftUI
 
-/// The Settings tab: iCloud Sync and Backup (the shared settings views, each on its own page), the welcome tour and About.
+/// The Settings tab: iCloud Sync and Backup (rows "Sync" / "Backup" under the iCloud header) (the shared settings views, each on its own page), the welcome tour and About.
 struct IOSSettingsView: View {
     @Environment(AppEnvironment.self) private var environment
 
@@ -9,7 +9,7 @@ struct IOSSettingsView: View {
         NavigationStack {
             List {
                 Section("iCloud") {
-                    NavigationLink("iCloud Sync") { SyncSettingsView().navigationTitle("iCloud Sync") }
+                    NavigationLink("Sync") { SyncSettingsView().navigationTitle("Sync") }   // the section already says iCloud
                     NavigationLink("Backup") { BackupSettingsView().navigationTitle("Backup") }
                 }
                 Section {
