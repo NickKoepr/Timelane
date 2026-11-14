@@ -83,7 +83,7 @@ struct OnboardingPage: Identifiable, Equatable {
         OnboardingPage(
             id: "more-ios", icon: .symbol("chart.bar.xaxis"), title: "Your hours at a glance",
             message: "**Projects** shows your monthly totals and exports them. **Overview** shows your whole year. "
-                + "Turn on **iCloud Sync** in Settings to keep your hours in step with your Mac.",
+                + "Turn on **iCloud** in Settings to keep your hours in step with your Mac and backed up.",
             footnote: "You can replay this introduction in **Settings**.",
             platforms: [.iOS]),
     ]

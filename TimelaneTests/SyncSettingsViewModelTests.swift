@@ -8,6 +8,7 @@ struct SyncSettingsViewModelTests {
         let model: SyncSettingsViewModel
         let device: SyncTestDevice
         let server: InMemorySyncServer
+        let backupStore: InMemoryCloudBackupStore
     }
 
     /// A Mac with sync still off; iCloud holds one project when `remoteData` is true.
@@ -20,7 +21,10 @@ struct SyncSettingsViewModelTests {
         }
         let device = try SyncTestDevice(server: server)
         if localProject { try await device.insertProject("Local", created: SyncTestWorld.h(1)) }
-        return Fixture(model: SyncSettingsViewModel(service: device.service), device: device, server: server)
+        let backupStore = InMemoryCloudBackupStore()
+        let backup = device.backupService(store: backupStore)
+        return Fixture(model: SyncSettingsViewModel(service: device.service, backup: backup), device: device,
+                       server: server, backupStore: backupStore)
     }
 
     @Test func remoteDataAsksEvenWhenThisMacIsEmpty() async throws {            // A1, A3
@@ -82,7 +86,7 @@ struct SyncSettingsViewModelTests {
         f.device.engine.account = .noAccount
         await f.model.setEnabled(true)
         #expect(!f.model.isEnabled)
-        #expect(f.model.errorMessage == "Sign in to iCloud in System Settings to use iCloud Sync.")
+        #expect(f.model.errorMessage == "Sign in to iCloud in System Settings to use iCloud.")
         #expect(f.server.records.isEmpty)
     }
 
@@ -139,5 +143,62 @@ struct SyncSettingsViewModelTests {
         service.errorMessage = nil
         service.hasRecordsFromNewerApp = true
         #expect(f.model.statusText == "Update Timelane on this device to keep syncing")
+    }
+
+    // MARK: Backup offer (iCloud has a backup but no synced data)
+
+    /// A backup of projects and hours from another device with project "Backed up".
+    func seedBackup(_ store: InMemoryCloudBackupStore, as part: BackupPart = .projectsAndHours) async throws {
+        let source = try SyncTestDevice(server: InMemorySyncServer())
+        try await source.insertProject("Backed up", created: SyncTestWorld.h(0))
+        try BackupFixtures.seedSnapshot(of: source.database, part: part, into: store)
+    }
+
+    @Test func emptyICloudWithBackupOffersRestore() async throws {
+        let f = try await make(remoteData: false)
+        try await seedBackup(f.backupStore)
+        await f.model.setEnabled(true)
+        #expect(f.model.backupOffer?.projectCount == 1)
+        #expect(!f.model.isEnabled)
+    }
+
+    @Test func restoringTheOfferedBackupMakesItTheICloudData() async throws {
+        let f = try await make(remoteData: false)
+        try await seedBackup(f.backupStore)
+        await f.model.setEnabled(true)
+        await f.model.resolveBackupOffer(.restore)
+        let names = try await f.device.allProjects().map(\.name)
+        #expect(f.model.isEnabled)
+        #expect(f.model.errorMessage == nil)
+        #expect(names == ["Backed up"])
+        #expect(f.server.records.count == 1)
+    }
+
+    @Test func legacyBackupIsOfferedToo() async throws {
+        let f = try await make(remoteData: false)
+        try await seedBackup(f.backupStore, as: .legacy)
+        await f.model.setEnabled(true)
+        await f.model.resolveBackupOffer(.restore)
+        let names = try await f.device.allProjects().map(\.name)
+        #expect(names == ["Backed up"])
+    }
+
+    @Test func usingThisDevicesDataKeepsIt() async throws {
+        let f = try await make(remoteData: false)
+        try await seedBackup(f.backupStore)
+        await f.model.setEnabled(true)
+        await f.model.resolveBackupOffer(.replace)
+        let names = try await f.device.allProjects().map(\.name)
+        #expect(f.model.isEnabled)
+        #expect(names == ["Local"])
+    }
+
+    @Test func cancellingTheOfferLeavesICloudOff() async throws {
+        let f = try await make(remoteData: false)
+        try await seedBackup(f.backupStore)
+        await f.model.setEnabled(true)
+        await f.model.resolveBackupOffer(.cancel)
+        #expect(!f.model.isEnabled)
+        #expect(f.model.backupOffer == nil)
     }
 }

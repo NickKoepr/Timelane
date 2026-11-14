@@ -1,13 +1,13 @@
 import CloudKit
 import Foundation
 
-/// The live store: one `DatabaseBackup` record named `latest` in the private database of the iCloud container.
+/// The live store: one `DatabaseBackup` record per `BackupPart` (named by `recordName`) in the default zone of the
+/// private database of the iCloud container. Every part uses the same fields, so no schema change is needed.
 /// The container is created on first use, never earlier: without the iCloud entitlement (unit tests,
 /// ad-hoc CI builds) creating a `CKContainer` crashes.
 actor CloudKitBackupStore: CloudBackupStore {
     static let containerIdentifier = "iCloud.nl.nickkoepr.timelane"
     private static let recordType = "DatabaseBackup"
-    private static let recordID = CKRecord.ID(recordName: "latest")
 
     private var cachedContainer: CKContainer?
 
@@ -29,13 +29,13 @@ actor CloudKitBackupStore: CloudBackupStore {
         }
     }
 
-    func latestBackup() async throws -> BackupInfo? {
-        guard let record = try await fetchRecord() else { return nil }
+    func latestBackup(_ part: BackupPart) async throws -> BackupInfo? {
+        guard let record = try await fetchRecord(part) else { return nil }
         return try Self.info(from: record)
     }
 
-    func upload(_ file: URL, info: BackupInfo) async throws {
-        let record = CKRecord(recordType: Self.recordType, recordID: Self.recordID)
+    func upload(_ file: URL, info: BackupInfo, as part: BackupPart) async throws {
+        let record = CKRecord(recordType: Self.recordType, recordID: Self.recordID(part))
         record["database"] = CKAsset(fileURL: file)
         record["createdAt"] = info.createdAt
         record["deviceName"] = info.deviceName
@@ -49,8 +49,8 @@ actor CloudKitBackupStore: CloudBackupStore {
         for saved in result.saveResults.values { _ = try saved.get() }
     }
 
-    func download() async throws -> (file: URL, info: BackupInfo)? {
-        guard let record = try await fetchRecord() else { return nil }
+    func download(_ part: BackupPart) async throws -> (file: URL, info: BackupInfo)? {
+        guard let record = try await fetchRecord(part) else { return nil }
         let info = try Self.info(from: record)
         guard let source = (record["database"] as? CKAsset)?.fileURL else { throw BackupError.notATimelaneDatabase }
         // CloudKit deletes its asset file later, so hand out a copy in a directory the caller owns.
@@ -63,9 +63,21 @@ actor CloudKitBackupStore: CloudBackupStore {
         return (file, info)
     }
 
-    private func fetchRecord() async throws -> CKRecord? {
+    func delete(_ part: BackupPart) async throws {
         do {
-            return try await container.privateCloudDatabase.record(for: Self.recordID)
+            _ = try await container.privateCloudDatabase.deleteRecord(withID: Self.recordID(part))
+        } catch let error as CKError where error.code == .unknownItem {
+            return
+        }
+    }
+
+    private static func recordID(_ part: BackupPart) -> CKRecord.ID {
+        CKRecord.ID(recordName: part.recordName)
+    }
+
+    private func fetchRecord(_ part: BackupPart) async throws -> CKRecord? {
+        do {
+            return try await container.privateCloudDatabase.record(for: Self.recordID(part))
         } catch let error as CKError where error.code == .unknownItem {
             return nil
         }

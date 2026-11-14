@@ -1,115 +1,117 @@
 import Foundation
 
+/// The backup part of the iCloud settings: what is in iCloud, Back Up Now, and the two restores.
 @MainActor @Observable
 final class BackupSettingsViewModel {
-    /// Set while the user has to choose what to do with the backup that already exists in iCloud.
-    var pendingChoice: BackupInfo?
-    /// The backup a confirmed restore would use.
-    var restoreCandidate: BackupInfo?
     var isConfirmingRestore = false
+    var isConfirmingActivityRestore = false
     var errorMessage: String?
+    /// What the last app activity restore added.
+    var activityRestoreMessage: String?
 
     private let service: CloudBackupService
-    private let relaunch: @MainActor () -> Void
-    private let restoreBlocked: @MainActor () -> Bool
 
-    /// - Parameter isRestoreBlocked: true while iCloud Sync is on (E6): a restore would fight the synced data.
-    init(service: CloudBackupService, relaunch: @escaping @MainActor () -> Void,
-         isRestoreBlocked: @escaping @MainActor () -> Bool = { false }) {
+    init(service: CloudBackupService) {
         self.service = service
-        self.relaunch = relaunch
-        self.restoreBlocked = isRestoreBlocked
     }
 
-    var isRestoreBlocked: Bool { restoreBlocked() }
-
-    var isEnabled: Bool { service.isEnabled }
     var isWorking: Bool { service.isWorking }
+    /// The app activity rows exist only where activity is recorded (the Mac).
+    var showsActivity: Bool { service.backsUpActivity }
+    var activityNotOwned: Bool { service.activityNotOwned }
     /// A failure of the last (automatic or manual) run, or of the last settings action.
     var shownError: String? { errorMessage ?? service.lastError }
+    var restoreCandidate: BackupInfo? { service.restorableProjects }
+    var activityCandidate: BackupInfo? { service.restorableActivity }
 
-    var statusText: String {
+    var projectsStatusText: String {
         if service.isWorking { return "Backing up…" }
-        if service.skippedBecauseEmpty {
+        if service.projectsSkip == .emptyDevice {
             return "Skipped: \(DeviceKind.current.thisDevice) has no data yet; your iCloud backup was kept."
         }
-        guard let last = service.lastBackupAt else { return "Not backed up yet" }
-        return "Last backed up \(last.formatted(date: .abbreviated, time: .shortened))"
+        if let info = service.remote[.projectsAndHours] {
+            return "Latest backup \(Self.describe(info)) · \(Self.counts(info))"
+        }
+        if let legacy = service.remote[.legacy] {
+            return "Backup of an older Timelane version \(Self.describe(legacy))"
+        }
+        return "No backup yet"
     }
 
-    func setEnabled(_ enabled: Bool) async {
-        errorMessage = nil
-        guard enabled else {
-            // Turning it off keeps the backup in iCloud.
-            service.setEnabled(false)
-            return
+    var activityStatusText: String {
+        guard let info = service.remote[.appActivity] else {
+            if let legacy = service.remote[.legacy] { return "In the backup of an older Timelane version \(Self.describe(legacy))" }
+            return "No app activity backup yet"
         }
-        guard !service.isEnabled else { return }
-        let status = await service.accountStatus()
-        guard status == .available else {
-            errorMessage = BackupError.iCloudUnavailable(status).errorDescription
-            return
+        if service.activityNotOwned {
+            return "The app activity backup in iCloud is from \(info.deviceName) (\(Self.date(info))). The activity of "
+                + "\(DeviceKind.current.thisDevice) is not backed up until you restore or replace it."
         }
-        do {
-            if let remote = try await service.latestRemoteBackup(), remote.hasData {
-                pendingChoice = remote
-                return
-            }
-        } catch {
-            errorMessage = error.localizedDescription
-            return
-        }
-        service.setEnabled(true)
-        await service.backUpNow(automatic: false)
+        return "Latest backup \(Self.describe(info))"
     }
 
-    func resolveChoice(_ choice: ExistingBackupChoice) async {
-        pendingChoice = nil
-        switch choice {
-        case .cancel:
-            break
-        case .replace:
-            service.setEnabled(true)
-            await service.backUpNow(automatic: false)
-        case .restore:
-            service.setEnabled(true)
-            await restoreAndRelaunch()
-        }
+    func task() async {
+        await service.refreshRemote()
     }
 
     func backUpNow() async {
         errorMessage = nil
-        await service.backUpNow(automatic: false)
+        await service.backUpNow()
     }
 
     /// Looks up the backup and asks for confirmation (the view shows the dialog).
     func requestRestore() async {
         errorMessage = nil
-        guard !isRestoreBlocked else { return }
-        do {
-            guard let remote = try await service.latestRemoteBackup() else { throw BackupError.noBackup }
-            restoreCandidate = remote
-            isConfirmingRestore = true
-        } catch {
-            errorMessage = error.localizedDescription
+        await service.refreshRemote()
+        guard service.lastError == nil else { return }          // shown through `shownError`
+        guard restoreCandidate != nil else {
+            errorMessage = BackupError.noBackup.errorDescription
+            return
         }
+        isConfirmingRestore = true
     }
 
     func confirmRestore() async {
         isConfirmingRestore = false
-        await restoreAndRelaunch()
-    }
-
-    private func restoreAndRelaunch() async {
-        guard !isRestoreBlocked else {
-            errorMessage = "Turn off iCloud Sync to restore a backup."
-            return
-        }
         do {
-            try await service.prepareRestore()
-            relaunch()
+            try await service.restoreProjects()
         } catch {
             errorMessage = error.localizedDescription
         }
+    }
+
+    func requestActivityRestore() async {
+        errorMessage = nil
+        activityRestoreMessage = nil
+        await service.refreshRemote()
+        guard service.lastError == nil else { return }
+        guard activityCandidate != nil else {
+            errorMessage = BackupError.noBackup.errorDescription
+            return
+        }
+        isConfirmingActivityRestore = true
+    }
+
+    func confirmActivityRestore() async {
+        isConfirmingActivityRestore = false
+        do {
+            let result = try await service.restoreActivity()
+            activityRestoreMessage = "Added \(result.sessions) app sessions and \(result.trackedApps) tracked apps."
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func replaceActivityBackup() async {
+        errorMessage = nil
+        await service.replaceActivityBackup()
+    }
+
+    static func describe(_ info: BackupInfo) -> String { "\(date(info)) from \(info.deviceName)" }
+
+    static func date(_ info: BackupInfo) -> String { info.createdAt.formatted(date: .abbreviated, time: .shortened) }
+
+    static func counts(_ info: BackupInfo) -> String {
+        "\(info.projectCount) projects, \(info.timeEntryCount) time entries"
     }
 }

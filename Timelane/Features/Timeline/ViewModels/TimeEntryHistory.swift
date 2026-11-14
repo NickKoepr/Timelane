@@ -25,6 +25,9 @@ final class TimeEntryHistory {
         if touched { stack.removeAll() }
     }
 
+    /// All local entries were replaced (a restored backup): no step refers to a row that still exists.
+    func clear() { stack.removeAll() }
+
     func undo() async {
         guard let change = stack.nextUndo else { return }
         if await apply(change.inverted) { stack.didUndo() }

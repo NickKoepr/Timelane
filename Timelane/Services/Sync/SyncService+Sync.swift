@@ -22,6 +22,9 @@ extension SyncService {
             syncRequested = false
             let eventsBefore = eventCount
             do {
+                if restoreUploadPending {
+                    try await replaceICloudAfterRestore()      // an interrupted restore goes first
+                }
                 if remoteResetPending {
                     try await followRemoteReset()
                     guard isEnabled else { return }
@@ -39,7 +42,10 @@ extension SyncService {
             if eventCount == eventsBefore && !remoteResetPending && !syncRequested { break }
         }
         // A pass that found nothing new still checked iCloud: show that in "Last synced".
-        if isEnabled { await markSynced() }
+        if isEnabled {
+            await markSynced()
+            completedPassSinceLaunch = true
+        }
     }
 
     /// Runs `syncNow` soon, for follow-up work found inside an engine event or after local changes.

@@ -12,6 +12,7 @@ final class IOSAppDelegate: NSObject, UIApplicationDelegate {
         Task { @MainActor in
             await AppEnvironment.shared.sync.load()
             Self.watchSyncEnabled()
+            await MainActor.run { AppEnvironment.shared.runICloudMigration() }
         }
         Task { @MainActor in await AppEnvironment.shared.backup.run() }
         return true

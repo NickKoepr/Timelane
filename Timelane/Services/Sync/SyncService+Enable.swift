@@ -44,7 +44,8 @@ extension SyncService {
         await syncNow()
     }
 
-    private func uploadEverything() async throws {
+    /// Empties iCloud when it has data, then queues every local project and entry (also used after a restore).
+    func uploadEverything() async throws {
         if try await engine.zoneHasRecords() {
             isResettingZone = true
             defer { isResettingZone = false }
@@ -71,6 +72,7 @@ extension SyncService {
         pauseReason = nil
         errorMessage = nil
         hasRecordsFromNewerApp = false
+        restoreUploadPending = false
         self.notice = notice
     }
 }

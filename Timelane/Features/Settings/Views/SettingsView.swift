@@ -1,16 +1,12 @@
 #if os(macOS)
 import SwiftUI
 
-/// Timelane ▸ Settings… (⌘,). iCloud Sync first, then backup.
+/// Timelane ▸ Settings… (⌘,): the iCloud setting (sync and backup are one feature).
 struct SettingsView: View {
     var body: some View {
-        TabView {
-            SyncSettingsView()
-                .tabItem { Label("Sync", systemImage: "arrow.triangle.2.circlepath.icloud") }
-            BackupSettingsView()
-                .tabItem { Label("Backup", systemImage: "icloud") }
-        }
-        .frame(width: 460)
+        ICloudSettingsView()
+            .frame(width: 460)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 

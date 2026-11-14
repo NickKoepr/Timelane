@@ -18,10 +18,12 @@ final class AppEnvironment {
     #endif
     /// The one Record/Stop timer, shared by the main window and the menu bar panel.
     let recordingTimer: RecordingTimer
-    /// Opt-in iCloud backup (off by default); also drives the Settings window.
+    /// The backup half of the iCloud feature (runs while `sync` is on); also drives the Settings window.
     let backup: CloudBackupService
-    /// Opt-in iCloud sync of projects and time entries (off by default); also drives the Settings window.
+    /// Opt-in iCloud sync of projects and time entries (off by default): the one iCloud switch.
     let sync: SyncService
+    /// A one-time message after an update changed how iCloud works (`ICloudMigration`); the root views show it.
+    var iCloudNotice: String?
     /// Set by the menu bar to open the main window on a specific screen; `RootView` consumes it.
     var requestedSidebarItem: SidebarItem?
     /// Set by the Overview heatmap to open the Timeline on a specific day; `TimelineScreen` consumes it.
@@ -29,6 +31,7 @@ final class AppEnvironment {
     /// Whether the welcome carousel is presented by `RootView`; on for a first launch, or via Help.
     var isShowingOnboarding = false
     let onboardingStore: OnboardingStore
+    let backupSettings: any BackupSettingsStore
 
     /// Id of the entry the auto logger is growing; the timelines draw it live.
     let liveAutoEntry = LiveAutoEntry()
@@ -42,8 +45,7 @@ final class AppEnvironment {
          syncEngine: any SyncEngineClient = FakeSyncEngine()) {
         self.database = database
         self.onboardingStore = onboardingStore
-        self.backup = Self.makeBackup(database: database, store: backupStore, settings: backupSettings,
-                                      pendingRestore: pendingRestore)
+        self.backupSettings = backupSettings
         self.recordingTimer = RecordingTimer(store: recordingTimerStore)
         self.projects = GRDBProjectRepository(database: database)
         self.timeEntries = GRDBTimeEntryRepository(database: database)
@@ -52,8 +54,12 @@ final class AppEnvironment {
         let history = TimeEntryHistory(repository: timeEntries)
         self.timeEntryHistory = history
         // Remote changes never land on the undo stack; steps that refer to a changed entry are dropped (E1).
-        self.sync = SyncService(store: GRDBSyncStore(database: database), engine: syncEngine, isolated: Self.isIsolatedRun,
-                                onRemoteEntryChanges: { ids in history.invalidate(touching: ids) })
+        let sync = SyncService(store: GRDBSyncStore(database: database), engine: syncEngine, isolated: Self.isIsolatedRun,
+                               onRemoteEntryChanges: { ids in history.invalidate(touching: ids) },
+                               onLocalDataReplaced: { history.clear() })
+        self.sync = sync
+        self.backup = Self.makeBackup(database: database, store: backupStore, settings: backupSettings, sync: sync,
+                                      safetyCopy: pendingRestore.directory.appendingPathComponent(PendingRestore.previousName))
         self.timeEntryEditor = TimeEntryEditor(repository: timeEntries, onChange: { change in
             await history.record(change)
         })

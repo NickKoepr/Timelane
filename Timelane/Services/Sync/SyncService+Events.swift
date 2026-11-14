@@ -4,8 +4,9 @@ import Foundation
 extension SyncService {
     func handle(_ event: SyncEngineEvent) async {
         guard isEnabled else { return }
-        // Before a pending reset is handled, downloads and send results belong to data that is about to be replaced.
-        if remoteResetPending {
+        // Before a pending reset or restore upload is handled, downloads and send results belong to data that is
+        // about to be replaced.
+        if remoteResetPending || restoreUploadPending {
             switch event {
             case .fetched, .sent: return
             default: break

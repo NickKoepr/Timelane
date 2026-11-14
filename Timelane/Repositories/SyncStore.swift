@@ -39,4 +39,9 @@ protocol SyncStore: Sendable {
     /// Deletes every project and time entry without queueing deletes. Returns the tracked-app links by project name.
     func wipeLocalSyncedData() async throws -> [SyncTrackedAppLink]
     func relinkTrackedApps(_ links: [SyncTrackedAppLink]) async throws
+    /// Replaces every local project and time entry with the ones in a validated backup file, in one transaction and
+    /// without queueing anything. Rows get new local ids; tracked apps keep their links by project name. Sync
+    /// metadata is dropped (the `enabled` state stays); with `uploadPending` the `restoreUploadPending` state is set
+    /// in the same transaction, so an interrupted restore still replaces the iCloud data later.
+    func restoreSyncedData(from file: URL, uploadPending: Bool) async throws
 }
