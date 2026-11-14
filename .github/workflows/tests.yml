@@ -149,3 +149,56 @@ jobs:
             -skipMacroValidation \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGN_ENTITLEMENTS=
+
+  macos-build:
+    name: macOS build (Release)
+    runs-on: xcode-27
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 27
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_27*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$XCODE" ]; then
+            XCODE=/Applications/Xcode.app
+          fi
+          if ! "$XCODE/Contents/Developer/usr/bin/xcodebuild" -version | grep -q '^Xcode 27'; then
+            echo "::error::No Xcode 27 found on this runner (looked at /Applications/Xcode_27*.app and Xcode.app)"
+            exit 1
+          fi
+          sudo xcode-select -s "$XCODE/Contents/Developer"
+          xcodebuild -version
+          swift --version
+
+      - name: Cache SwiftPM checkouts
+        uses: actions/cache@v4
+        with:
+          path: build/DerivedData-macOS/SourcePackages
+          key: spm-macos-${{ runner.os }}-${{ hashFiles('Timelane.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved') }}
+          restore-keys: |
+            spm-macos-${{ runner.os }}-
+
+      - name: Resolve packages
+        run: |
+          xcodebuild -resolvePackageDependencies \
+            -project Timelane.xcodeproj \
+            -scheme Timelane \
+            -derivedDataPath build/DerivedData-macOS \
+            -skipPackagePluginValidation \
+            -skipMacroValidation
+
+      # A Release build catches code that only compiles in Debug (the DEBUG-only screenshot hooks).
+      # No signing and no entitlements, like the other jobs.
+      - name: Build for macOS (Release)
+        run: |
+          xcodebuild build \
+            -project Timelane.xcodeproj \
+            -scheme Timelane \
+            -configuration Release \
+            -destination 'generic/platform=macOS' \
+            -derivedDataPath build/DerivedData-macOS \
+            -skipPackagePluginValidation \
+            -skipMacroValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGN_ENTITLEMENTS=
