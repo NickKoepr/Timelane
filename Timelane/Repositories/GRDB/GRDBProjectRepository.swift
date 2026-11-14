@@ -30,6 +30,7 @@ struct GRDBProjectRepository: ProjectRepository {
                     if clash > 0 { throw RepositoryError.duplicateCustomId }
                 }
                 var saved = project
+                saved.updatedAt = .now
                 try saved.save(db)
                 return saved
             }
@@ -40,7 +41,8 @@ struct GRDBProjectRepository: ProjectRepository {
 
     func archive(id: Int64, archived: Bool) async throws {
         try await database.writer.write { db in
-            try db.execute(sql: "UPDATE project SET isArchived = ? WHERE id = ?", arguments: [archived, id])
+            try db.execute(sql: "UPDATE project SET isArchived = ?, updatedAt = ? WHERE id = ?",
+                           arguments: [archived, Date.now.timeIntervalSince1970, id])
         }
     }
 
