@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         guard !AppEnvironment.isIsolatedRun else { return }
         Task { await AppEnvironment.shared.tracker.start() }
         Task { await AppEnvironment.shared.backup.run() }
+        Task { await AppEnvironment.shared.sync.load() }
     }
 
     /// Tracking and the menu bar item keep running when the window is closed.

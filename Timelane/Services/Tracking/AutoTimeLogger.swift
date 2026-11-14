@@ -165,8 +165,11 @@ final class AutoTimeLogger {
         guard let own = entry else { return nil }
         let window = DateRange(start: own.lastEnd.addingTimeInterval(-1), end: max(at, own.lastEnd).addingTimeInterval(1))
         let stored = try await repository.entries(in: window)
+        // Anything but the logger's own last write (including a title or note added on another device) means
+        // the user took the entry over: manual wins, the logger starts a new entry (D7).
         guard let mine = stored.first(where: { $0.id == own.id }),
-              mine.projectId == own.projectId, mine.start.isSameInstant(as: own.start), mine.end.isSameInstant(as: own.lastEnd) else { return nil }
+              mine.projectId == own.projectId, mine.start.isSameInstant(as: own.start), mine.end.isSameInstant(as: own.lastEnd),
+              mine.title == nil, mine.note == nil else { return nil }
         let blocked = stored.contains { $0.id != own.id && $0.start < at && $0.end > own.lastEnd }
         return blocked ? nil : mine
     }

@@ -15,6 +15,16 @@ final class TimeEntryHistory {
 
     func record(_ change: TimeEntryChange) { stack.record(change) }
 
+    /// A remote change (iCloud sync) touched these entries (E1). Remote changes never go on the stack; the
+    /// steps that refer to a changed row would write stale data, so the whole history is dropped.
+    func invalidate(touching ids: Set<Int64>) {
+        let steps = stack.undoStack + stack.redoStack
+        let touched = steps.contains { step in
+            (step.before + step.after).contains { entry in entry.id.map(ids.contains) ?? false }
+        }
+        if touched { stack.removeAll() }
+    }
+
     func undo() async {
         guard let change = stack.nextUndo else { return }
         if await apply(change.inverted) { stack.didUndo() }
