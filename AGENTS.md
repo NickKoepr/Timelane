@@ -12,6 +12,7 @@ Timelane is a native **macOS** app (SwiftUI, Swift 6) to register working hours 
 - **Menu bar panel** (`MenuBarExtra`): live tracking status, the same timeline, a popup form.
 - **Record / Stop** timer: records a period and opens the entry form on Stop.
 - All data is local (SQLite via GRDB) inside the app sandbox. The only network use is the **opt-in iCloud backup** (a CloudKit snapshot of the database, off by default, set in the Settings window).
+- **Reminder notification** (opt-in, off by default, Settings ▸ Notifications): a local notification to log hours on chosen weekdays, each at its own time.
 
 Bundle ID `nl.nickkoepr.timelane`, version in the Xcode build settings (`MARKETING_VERSION` / `CURRENT_PROJECT_VERSION`, app target), deployment target **macOS 26.0**, built with Xcode 27.x. Repo: github.com/NickKoepr/Timelane (private). The local folder may still be called `TimeTracker/`; everything inside is named Timelane.
 
@@ -38,7 +39,8 @@ open build/DerivedData/Build/Products/Debug/Timelane.app
 ```
 Timelane/                     app target (folder is a synchronized group: new files are picked up automatically)
   App/                        TimelaneApp (@main: Window + MenuBarExtra; commands: undo/redo, Help ▸ Welcome), AppDelegate (keep-alive, start tracker),
-                              AppEnvironment (composition root: DB, repositories, tracker, editor, timer), WindowMetrics
+                              AppEnvironment (composition root: DB, repositories, tracker, editor, timer), WindowMetrics,
+                              ReminderNotificationDelegate (notification clicks), View+MainWindowOpener (openWindow for non-view code)
   Models/                     plain value types: Project, TimeEntry, AppSession, TrackedApp, ProjectColor, ProjectMonthTotal
   Database/                   AppDatabase (live / inMemory, ValueObservation → AsyncStream, DEBUG reset), Migrations (v1, v2),
                               Records/ (GRDB conformances, dates as Unix Double)
@@ -49,6 +51,8 @@ Timelane/                     app target (folder is a synchronized group: new fi
                               implement `MonthExportFormat` and add it to `ExportFormats.all` — nothing else changes.
   Services/Backup/            Opt-in iCloud backup: CloudBackupService, CloudBackupStore (CloudKit + in-memory fake),
                               BackupSchedule/BackupSafety (pure), BackupSettingsStore, BackupInfo/BackupError
+  Services/Reminders/         Opt-in reminder to log hours: DailyReminderService, DailyReminderSettings + DailyReminderSchedule (pure),
+                              NotificationScheduler (UserNotificationScheduler + in-memory fake), DailyReminderSettingsStore
   Services/                   DayTotals, TimeEntryOverlapResolver (pure), AppCandidates, AppIconProvider, RunningApps
     Activity/                 PURE yearly stats: YearActivity, ActivityLevel, ActivityHeatmapLayout, ActivityStatistics
     Tracking/                 AppActivityTracker (one serial ActivityEvent stream), SystemEventObserver (sleep/wake/lock),
@@ -69,7 +73,8 @@ Timelane/                     app target (folder is a synchronized group: new fi
     Projects/                 ProjectsViewModel, ProjectFormViewModel + views
     Overview/                 OverviewViewModel (+Derived), yearly heatmap, stat tiles, monthly chart, project list
     Onboarding/               Welcome carousel (first launch + Help ▸ Welcome to Timelane): OnboardingPage, Store, ViewModel, views
-    Settings/                 Settings window (⌘,): BackupSettingsViewModel + SettingsView/BackupSettingsView
+    Settings/                 Settings window (⌘,): tabs Backup (BackupSettingsViewModel/View) and Notifications
+                              (NotificationSettingsViewModel/View, ReminderDayRow)
     TrackedApps/              TrackedAppsViewModel, AddTrackedAppViewModel + views (incl. NSOpenPanel wrapper)
   MenuBar/                    MenuBarContentView, MenuBarViewModel, status line, day bar, MenuBarFormPopup, PanelOpenObserver
   Debug/Screenshots/          DEBUG-only App Store screenshot mode: ScreenshotSampleData, AppEnvironment.screenshot(),
@@ -127,5 +132,6 @@ website/                      Static product site (HTML + CSS) for GitHub Pages,
 - **Tracking rule**: the tracked-apps list only decides what is *recorded*; everything already recorded is always shown.
 - **App icons**: never use SF Symbols in the app icon (licence); regenerate with `swift Tools/generate-app-icon.swift Timelane/Assets.xcassets/AppIcon.appiconset Timelane/Assets.xcassets/MenuBarIcon.imageset Timelane/Assets.xcassets/ClockMark.imageset`. The Dock caches icons: `touch` the app and run `lsregister -f` on it after changing the icon.
 - **iCloud backup**: never create a `CKContainer` in tests or ad-hoc builds (it crashes without the entitlement). Only `CloudKitBackupStore` imports CloudKit and creates the container lazily; everything else uses `InMemoryCloudBackupStore`. CI strips the entitlements with `CODE_SIGN_ENTITLEMENTS=` on the `xcodebuild` command line. A restore is only *staged* (`pending-restore.sqlite`); `AppDatabase.live()` swaps it in on the next launch, keeping `db-before-restore.sqlite`.
+- **Notifications**: never touch `UNUserNotificationCenter` in tests, previews or screenshot mode; only `UserNotificationScheduler` and `ReminderNotificationDelegate` import UserNotifications, everything else uses `InMemoryNotificationScheduler`, and the delegate is only installed when `!AppEnvironment.isIsolatedRun`. The system calls back on its own queue: keep the delegate and the completion handlers nonisolated / explicitly `@Sendable` (a closure inferred as main-actor isolated traps there). Permission is only asked when the user turns a reminder on. Each change replaces all seven request identifiers synchronously, so fast edits can't leave a stale request.
 - **App Store screenshots**: `Tools/make-app-store-screenshots.sh [scene ...]`. The screenshot copy is unsandboxed and has its own bundle id, so it never touches the real app's database or defaults; the app captures *its own* windows (`CGWindowListCreateImage` via `dlsym`, no Screen Recording permission needed). It sets `ignoresMouseEvents` so the pointer can't add hover cards, and quits itself after 30 s at the latest. Invalid `-screenshotScene`/`-screenshotOutput` arguments make it stop (`fatalError`) instead of falling back to the live database. Hooks in app code are `#if DEBUG`; check a Release build still compiles after touching them.
 - **Tests**: shared state (UserDefaults keys, timer store) must be injected with throw-away suites / in-memory stores in tests; one unexplained flaky run was seen once while the app was running.
