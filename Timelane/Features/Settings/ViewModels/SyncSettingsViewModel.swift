@@ -1,9 +1,12 @@
 import Foundation
 
+/// The iCloud switch (sync + backup) and the sync status in Settings.
 @MainActor @Observable
 final class SyncSettingsViewModel {
     /// Set while the user has to choose what to do with the data that already exists in iCloud (A1/A3).
     var isChoosingExistingData = false
+    /// Set while turning iCloud on finds no synced data but a backup with data: restore it or start from this device.
+    var backupOffer: BackupInfo?
     /// Set while the user has to confirm turning sync off (A4).
     var isConfirmingDisable = false
     /// True while checking iCloud and turning sync on.
@@ -11,9 +14,11 @@ final class SyncSettingsViewModel {
     var errorMessage: String?
 
     private let service: SyncService
+    private let backup: CloudBackupService
 
-    init(service: SyncService) {
+    init(service: SyncService, backup: CloudBackupService) {
         self.service = service
+        self.backup = backup
     }
 
     var isEnabled: Bool { service.isEnabled }
@@ -54,6 +59,11 @@ final class SyncSettingsViewModel {
                 isChoosingExistingData = true       // always ask, also when this device is empty
                 return
             }
+            await backup.refreshRemote()
+            if let offer = backup.restorableProjects, offer.hasData {
+                backupOffer = offer
+                return
+            }
             try await service.enable(.replaceICloud)
         } catch {
             errorMessage = error.localizedDescription
@@ -65,7 +75,7 @@ final class SyncSettingsViewModel {
         case .restricted: "iCloud is restricted on \(DeviceKind.current.thisDevice), so Timelane cannot sync."
         case .temporarilyUnavailable: "iCloud is temporarily unavailable. Try again later."
         case .couldNotDetermine: "Timelane could not reach iCloud. Try again later."
-        default: "Sign in to iCloud in \(DeviceKind.current.systemSettingsName) to use iCloud Sync."
+        default: "Sign in to iCloud in \(DeviceKind.current.systemSettingsName) to use iCloud."
         }
     }
 
@@ -81,6 +91,20 @@ final class SyncSettingsViewModel {
         defer { isEnabling = false }
         do {
             try await service.enable(enableChoice)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    /// The answer to the backup offer: restore the backup (then it becomes the iCloud data) or use this device's data.
+    func resolveBackupOffer(_ choice: ExistingBackupChoice) async {
+        backupOffer = nil
+        guard choice != .cancel else { return }
+        isEnabling = true
+        defer { isEnabling = false }
+        do {
+            if choice == .restore { try await backup.restoreBackup() }
+            try await service.enable(.replaceICloud)
         } catch {
             errorMessage = error.localizedDescription
         }

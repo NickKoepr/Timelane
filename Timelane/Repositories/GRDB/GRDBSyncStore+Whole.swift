@@ -37,20 +37,9 @@ extension GRDBSyncStore {
 
     func wipeLocalSyncedData() async throws -> [SyncTrackedAppLink] {
         try await database.writer.write { db in
-            let rows = try Row.fetchAll(db, sql: """
-                SELECT trackedApp.bundleIdentifier AS bundle, project.name AS name
-                FROM trackedApp JOIN project ON project.id = trackedApp.projectId
-                """)
-            let links = rows.map { row -> SyncTrackedAppLink in
-                let bundle: String = row["bundle"]
-                let name: String = row["name"]
-                return SyncTrackedAppLink(bundleIdentifier: bundle, projectName: name)
-            }
+            let links = try Self.trackedAppLinks(db)
             // The marker keeps the deletes out of the outbox: replacing this device must not delete anything in iCloud.
-            try db.execute(sql: "INSERT OR REPLACE INTO syncApplyingRemote (marker) VALUES (1)")
-            try db.execute(sql: "DELETE FROM timeEntry")
-            try db.execute(sql: "DELETE FROM project")
-            try db.execute(sql: "DELETE FROM syncApplyingRemote")
+            try Self.deleteSyncedRowsSilently(db)
             for table in ["syncOutbox", "syncParkedRecord", "syncTombstone", "syncRecordMeta"] {
                 try db.execute(sql: "DELETE FROM \(table)")
             }
@@ -59,13 +48,33 @@ extension GRDBSyncStore {
     }
 
     func relinkTrackedApps(_ links: [SyncTrackedAppLink]) async throws {
-        try await database.writer.write { db in
-            for link in links {
-                try db.execute(sql: """
-                    UPDATE trackedApp SET projectId = (SELECT id FROM project WHERE name = ? COLLATE NOCASE)
-                    WHERE bundleIdentifier = ?
-                    """, arguments: [link.projectName, link.bundleIdentifier])
-            }
+        try await database.writer.write { db in try Self.relink(db, links) }
+    }
+
+    // MARK: Shared steps (also used by restoring a backup)
+
+    static func trackedAppLinks(_ db: Database) throws -> [SyncTrackedAppLink] {
+        let rows = try Row.fetchAll(db, sql: """
+            SELECT trackedApp.bundleIdentifier AS bundle, project.name AS name
+            FROM trackedApp JOIN project ON project.id = trackedApp.projectId
+            """)
+        return rows.map { row in SyncTrackedAppLink(bundleIdentifier: row["bundle"], projectName: row["name"]) }
+    }
+
+    /// Deletes every time entry and project without queueing deletes for iCloud.
+    static func deleteSyncedRowsSilently(_ db: Database) throws {
+        try db.execute(sql: "INSERT OR REPLACE INTO syncApplyingRemote (marker) VALUES (1)")
+        try db.execute(sql: "DELETE FROM timeEntry")
+        try db.execute(sql: "DELETE FROM project")
+        try db.execute(sql: "DELETE FROM syncApplyingRemote")
+    }
+
+    static func relink(_ db: Database, _ links: [SyncTrackedAppLink]) throws {
+        for link in links {
+            try db.execute(sql: """
+                UPDATE trackedApp SET projectId = (SELECT id FROM project WHERE name = ? COLLATE NOCASE)
+                WHERE bundleIdentifier = ?
+                """, arguments: [link.projectName, link.bundleIdentifier])
         }
     }
 }

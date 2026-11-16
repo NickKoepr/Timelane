@@ -5,6 +5,8 @@ enum SyncStateKey: String, Sendable {
     case enabled
     case engineState
     case lastSync
+    /// Set when a backup replaced the local projects and hours; cleared once they replaced the iCloud data.
+    case restoreUploadPending
 }
 
 /// One row of the outbox: a record with a local change that still has to reach the server.

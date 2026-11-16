@@ -63,7 +63,7 @@ struct IOSProjectsScreen: View {
                             presenting: projectToDelete) { project in
             Button("Delete “\(project.name)”", role: .destructive) { Task { await viewModel.delete(project) } }
         } message: { _ in
-            Text("Its logged hours are deleted too.")
+            Text("Only projects without logged hours can be deleted. Archive a project to hide it and keep its hours.")
         }
         .errorAlert($exportModel.errorMessage)
         .errorAlert($viewModel.errorMessage)

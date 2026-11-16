@@ -18,6 +18,7 @@ struct RootView: View {
         .frame(minWidth: WindowMetrics.minimumSize.width, minHeight: WindowMetrics.minimumSize.height)
         .background { sidebarShortcuts }
         .errorAlert(Bindable(environment.timeEntryHistory).errorMessage)
+        .messageAlert("iCloud has changed", Bindable(environment).iCloudNotice)
         .sheet(isPresented: Bindable(environment).isShowingOnboarding) {
             OnboardingView(viewModel: environment.makeOnboardingViewModel(),
                            onClose: { environment.isShowingOnboarding = false })

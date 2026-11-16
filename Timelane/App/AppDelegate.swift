@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Task {
             await AppEnvironment.shared.sync.load()
             await MainActor.run { Self.watchSyncEnabled() }
+            await MainActor.run { AppEnvironment.shared.runICloudMigration() }
         }
         NotificationCenter.default.addObserver(forName: NSApplication.didBecomeActiveNotification, object: nil, queue: .main) { _ in
             // Syncs now and then once a minute while active (no-op while sync is off).

@@ -1,15 +1,19 @@
 import Foundation
 import os
 
-/// Fake remote for tests and previews: keeps the snapshot in memory and counts calls.
+/// Fake remote for tests and previews: keeps every part in memory and counts calls.
 final class InMemoryCloudBackupStore: CloudBackupStore, @unchecked Sendable {
+    private struct Stored {
+        var data: Data
+        var info: BackupInfo
+    }
+
     private struct State {
         var status: CloudAccountStatus = .available
-        var data: Data?
-        var info: BackupInfo?
+        var parts: [BackupPart: Stored] = [:]
         var error: (any Error)?
-        var uploadCount = 0
-        var downloadCount = 0
+        var uploads: [BackupPart] = []
+        var downloads: [BackupPart] = []
     }
 
     private let state = OSAllocatedUnfairLock(initialState: State())
@@ -27,14 +31,21 @@ final class InMemoryCloudBackupStore: CloudBackupStore, @unchecked Sendable {
         get { state.withLock { $0.error } }
         set { state.withLock { $0.error = newValue } }
     }
-    var info: BackupInfo? { state.withLock { $0.info } }
-    var storedData: Data? { state.withLock { $0.data } }
-    var uploadCount: Int { state.withLock { $0.uploadCount } }
-    var downloadCount: Int { state.withLock { $0.downloadCount } }
+    func info(_ part: BackupPart) -> BackupInfo? { state.withLock { $0.parts[part]?.info } }
+    func storedData(_ part: BackupPart) -> Data? { state.withLock { $0.parts[part]?.data } }
+    /// Every upload, in order.
+    var uploads: [BackupPart] { state.withLock { $0.uploads } }
+    func uploadCount(_ part: BackupPart) -> Int { uploads.filter { $0 == part }.count }
+    var downloads: [BackupPart] { state.withLock { $0.downloads } }
 
-    /// Seeds a backup without going through `upload`.
-    func seed(data: Data, info: BackupInfo) {
-        state.withLock { $0.data = data; $0.info = info }
+    /// Stores a part without going through `upload`.
+    func seed(_ part: BackupPart, data: Data, info: BackupInfo) {
+        state.withLock { $0.parts[part] = Stored(data: data, info: info) }
+    }
+
+    /// Stores a real database file as a part (e.g. a legacy whole-database backup).
+    func seed(_ part: BackupPart, file: URL, info: BackupInfo) throws {
+        seed(part, data: try Data(contentsOf: file), info: info)
     }
 
     private func throwIfFailing() throws {
@@ -46,29 +57,35 @@ final class InMemoryCloudBackupStore: CloudBackupStore, @unchecked Sendable {
         return status
     }
 
-    func latestBackup() async throws -> BackupInfo? {
+    func latestBackup(_ part: BackupPart) async throws -> BackupInfo? {
         try throwIfFailing()
-        return info
+        return info(part)
     }
 
-    func upload(_ file: URL, info: BackupInfo) async throws {
+    func upload(_ file: URL, info: BackupInfo, as part: BackupPart) async throws {
         try throwIfFailing()
         let data = try Data(contentsOf: file)
-        state.withLock { $0.data = data; $0.info = info; $0.uploadCount += 1 }
+        state.withLock {
+            $0.parts[part] = Stored(data: data, info: info)
+            $0.uploads.append(part)
+        }
     }
 
-    func download() async throws -> (file: URL, info: BackupInfo)? {
+    func download(_ part: BackupPart) async throws -> (file: URL, info: BackupInfo)? {
         try throwIfFailing()
-        guard let (data, info) = state.withLock({ state in state.data.flatMap { data in state.info.map { (data, $0) } } }) else {
-            return nil
-        }
-        state.withLock { $0.downloadCount += 1 }
+        guard let stored = state.withLock({ $0.parts[part] }) else { return nil }
+        state.withLock { $0.downloads.append(part) }
         let directory = FileManager.default.temporaryDirectory
             .appendingPathComponent("TimelaneBackup", isDirectory: true)
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let file = directory.appendingPathComponent("download.sqlite")
-        try data.write(to: file)
-        return (file, info)
+        try stored.data.write(to: file)
+        return (file, stored.info)
+    }
+
+    func delete(_ part: BackupPart) async throws {
+        try throwIfFailing()
+        _ = state.withLock { $0.parts.removeValue(forKey: part) }
     }
 }

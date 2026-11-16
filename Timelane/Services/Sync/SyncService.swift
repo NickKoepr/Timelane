@@ -31,6 +31,7 @@ final class SyncService {
     let zoneCheckDelay: Duration
     let syncsAutomatically: Bool
     let onRemoteEntryChanges: @MainActor (Set<Int64>) -> Void
+    let onLocalDataReplaced: @MainActor () -> Void
     @ObservationIgnored var forwarder: SyncOutboxForwarder?
     @ObservationIgnored var outboxTask: Task<Void, Never>?
     @ObservationIgnored var pollTask: Task<Void, Never>?
@@ -45,6 +46,10 @@ final class SyncService {
     /// A sync was asked for while one was running: the running pass does another round.
     @ObservationIgnored var syncRequested = false
     @ObservationIgnored var eventCount = 0
+    /// A whole sync pass finished since launch (the backup waits for one, see `isCaughtUp`).
+    @ObservationIgnored var completedPassSinceLaunch = false
+    /// A restored backup still has to replace the iCloud data (see `SyncService+Restore`).
+    @ObservationIgnored var restoreUploadPending = false
 
     /// - Parameters:
     ///   - isolated: tests, previews and screenshot runs never start the engine.
@@ -52,9 +57,11 @@ final class SyncService {
     ///   - zoneCheckDelay: the wait between checks whether a deleted zone was created again by another device.
     ///   - syncsAutomatically: run a sync pass after local changes were handed to the engine (off in tests).
     ///   - onRemoteEntryChanges: told which local time entries a remote change touched (E1: forget undo steps).
+    ///   - onLocalDataReplaced: all local projects and hours were replaced (a restored backup): forget all undo steps.
     init(store: any SyncStore, engine: any SyncEngineClient, isolated: Bool = false, forwardDelay: Duration = .seconds(5),
          zoneCheckDelay: Duration = .seconds(3), syncsAutomatically: Bool = true,
-         onRemoteEntryChanges: @escaping @MainActor (Set<Int64>) -> Void = { _ in }) {
+         onRemoteEntryChanges: @escaping @MainActor (Set<Int64>) -> Void = { _ in },
+         onLocalDataReplaced: @escaping @MainActor () -> Void = {}) {
         self.store = store
         self.engine = engine
         self.isolated = isolated
@@ -62,6 +69,7 @@ final class SyncService {
         self.zoneCheckDelay = zoneCheckDelay
         self.syncsAutomatically = syncsAutomatically
         self.onRemoteEntryChanges = onRemoteEntryChanges
+        self.onLocalDataReplaced = onLocalDataReplaced
     }
 
     /// Call once at launch: restores the on/off state and starts the engine when sync is on.
@@ -73,6 +81,8 @@ final class SyncService {
            let seconds = Double(text) {
             lastSync = Date(timeIntervalSince1970: seconds)
         }
+        let pendingRestore = (try? await store.state(.restoreUploadPending)) ?? nil
+        restoreUploadPending = isEnabled && pendingRestore != nil
         if isEnabled { await startEngine() }
     }
 
@@ -102,9 +112,10 @@ final class SyncService {
 
     // MARK: Engine plumbing
 
-    /// Nothing goes up while a remote reset is pending: local rows may be about to be replaced.
+    /// Nothing goes up while a remote reset is pending (local rows may be about to be replaced) or while a restored
+    /// backup still has to replace the iCloud data (that upload starts from a fresh zone).
     func uploadRecord(for id: SyncRecordID) async -> SyncUploadRecord? {
-        guard !remoteResetPending else { return nil }
+        guard !remoteResetPending, !restoreUploadPending else { return nil }
         return (try? await store.uploadRecord(for: id)) ?? nil
     }
 

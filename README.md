@@ -33,7 +33,7 @@ The **iOS app** has no app tracking and no menu bar. It has four tabs:
 - **Timeline**: one day with the *Logged hours* lane. Tap an empty spot to add an entry (a 30-minute slot, or the zoom step when zoomed in), touch and hold and drag to select a period, tap an entry to edit or delete it, pinch to zoom, swipe sideways (or use ‹ ›, the calendar and Today) to change day. Record / Stop sits in the navigation bar (the timer is local to the device and not synced).
 - **Overview**: the yearly heatmap and statistics; tapping a day opens it on the Timeline.
 - **Projects**: monthly totals per project, add / edit / archive / delete (swipe a row), and export of the month (Excel or JSON) to Files via the system file exporter.
-- **Settings**: iCloud Sync, Backup, the welcome tour and About.
+- **Settings**: iCloud (sync and backup), the welcome tour and About.
 
 Entries are moved or resized on iOS through the edit form (dragging them on the timeline is Mac-only for now). The first launch shows a shorter welcome tour without the tracking and menu bar pages. CI builds the iOS app for the Simulator on every pull request.
 
@@ -77,7 +77,7 @@ Timelane/
   Repositories/         Repository protocols; GRDB/ holds the implementations
   Services/             Day totals, overlap resolving, running apps, app icons
     Activity/           Pure yearly statistics: day bucketing, heatmap layout, levels, statistics
-    Backup/             Opt-in iCloud backup: CloudBackupService, CloudKit store, schedule and safety rules
+    Backup/             iCloud backup (part of the iCloud switch): CloudBackupService, CloudKit store, parts, schedules, safety and ownership rules
     Sync/               Opt-in iCloud sync of projects and entries: SyncService, CloudKit engine, pure merge/conflict rules, fakes for tests
     Tracking/           AppActivityTracker, AutoTimeLogger (linked app → growing entry), idle detection, system event observer, heartbeat
   Utilities/            DateRange, calendar helpers, duration formatting, colours
@@ -90,7 +90,7 @@ Timelane/
     Projects/           ViewModels/ and Views/ for projects and monthly totals
     Overview/           Yearly heatmap, statistics and charts
     TrackedApps/        ViewModels/ and Views/ for the tracked-apps list
-    Settings/           Settings window (Timelane ▸ Settings…, ⌘,) with the iCloud sync and backup tabs
+    Settings/           Settings window (Timelane ▸ Settings…, ⌘,): the iCloud setting (sync and backup)
   MenuBar/              Menu bar panel: view model, content, form popup
   Debug/Screenshots/    DEBUG-only screenshot mode for the App Store images (sample data, self-capture)
   Assets.xcassets/      Accent colour and AppIcon
@@ -106,32 +106,33 @@ The database is a single SQLite file inside the app's sandbox container:
 
 `~/Library/Containers/nl.nickkoepr.timelane/Data/Library/Application Support/Timelane/db.sqlite`
 
-It stores projects, your time entries (start, end, optional title and note), the list of tracked apps, and app sessions: app name, bundle identifier, start and end. No window titles, keystrokes or screenshots are recorded. Nothing leaves your machine unless you turn on iCloud backup (see below); then the database goes only to your own private iCloud. Exported files are written only where you choose in the save panel.
+It stores projects, your time entries (start, end, optional title and note), the list of tracked apps, and app sessions: app name, bundle identifier, start and end. No window titles, keystrokes or screenshots are recorded. Nothing leaves your machine unless you turn on iCloud (see below); then your data goes only to your own private iCloud. Exported files are written only where you choose in the save panel.
 
-## iCloud backup
+## iCloud (sync and backup)
 
-Optional and off by default. Turn it on in *Timelane ▸ Settings…* (⌘,) on the *Backup* tab.
+Optional and off by default: one switch, *iCloud Sync & Backup*, in *Timelane ▸ Settings…* (⌘,) on the Mac and *Settings ▸ iCloud* on iPhone and iPad. It keeps **projects and logged hours** (time entries) the same on all your devices, and keeps a backup of them you can go back to. Everything goes only to your *private* CloudKit database (`iCloud.nl.nickkoepr.timelane`); nothing is shared with anyone.
 
-- **What is stored:** a consistent copy of the whole database (projects, logged hours, tracked apps, app sessions) as one file in your *private* CloudKit database (`iCloud.nl.nickkoepr.timelane`), plus a few counters (device name, app version, number of projects and entries). Nothing is shared with anyone.
-- **When:** right after you turn it on, and then automatically, at most every 15 minutes while data changes. *Back Up Now* forces a backup.
-- **Safety:** an automatic backup never replaces an iCloud backup that holds data with an empty database (e.g. after a reinstall). If a backup already exists when you turn the setting on, you choose between restoring it and replacing it.
-- **Restore:** *Restore from iCloud…* downloads and checks the backup, then restarts Timelane, which swaps it in before opening the database. The previous database stays on this Mac as `db-before-restore.sqlite` next to `db.sqlite`.
-- **Turning it off** stops uploads; the copy in iCloud is kept.
+### Sync
 
-This is a snapshot backup, not a live sync between Macs. It needs the iCloud capability (CloudKit) for the app; CI builds strip it (`CODE_SIGN_ENTITLEMENTS=`).
-
-## iCloud sync
-
-Optional and off by default. Turn it on in *Timelane ▸ Settings…* (⌘,) on the *Sync* tab. It keeps **projects and logged hours** (time entries) the same on all your Macs, through your *private* iCloud (`iCloud.nl.nickkoepr.timelane`). Changes usually arrive within seconds: besides iCloud's push notifications (best effort), the app checks for changes right away when it comes on screen and then every 30 s while the app is on screen (every 60 s while only the Mac menu bar panel is open; nothing is checked while neither is visible). *Sync Now* always asks iCloud and updates *Last synced*.
+Changes usually arrive within seconds: besides iCloud's push notifications (best effort), the app checks for changes right away when it comes on screen and then every 30 s while the app is on screen (every 60 s while only the Mac menu bar panel is open; nothing is checked while neither is visible). *Sync Now* always asks iCloud and updates *Last synced*.
 
 - **What syncs:** projects (name, colour, archived, customer id) and time entries (times, title, note, project).
-- **What does not:** app sessions (the tracked-apps lane), the list of tracked apps and the Record timer stay on each Mac.
-- **Turning it on:** if iCloud already holds Timelane data you are always asked: *Replace iCloud data with this Mac*, or *Replace this Mac's data with iCloud* (local projects and entries are replaced; app sessions and tracked apps stay). If iCloud is empty, this Mac's data is simply uploaded.
-- **Replacing iCloud data** from one device replaces the projects and hours on every other device too (there is one iCloud dataset); they show a notice. If the iCloud data is removed instead (iCloud settings), the other devices turn sync off and keep their data.
-- **Turning it off** keeps the data on this Mac and in iCloud. Turning it on again asks the same question. Signing out of iCloud or switching Apple ID turns sync off with a message; data is never moved between accounts silently.
+- **What does not:** app sessions (the tracked-apps lane), the list of tracked apps and the Record timer stay on each device (app activity is backed up from the Mac, see below).
+- **Turning it on:** if iCloud already holds Timelane data you are always asked: *Replace iCloud data with this Mac*, or *Replace this Mac's data with iCloud* (local projects and entries are replaced; app sessions and tracked apps stay). If iCloud has no synced data but does have a backup with data, you can restore that backup (it becomes the iCloud data) or use this device's data. Otherwise this device's data is simply uploaded.
+- **Replacing iCloud data** from one device replaces the projects and hours on every other device too (there is one iCloud dataset); they show a notice. If the iCloud data is removed instead (iCloud settings), the other devices turn iCloud off and keep their data.
+- **Turning it off** stops syncing and backups and keeps the data on this device and in iCloud. Signing out of iCloud or switching Apple ID turns it off with a message; data is never moved between accounts silently.
 - **Conflicts:** the most recent change wins. For a time entry, the times, the title/note and the project are resolved separately, so a rename on one Mac and a move on another both survive. If a project is deleted on one Mac and edited on another, the delete wins; if an entry was added to a deleted project, the project comes back. Projects with the same name created on two Macs are merged; if two projects get the same customer id, the older edit keeps it and you see a notice. Entries never overlap: after a sync overlaps are resolved the same way as when you edit (newest action wins).
-- **Backup:** works next to sync, but restoring a backup is disabled while sync is on (turn sync off first).
-- **Requirements:** iCloud signed in, the iCloud (CloudKit) and Push Notifications capabilities on the App ID, and the same or a newer Timelane on every Mac (a Mac that is too old shows "Update Timelane on this device to keep syncing"). CI builds strip the entitlements.
+- **Requirements:** iCloud signed in, the iCloud (CloudKit) and Push Notifications capabilities on the App ID, and the same or a newer Timelane on every device (one that is too old shows "Update Timelane on this device to keep syncing"). CI builds strip the entitlements (`CODE_SIGN_ENTITLEMENTS=`).
+
+### Backup
+
+There is **one shared backup** in iCloud, in two parts (CloudKit records of type `DatabaseBackup`, each one SQLite file plus device name, app version, schema version and counts):
+
+- **Projects and hours** (`projectsAndHours`): written by any device, automatically after changes (at most every 15 minutes) and only once that device is *caught up* with sync: it finished a sync pass since launch, sent all its changes, and sync is not paused or failing. So a device that was closed for a week never uploads old data before it fetched. The only thing a backup can miss is a change another device was sending at that very moment. An automatic backup never replaces a backup that holds data with an empty database (e.g. after a reinstall).
+- **App activity** (`appActivity`, Mac only): app sessions and the tracked apps list (with their project links), backed up once an hour. An iPhone never touches it. When the activity backup in iCloud was made by another Mac (a new Mac, or a second one), that activity is first added to this Mac and then the backup is replaced, so nothing is lost; with two Macs both end up with each other's activity. Settings show one backup: the split is technical.
+- **Back Up Now** syncs first and then backs up both parts.
+- **Restore Backup…** replaces the projects and logged hours **on all devices** with the backup (the iCloud data is replaced and the other devices follow). On a Mac it also adds the app sessions and tracked apps from the backup that this Mac is missing (nothing is removed). A copy of the whole database is kept as `db-before-restore.sqlite` next to `db.sqlite`. If the app quits or goes offline halfway, the iCloud part finishes on the next sync.
+- **Older versions** had a separate backup switch and one whole-database record (`latest`). It stays readable as a restore source until it is no longer needed: it is removed once an app activity backup exists, or right away when it holds no app activity. A device that had only the old backup switch on (sync off) shows a one-time notice that backups now need iCloud on.
 
 ## Website
 

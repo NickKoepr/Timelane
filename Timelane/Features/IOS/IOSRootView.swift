@@ -30,6 +30,7 @@ struct IOSRootView: View {
             environment.requestedSidebarItem = nil
         }
         .errorAlert(Bindable(environment.timeEntryHistory).errorMessage)
+        .messageAlert("iCloud has changed", Bindable(environment).iCloudNotice)
         .fullScreenCover(isPresented: Bindable(environment).isShowingOnboarding) {
             IOSOnboardingView(viewModel: environment.makeOnboardingViewModel(),
                               onClose: { environment.isShowingOnboarding = false })

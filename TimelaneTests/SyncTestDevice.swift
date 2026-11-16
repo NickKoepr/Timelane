@@ -40,7 +40,8 @@ final class SyncTestDevice {
                                    onRemoteEntryChanges: { ids in
                                        log.batches.append(ids)
                                        history.invalidate(touching: ids)
-                                   })
+                                   },
+                                   onLocalDataReplaced: { history.clear() })
     }
 
     // MARK: Writing (the way the app does it, with chosen timestamps)
