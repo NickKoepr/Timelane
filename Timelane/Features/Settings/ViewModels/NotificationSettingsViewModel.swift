@@ -55,13 +55,17 @@ final class NotificationSettingsViewModel {
     }
 
     /// "Next reminder: tomorrow at 17:00", or a hint while no day is chosen.
-    var scheduleSummary: String {
-        guard let next = DailyReminderSchedule.nextDate(for: service.settings, after: now(), calendar: calendar) else {
+    var scheduleSummary: String { scheduleSummary(at: now()) }
+
+    /// The summary as seen at `date`. The view passes the time from a `TimelineView`, so the text moves on after a
+    /// reminder fires (and at midnight): the passing of time alone changes no observed state.
+    func scheduleSummary(at date: Date) -> String {
+        guard let next = DailyReminderSchedule.nextDate(for: service.settings, after: date, calendar: calendar) else {
             return "Choose at least one day."
         }
         let style = Date.FormatStyle(date: .omitted, time: .shortened, locale: calendar.locale ?? .autoupdatingCurrent,
                                      calendar: calendar, timeZone: calendar.timeZone)
-        return "Next reminder: \(dayDescription(of: next)) at \(next.formatted(style))"
+        return "Next reminder: \(dayDescription(of: next, relativeTo: date)) at \(next.formatted(style))"
     }
 
     /// System Settings ▸ Notifications, at Timelane's entry.
@@ -85,8 +89,7 @@ final class NotificationSettingsViewModel {
         await service.refresh()
     }
 
-    private func dayDescription(of date: Date) -> String {
-        let today = now()
+    private func dayDescription(of date: Date, relativeTo today: Date) -> String {
         if calendar.isDate(date, inSameDayAs: today) { return "today" }
         if let tomorrow = calendar.date(byAdding: .day, value: 1, to: today), calendar.isDate(date, inSameDayAs: tomorrow) {
             return "tomorrow"

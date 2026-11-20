@@ -120,6 +120,16 @@ struct NotificationSettingsViewModelTests {
         #expect(monday.model.scheduleSummary == "Next reminder: Monday at 17:00")
     }
 
+    @Test func summaryMovesOnOnceTheReminderHasFired() async {
+        let f = make()
+        await f.model.setEnabled(true)
+        #expect(f.model.scheduleSummary(at: TestCalendar.date(2026, 11, 3, 16, 59)) == "Next reminder: today at 17:00")
+        // The minute it fires, the summary already names the next one.
+        #expect(f.model.scheduleSummary(at: TestCalendar.date(2026, 11, 3, 17, 0)) == "Next reminder: tomorrow at 17:00")
+        // After midnight, "tomorrow" becomes "today".
+        #expect(f.model.scheduleSummary(at: TestCalendar.date(2026, 11, 4, 0, 1)) == "Next reminder: today at 17:00")
+    }
+
     @Test func summaryAsksForADayWhenNoneIsOn() async {
         let f = make()
         await f.model.setEnabled(true)
