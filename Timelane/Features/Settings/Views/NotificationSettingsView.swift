@@ -53,9 +53,12 @@ private struct NotificationSettingsContent: View {
                     isOn: Binding(get: { viewModel.isOn(weekday) }, set: { viewModel.setOn($0, for: weekday) }),
                     time: Binding(get: { viewModel.time(for: weekday) }, set: { viewModel.setTime($0, for: weekday) }))
             }
-            Text(viewModel.scheduleSummary)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
+            // Re-rendered every minute, so the next reminder moves on once one has fired.
+            TimelineView(.everyMinute) { context in
+                Text(viewModel.scheduleSummary(at: context.date))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 }
